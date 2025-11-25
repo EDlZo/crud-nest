@@ -1,0 +1,21 @@
+.app-nav {
+  background: #0f172a;
+  color: #fff;
+  padding: 8px 16px;
+}
+.app-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.app-nav a {
+  color: #e6eef8;
+  text-decoration: none;
+  font-weight: 600;
+}
+.app-nav a:hover {
+  text-decoration: underline;
+}
