@@ -199,9 +199,16 @@ export const ContactsPage = () => {
           <h1>สมุดรายชื่อ</h1>
           <p>จัดการข้อมูลติดต่อของคุณในที่เดียว</p>
         </div>
-        <button className="secondary logout-btn" onClick={performLogout}>
-          ออกจากระบบ
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {user?.role === 'superadmin' && (
+            <a className="secondary" href="/admin/users">
+              จัดการผู้ใช้
+            </a>
+          )}
+          <button className="secondary logout-btn" onClick={performLogout}>
+            ออกจากระบบ
+          </button>
+        </div>
       </header>
 
       <section className="card">
