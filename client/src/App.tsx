@@ -11,8 +11,8 @@ type Contact = {
   updatedAt?: string;
 };
 
-// If VITE_API_BASE_URL is not set (production where API is same origin),
-// use a relative base so the browser calls the same origin as the frontend.
+// In development, Vite proxy will forward /cruds to http://localhost:3000
+// In production, API_BASE_URL should be empty to use same origin
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 const emptyContact: Contact = {
