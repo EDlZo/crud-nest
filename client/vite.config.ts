@@ -5,6 +5,17 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    proxy: {
+      // proxy any request starting with /cruds to the backend
+      '/cruds': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 });
+
+// In development, proxy API requests to the Nest backend running on localhost:3000
+// so the client can use relative paths (e.g. fetch('/cruds')) and avoid CORS.
 
