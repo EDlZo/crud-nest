@@ -6,6 +6,8 @@ import { existsSync } from 'fs';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // Enable CORS so frontend (e.g. Vite dev server or deployed client) can call the API
+  app.enableCors();
 
   // Serve frontend build folder (Vite outputs to `dist` by default)
   const clientDistPath = join(__dirname, '..', 'client', 'dist');
