@@ -7,7 +7,7 @@ import { Crud } from './entities/crud.entity';
 type AuthUser = {
   userId: string;
   email?: string;
-  role?: 'admin' | 'superadmin';
+  role?: string;
 };
 
 type CrudDocument = Omit<Crud, 'id'>;
