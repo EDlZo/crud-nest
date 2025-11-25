@@ -11,7 +11,9 @@ type Contact = {
   updatedAt?: string;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+// If VITE_API_BASE_URL is not set (production where API is same origin),
+// use a relative base so the browser calls the same origin as the frontend.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 const emptyContact: Contact = {
   firstName: '',
