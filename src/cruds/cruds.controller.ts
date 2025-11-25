@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { CrudsService } from './cruds.service';
 import { CreateCrudDto } from './dto/create-crud.dto';
@@ -8,7 +8,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 type AuthUser = {
   userId: string;
-  email: string;
+  email?: string;
 };
 
 type AuthenticatedRequest = Request & { user: AuthUser };
@@ -34,16 +34,12 @@ export class CrudsController {
   }
 
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateCrudDto: UpdateCrudDto,
-    @Req() req: AuthenticatedRequest,
-  ): Promise<Crud> {
+  update(@Param('id') id: string, @Body() updateCrudDto: UpdateCrudDto, @Req() req: AuthenticatedRequest): Promise<Crud> {
     return this.crudsService.update(id, updateCrudDto, req.user);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string): Promise<{ id: string }> {
-    return this.crudsService.remove(id);
+  remove(@Param('id') id: string, @Req() req: AuthenticatedRequest): Promise<{ id: string }> {
+    return this.crudsService.remove(id, req.user);
   }
 }

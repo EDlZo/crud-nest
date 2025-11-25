@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCrudDto } from './dto/create-crud.dto';
 import { UpdateCrudDto } from './dto/update-crud.dto';
 import { db } from '../firebase.config';
@@ -55,6 +55,9 @@ export class CrudsService {
     }
     const timestamp = new Date().toISOString();
     const existing = doc.data() as CrudDocument;
+    if (existing.userId && existing.userId !== user.userId) {
+      throw new ForbiddenException('คุณไม่มีสิทธิ์แก้ไขข้อมูลนี้');
+    }
     const payload: CrudDocument = {
       ...existing,
       ...updateCrudDto,
@@ -65,11 +68,15 @@ export class CrudsService {
     return { id, ...payload };
   }
 
-  async remove(id: string): Promise<{ id: string }> {
+  async remove(id: string, user: AuthUser): Promise<{ id: string }> {
     const docRef = this.collection.doc(id);
     const doc = await docRef.get();
     if (!doc.exists) {
       throw new NotFoundException(`ไม่พบข้อมูล id ${id}`);
+    }
+    const existing = doc.data() as CrudDocument;
+    if (existing.userId && existing.userId !== user.userId) {
+      throw new ForbiddenException('คุณไม่มีสิทธิ์ลบข้อมูลนี้');
     }
     await docRef.delete();
     return { id };

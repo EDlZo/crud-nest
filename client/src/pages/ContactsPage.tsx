@@ -24,7 +24,7 @@ const emptyContact: Contact = {
 const withBase = (path: string) => `${API_BASE_URL}${path}`;
 
 export const ContactsPage = () => {
-  const { token, logout } = useAuth();
+  const { token, user, logout } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [formData, setFormData] = useState<Contact>(emptyContact);
   const [loading, setLoading] = useState(false);
@@ -56,8 +56,13 @@ export const ContactsPage = () => {
         handleUnauthorized();
         return;
       }
+      if (response.status === 403) {
+        throw new Error('คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้');
+      }
       if (!response.ok) {
-        throw new Error('โหลดข้อมูลไม่สำเร็จ');
+        const contentType = response.headers.get('content-type') || '';
+        const body = contentType.includes('application/json') ? await response.json() : await response.text();
+        throw new Error(typeof body === 'string' ? body : JSON.stringify(body));
       }
       const data = await response.json();
       setContacts(Array.isArray(data) ? data : []);
@@ -118,9 +123,14 @@ export const ContactsPage = () => {
         handleUnauthorized();
         return;
       }
+      if (response.status === 403) {
+        throw new Error('คุณไม่มีสิทธิ์แก้ไขข้อมูลนี้');
+      }
 
       if (!response.ok) {
-        throw new Error('บันทึกข้อมูลไม่สำเร็จ');
+        const contentType = response.headers.get('content-type') || '';
+        const body = contentType.includes('application/json') ? await response.json() : await response.text();
+        throw new Error(typeof body === 'string' ? body : JSON.stringify(body));
       }
 
       const saved = (await response.json()) as Contact;
@@ -165,8 +175,13 @@ export const ContactsPage = () => {
         handleUnauthorized();
         return;
       }
+      if (response.status === 403) {
+        throw new Error('คุณไม่มีสิทธิ์ลบข้อมูลนี้');
+      }
       if (!response.ok) {
-        throw new Error('ลบข้อมูลไม่สำเร็จ');
+        const contentType = response.headers.get('content-type') || '';
+        const body = contentType.includes('application/json') ? await response.json() : await response.text();
+        throw new Error(typeof body === 'string' ? body : JSON.stringify(body));
       }
       setContacts((prev) => prev.filter((item) => item.id !== id));
       if (editingId === id) {
@@ -257,33 +272,41 @@ export const ContactsPage = () => {
                   <th>ชื่อ-นามสกุล</th>
                   <th>เบอร์โทร</th>
                   <th>ที่อยู่</th>
-                  <th>ผู้เพิ่ม (user_id)</th>
                   <th>อัปเดตล่าสุด</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {contacts.map((contact) => (
-                  <tr key={contact.id}>
-                    <td>
-                      <strong>
-                        {contact.firstName} {contact.lastName}
-                      </strong>
-                    </td>
-                    <td>{contact.phone}</td>
-                    <td>{contact.address}</td>
-                    <td>{contact.userId ?? '-'}</td>
-                    <td>
-                      {contact.updatedAt ? new Date(contact.updatedAt).toLocaleString() : '-'}
-                    </td>
-                    <td className="actions-cell">
-                      <button onClick={() => handleEdit(contact)}>แก้ไข</button>
-                      <button className="danger" onClick={() => handleDelete(contact.id)}>
-                        ลบ
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {contacts.map((contact) => {
+                  // Only allow modification if the current logged-in user is the owner
+                  const canModify = contact.userId === user?.userId;
+                  return (
+                    <tr key={contact.id}>
+                      <td>
+                        <strong>
+                          {contact.firstName} {contact.lastName}
+                        </strong>
+                      </td>
+                      <td>{contact.phone}</td>
+                      <td>{contact.address}</td>
+                      <td>
+                        {contact.updatedAt ? new Date(contact.updatedAt).toLocaleString() : '-'}
+                      </td>
+                      <td className="actions-cell">
+                        {canModify ? (
+                          <>
+                            <button onClick={() => handleEdit(contact)}>แก้ไข</button>
+                            <button className="danger" onClick={() => handleDelete(contact.id)}>
+                              ลบ
+                            </button>
+                          </>
+                        ) : (
+                          <span className="muted-text">ไม่มีสิทธิ์</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
