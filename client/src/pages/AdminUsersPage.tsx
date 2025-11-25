@@ -51,8 +51,21 @@ export const AdminUsersPage = () => {
         },
         body: JSON.stringify({ userId, role }),
       });
-      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error((data && data.message) ? data.message : (await res.text()));
       await fetchUsers();
+
+      // If backend returned a token for the user, copy it to clipboard and notify admin
+      if (data?.token) {
+        try {
+          await navigator.clipboard.writeText(data.token);
+          alert('โทเค็นใหม่ของผู้ใช้ถูกคัดลอกไปยังคลิปบอร์ดแล้ว\nส่งให้ผู้ใช้เพื่อให้ล็อกอินใหม่');
+        } catch {
+          // fallback: show prompt so admin can copy manually
+          // eslint-disable-next-line no-alert
+          prompt('โทเค็นใหม่ของผู้ใช้ (คัดลอกด้วยมือ):', data.token);
+        }
+      }
     } catch (err) {
       setError((err as Error).message);
     }

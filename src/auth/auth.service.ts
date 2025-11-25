@@ -91,7 +91,15 @@ export class AuthService {
     const doc = await docRef.get();
     if (!doc.exists) throw new BadRequestException('User not found');
     await docRef.update({ role });
-    return { userId, role };
+
+    // re-fetch user data to sign a new token for them
+    const updated = await docRef.get();
+    const data = updated.data() as any;
+    const email = data?.email as string | undefined;
+
+    // Sign and return a fresh token for that user so admin can provide it to the user
+    const token = await this.signToken(userId, email ?? '', role);
+    return { userId, role, token };
   }
 }
 
