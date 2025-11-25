@@ -19,12 +19,11 @@ body {
   gap: 1.5rem;
 }
 
-header {
-  text-align: center;
-}
-
-header h1 {
-  margin-bottom: 0.25rem;
+.app__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .card {
@@ -146,6 +145,39 @@ th {
   gap: 0.5rem;
 }
 
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
+  padding: 2rem 1rem;
+}
+
+.auth-card {
+  width: min(420px, 100%);
+}
+
+.auth-description {
+  color: #475569;
+  margin-bottom: 1.5rem;
+}
+
+.auth-toggle {
+  margin-top: 1rem;
+  text-align: center;
+  color: #475569;
+}
+
+.auth-toggle a {
+  color: #4f46e5;
+  font-weight: 600;
+}
+
+.logout-btn {
+  min-width: 160px;
+}
+
 @media (max-width: 640px) {
   .card {
     padding: 1.25rem;
@@ -157,6 +189,11 @@ th {
 
   .actions-cell {
     flex-direction: column;
+  }
+
+  .app__header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 

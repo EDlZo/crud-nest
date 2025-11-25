@@ -6,4 +6,5 @@ export class Crud {
   address: string;
   createdAt?: string;
   updatedAt?: string;
+  userId?: string;
 }

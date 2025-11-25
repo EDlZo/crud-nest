@@ -19,7 +19,13 @@ async function bootstrap() {
     // Use an Express-compatible middleware so TypeScript typings stay happy
     app.use((req, res, next) => {
       // skip API routes - check for /api prefix or known API endpoints like /cruds
-      if (req.path.startsWith('/api') || req.path.startsWith('/cruds')) return next();
+      if (
+        req.path.startsWith('/api') ||
+        req.path.startsWith('/cruds') ||
+        req.path.startsWith('/auth')
+      ) {
+        return next();
+      }
       res.sendFile(join(clientDistPath, 'index.html'));
     });
   }

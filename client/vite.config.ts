@@ -6,8 +6,12 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // proxy any request starting with /cruds to the backend
       '/cruds': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/auth': {
         target: 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
