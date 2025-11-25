@@ -279,7 +279,8 @@ export const ContactsPage = () => {
               <tbody>
                 {contacts.map((contact) => {
                   // Only allow modification if the current logged-in user is the owner
-                  const canModify = contact.userId === user?.userId;
+                  const canModify =
+                    user?.role === 'admin' || user?.role === 'superadmin' || contact.userId === user?.userId;
                   return (
                     <tr key={contact.id}>
                       <td>

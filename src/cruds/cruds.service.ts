@@ -7,6 +7,7 @@ import { Crud } from './entities/crud.entity';
 type AuthUser = {
   userId: string;
   email?: string;
+  role?: 'admin' | 'superadmin';
 };
 
 type CrudDocument = Omit<Crud, 'id'>;
@@ -55,7 +56,8 @@ export class CrudsService {
     }
     const timestamp = new Date().toISOString();
     const existing = doc.data() as CrudDocument;
-    if (existing.userId && existing.userId !== user.userId) {
+    // allow admins/superadmins to bypass ownership
+    if (existing.userId && existing.userId !== user.userId && user.role !== 'admin' && user.role !== 'superadmin') {
       throw new ForbiddenException('คุณไม่มีสิทธิ์แก้ไขข้อมูลนี้');
     }
     const payload: CrudDocument = {
@@ -75,7 +77,7 @@ export class CrudsService {
       throw new NotFoundException(`ไม่พบข้อมูล id ${id}`);
     }
     const existing = doc.data() as CrudDocument;
-    if (existing.userId && existing.userId !== user.userId) {
+    if (existing.userId && existing.userId !== user.userId && user.role !== 'admin' && user.role !== 'superadmin') {
       throw new ForbiddenException('คุณไม่มีสิทธิ์ลบข้อมูลนี้');
     }
     await docRef.delete();

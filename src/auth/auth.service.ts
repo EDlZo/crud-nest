@@ -27,15 +27,21 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const docRef = this.collection.doc();
+    // Determine role: if this is the first user, make them superadmin
+    const snapshot = await this.collection.limit(1).get();
+    const isFirstUser = snapshot.empty;
+    const role = isFirstUser ? 'superadmin' : 'admin';
+
     const userPayload = {
       userId: docRef.id,
       email: normalizedEmail,
       passwordHash,
+      role,
       createdAt: new Date().toISOString(),
-    };
+    } as any;
     await docRef.set(userPayload);
 
-    const token = await this.signToken(docRef.id, normalizedEmail);
+    const token = await this.signToken(docRef.id, normalizedEmail, userPayload.role);
     return { token };
   }
 
@@ -49,7 +55,7 @@ export class AuthService {
     if (!passwordMatch) {
       throw new UnauthorizedException('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
     }
-    const token = await this.signToken(user.id, normalizedEmail);
+    const token = await this.signToken(user.id, normalizedEmail, user.role);
     return { token };
   }
 
@@ -68,8 +74,24 @@ export class AuthService {
     return { id: doc.id, ...data };
   }
 
-  private signToken(userId: string, email: string) {
-    return this.jwtService.signAsync({ sub: userId, email }, JWT_SIGN_OPTIONS);
+  private signToken(userId: string, email: string, role?: string) {
+    const payload: any = { sub: userId, email };
+    if (role) payload.role = role;
+    return this.jwtService.signAsync(payload, JWT_SIGN_OPTIONS);
+  }
+
+  // administrative: list users and change role
+  async listUsers(): Promise<UserDocument[]> {
+    const snapshot = await this.collection.get();
+    return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+  }
+
+  async setRole(userId: string, role: 'admin' | 'superadmin') {
+    const docRef = this.collection.doc(userId);
+    const doc = await docRef.get();
+    if (!doc.exists) throw new BadRequestException('User not found');
+    await docRef.update({ role });
+    return { userId, role };
   }
 }
 
