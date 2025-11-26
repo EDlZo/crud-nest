@@ -41,7 +41,7 @@ export const NavBar = () => {
           <Link to="/">จัดการข้อมูล</Link>
         </li>
         {displayRole === 'superadmin' ? (
-          <li>
+          <li onClick={() => navigate('/admin/users')}>
             <Link to="/admin/users">จัดการผู้ใช้</Link>
           </li>
         ) : null}
