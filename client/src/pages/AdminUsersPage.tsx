@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import '../App.css';
 
@@ -10,7 +11,8 @@ type User = {
 };
 
 export const AdminUsersPage = () => {
-  const { token, user } = useAuth();
+  const { token, user, logout } = useAuth();
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +103,8 @@ export const AdminUsersPage = () => {
       });
 
       // sequentially apply changes (server expects single user per request)
+      // track if current user was affected so we can prompt sign-out
+      let promptedSignOut = false;
       for (const [userId, role] of changes) {
         if (!role) continue;
         const res = await fetch('/auth/users/role', {
@@ -111,17 +115,44 @@ export const AdminUsersPage = () => {
           },
           body: JSON.stringify({ userId, role }),
         });
+        const data = await res.json().catch(() => null);
         if (!res.ok) {
-          const body = await res.text();
+          const body = (data && (data.message || JSON.stringify(data))) || (await res.text());
           throw new Error(body || `Failed to update ${userId}`);
         }
-        // optionally process returned token
-        // const data = await res.json().catch(() => null);
+
+        // If backend returned a token for this user, handle it
+        if (data?.token) {
+          try {
+            // If the affected user is the currently logged-in user, prompt them to re-login
+            if (user?.userId && data.userId === user.userId) {
+              promptedSignOut = true;
+            } else {
+              // otherwise copy token for admin to deliver
+              await navigator.clipboard.writeText(data.token);
+              alert('โทเค็นใหม่ของผู้ใช้ถูกคัดลอกไปยังคลิปบอร์ดแล้ว\nส่งให้ผู้ใช้เพื่อให้ล็อกอินใหม่');
+            }
+          } catch {
+            // fallback: show prompt so admin can copy manually
+            // eslint-disable-next-line no-alert
+            if (!(user?.userId && data.userId === user.userId)) prompt('โทเค็นใหม่ของผู้ใช้ (คัดลอกด้วยมือ):', data.token);
+          }
+        }
       }
 
       // refresh list and clear pending
       await fetchUsers();
       setPending({});
+      if (promptedSignOut) {
+        // show a modal-like alert then sign the user out and redirect to login
+        // use confirm to ensure UX in this tab — we can replace with a nicer modal if desired
+        // eslint-disable-next-line no-alert
+        const ok = confirm('สิทธิ์ของบัญชีคุณถูกเปลี่ยน. ต้องการออกจากระบบและไปยังหน้าเข้าสู่ระบบเพื่อสมัครสิทธิ์ใหม่หรือไม่?');
+        if (ok) {
+          logout();
+          navigate('/login');
+        }
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
