@@ -68,16 +68,7 @@ export const VisibilityPage = () => {
     }
   };
 
-  if (!user?.role || user.role !== 'superadmin') {
-    return (
-      <main className="app">
-        <section className="card">
-          <h2>ไม่พบสิทธิ์</h2>
-          <p>หน้านี้สำหรับผู้ดูแลระบบระดับสูงเท่านั้น</p>
-        </section>
-      </main>
-    );
-  }
+  const canManageVisibility = user?.role === 'superadmin';
 
   return (
     <main className="app">
@@ -91,6 +82,9 @@ export const VisibilityPage = () => {
       <section className="card">
         {error && <p className="error">{error}</p>}
         {loading && <p className="muted-text">กำลังโหลด...</p>}
+        {!canManageVisibility && (
+          <p className="muted-text">คุณสามารถดูการตั้งค่านี้ได้ แต่ต้องเป็น Superadmin เท่านั้นเพื่อแก้ไข</p>
+        )}
 
         <div style={{ display: 'grid', gap: 12 }}>
           {roles.map((role) => (
@@ -103,6 +97,7 @@ export const VisibilityPage = () => {
                       type="checkbox"
                       checked={Boolean(visibility?.[role]?.[p.key])}
                       onChange={() => toggle(role, p.key)}
+                      disabled={!canManageVisibility}
                     />
                     <span>{p.label}</span>
                   </label>
@@ -113,8 +108,8 @@ export const VisibilityPage = () => {
         </div>
 
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-          <button onClick={save} disabled={loading}>{loading ? 'กำลังบันทึก...' : 'บันทึก'}</button>
-          <button className="secondary" onClick={fetchVisibility} disabled={loading}>ยกเลิก</button>
+          <button onClick={save} disabled={!canManageVisibility || loading}>{loading ? 'กำลังบันทึก...' : 'บันทึก'}</button>
+          <button className="secondary" onClick={fetchVisibility} disabled={!canManageVisibility || loading}>ยกเลิก</button>
         </div>
       </section>
     </main>
