@@ -17,6 +17,7 @@ const decodeJwt = (token?: string | null) => {
 export const NavBar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -38,13 +39,25 @@ export const NavBar = () => {
       </div>
       <ul>
         <li>
-          <Link to="/">จัดการข้อมูล</Link>
+          <button
+            type="button"
+            className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
+            aria-current={location.pathname === '/' ? 'page' : undefined}
+            onClick={() => {
+              // navigate to home (manage data)
+              navigate('/');
+              try { window.dispatchEvent(new PopStateEvent('popstate')); } catch (e) {}
+            }}
+          >
+            จัดการข้อมูล
+          </button>
         </li>
-        {displayRole === 'superadmin' ? (
+          {displayRole === 'superadmin' ? (
           <li>
             <button
               type="button"
-              className="nav-link"
+              className={`nav-link ${location.pathname.startsWith('/admin') ? 'active' : ''}`}
+              aria-current={location.pathname.startsWith('/admin') ? 'page' : undefined}
               onClick={() => {
                 // eslint-disable-next-line no-console
                 console.log('NavBar: admin users button clicked');
@@ -63,7 +76,7 @@ export const NavBar = () => {
           </li>
         ) : null}
         <li>
-          <button onClick={handleLogout} className="secondary logout-btn">
+          <button onClick={handleLogout} className="nav-link logout-btn">
             ออกจากระบบ
           </button>
         </li>

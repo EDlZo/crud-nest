@@ -5,6 +5,7 @@ import { LoginAuthDto } from './dto/login-auth.dto';
 import { UseGuards } from '@nestjs/common';
 import { Roles } from './roles.decorator';
 import { RolesGuard } from './roles.guard';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -21,14 +22,14 @@ export class AuthController {
   }
 
   // admin endpoints - only accessible by superadmin
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('superadmin')
   @Post('users/role')
   async setRole(@Body() body: { userId: string; role: 'admin' | 'superadmin' }) {
     return this.authService.setRole(body.userId, body.role);
   }
 
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('superadmin')
   @Post('users/list')
   async listUsers() {
