@@ -35,7 +35,7 @@ export const NavBar = () => {
       <div className="brand">ระบบจัดการ</div>
       <div style={{ marginBottom: 12, color: '#cbd5e1', fontSize: 13 }}>
         <div>{displayEmail ?? 'กำลังโหลดผู้ใช้...'}</div>
-        <div style={{ opacity: 0.9 }}>{displayRole ?? '—'}</div>
+        <div style={{ opacity: 0.9 }}>Role : {displayRole ?? '—'}</div>
       </div>
       <ul>
         <li>
