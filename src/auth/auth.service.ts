@@ -37,12 +37,13 @@ export class AuthService {
       email: normalizedEmail,
       passwordHash,
       createdAt: new Date().toISOString(),
+      tokenVersion: 0,
     };
     if (isFirstUser) userPayload.role = 'superadmin';
     await docRef.set(userPayload);
 
     // Sign token without role claim for guest users (role claim included only for superadmin/admin)
-    const token = await this.signToken(docRef.id, normalizedEmail, userPayload.role);
+    const token = await this.signToken(docRef.id, normalizedEmail, userPayload.role, userPayload.tokenVersion);
     return { token };
   }
 
@@ -56,7 +57,7 @@ export class AuthService {
     if (!passwordMatch) {
       throw new UnauthorizedException('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
     }
-    const token = await this.signToken(user.id, normalizedEmail, user.role);
+    const token = await this.signToken(user.id, normalizedEmail, user.role, (user as any).tokenVersion ?? 0);
     return { token };
   }
 
@@ -75,9 +76,10 @@ export class AuthService {
     return { id: doc.id, ...data };
   }
 
-  private signToken(userId: string, email: string, role?: string) {
+  private signToken(userId: string, email: string, role?: string, tokenVersion?: number) {
     const payload: any = { sub: userId, email };
     if (role) payload.role = role;
+    if (typeof tokenVersion !== 'undefined') payload.tokenVersion = tokenVersion;
     return this.jwtService.signAsync(payload, JWT_SIGN_OPTIONS);
   }
 
@@ -93,9 +95,9 @@ export class AuthService {
     if (!doc.exists) throw new BadRequestException('User not found');
     // If role is 'guest' or not provided, remove the role field (guest = no role)
     if (!role || role === 'guest') {
-      await docRef.update({ role: FieldValue.delete() });
+      await docRef.update({ role: FieldValue.delete(), tokenVersion: FieldValue.increment(1) });
     } else {
-      await docRef.update({ role });
+      await docRef.update({ role, tokenVersion: FieldValue.increment(1) });
     }
 
     // re-fetch user data to sign a new token for them
@@ -104,7 +106,8 @@ export class AuthService {
     const email = data?.email as string | undefined;
     const updatedRole = data?.role as string | undefined;
 
-    const token = await this.signToken(userId, email ?? '', updatedRole);
+    const updatedTokenVersion = (updatedData?.tokenVersion as number | undefined) ?? 0;
+    const token = await this.signToken(userId, email ?? '', updatedRole, updatedTokenVersion);
     return { userId, role: updatedRole ?? null, token };
   }
 
