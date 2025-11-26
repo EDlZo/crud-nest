@@ -106,7 +106,7 @@ export class AuthService {
     const email = data?.email as string | undefined;
     const updatedRole = data?.role as string | undefined;
 
-    const updatedTokenVersion = (updatedData?.tokenVersion as number | undefined) ?? 0;
+    const updatedTokenVersion = (data?.tokenVersion as number | undefined) ?? 0;
     const token = await this.signToken(userId, email ?? '', updatedRole, updatedTokenVersion);
     return { userId, role: updatedRole ?? null, token };
   }
