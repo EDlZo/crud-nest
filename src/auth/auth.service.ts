@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { db } from '../firebase.config';
-import { deleteField } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { UserDocument } from './entities/user.entity';
@@ -99,15 +99,10 @@ export class AuthService {
     }
 
     // re-fetch user data to sign a new token for them
-    const updated = await docRef.get();
-    const data = updated.data() as any;
+    const updatedDoc = await docRef.get();
+    const data = updatedDoc.data() as any;
     const email = data?.email as string | undefined;
-
-    // Sign and return a fresh token for that user so admin can provide it to the user
-    // Re-read updated data to determine whether a role remains
-    const updated = await docRef.get();
-    const updatedData = updated.data() as any;
-    const updatedRole = updatedData?.role as string | undefined;
+    const updatedRole = data?.role as string | undefined;
 
     const token = await this.signToken(userId, email ?? '', updatedRole);
     return { userId, role: updatedRole ?? null, token };
