@@ -36,8 +36,7 @@ export class AuthController {
     return this.authService.deleteUser(body.userId);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'superadmin')
+  @UseGuards(JwtAuthGuard)
   @Post('users/list')
   async listUsers() {
     return this.authService.listUsers();

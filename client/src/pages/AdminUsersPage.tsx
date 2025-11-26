@@ -189,17 +189,7 @@ export const AdminUsersPage = () => {
   const cancelAll = () => setPending({});
 
   const canManageRoles = user?.role === 'superadmin';
-
-  if (!user?.role || (user.role !== 'superadmin' && user.role !== 'admin')) {
-    return (
-      <main className="app">
-        <section className="card">
-          <h2>ไม่พบสิทธิ์</h2>
-          <p>หน้านี้สำหรับผู้ดูแลระบบระดับสูงเท่านั้น</p>
-        </section>
-      </main>
-    );
-  }
+  // allow any authenticated user to view the users page in read-only mode
 
   return (
     <main className="app">
@@ -217,10 +207,10 @@ export const AdminUsersPage = () => {
             {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
           </button>
           <div style={{ marginLeft: 'auto' }}>
-            <button onClick={saveAll} disabled={!hasPendingChanges() || loading} style={{ marginRight: 8 }}>
+            <button onClick={saveAll} disabled={!canManageRoles || !hasPendingChanges() || loading} style={{ marginRight: 8 }}>
               บันทึกการเปลี่ยนแปลง
             </button>
-            <button onClick={cancelAll} disabled={!hasPendingChanges() || loading} className="secondary">
+            <button onClick={cancelAll} disabled={!canManageRoles || !hasPendingChanges() || loading} className="secondary">
               ยกเลิก
             </button>
           </div>
