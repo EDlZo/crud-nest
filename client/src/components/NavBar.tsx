@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './NavBar.css';
 
@@ -50,6 +50,17 @@ export const NavBar = () => {
                 // eslint-disable-next-line no-console
                 console.log('NavBar: admin users link clicked');
                 navigate('/admin/users');
+                // verify navigation; if SPA navigation didn't apply, fallback to full navigation
+                setTimeout(() => {
+                  // eslint-disable-next-line no-console
+                  console.log('NavBar: after navigate, pathname=', window.location.pathname);
+                }, 50);
+                setTimeout(() => {
+                  if (window.location.pathname !== '/admin/users') {
+                    // eslint-disable-next-line no-restricted-globals
+                    window.location.href = '/admin/users';
+                  }
+                }, 120);
               }}
             >
               จัดการผู้ใช้
