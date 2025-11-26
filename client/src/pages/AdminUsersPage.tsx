@@ -212,7 +212,7 @@ export const AdminUsersPage = () => {
                             checked={selected === 'guest'}
                             onChange={() => setPendingRole(u.userId, 'guest')}
                           />
-                          <span>—</span>
+                          <span>Guest</span>
                         </label>
                       </div>
                     </td>
