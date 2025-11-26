@@ -1,11 +1,20 @@
-import { jsx as _jsx, Fragment as _Fragment } from "react/jsx-runtime";
+import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { NavBar } from './NavBar';
+
 export const ProtectedRoute = ({ children }) => {
     const { token } = useAuth();
     const location = useLocation();
+
     if (!token) {
-        return _jsx(Navigate, { to: "/login", state: { from: location }, replace: true });
+        return <Navigate to="/login" state={{ from: location }} replace />;
     }
-    return _jsx(_Fragment, { children: children });
+
+    return (
+        <div style={{ display: 'flex', minHeight: '100vh' }}>
+            <NavBar />
+            <main style={{ flex: 1, padding: 20 }}>{children}</main>
+        </div>
+    );
 };
