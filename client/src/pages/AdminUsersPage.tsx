@@ -129,9 +129,11 @@ export const AdminUsersPage = () => {
     }
   };
 
+  // Confirm modal state for deleting a user
+  const [confirmTarget, setConfirmTarget] = useState<{ userId: string; email: string } | null>(null);
+
   const deleteUser = async (userId: string) => {
     if (!token) return;
-    if (!confirm('ต้องการลบผู้ใช้นี้จริงหรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้')) return;
     setLoading(true);
     setError(null);
     try {
@@ -146,8 +148,12 @@ export const AdminUsersPage = () => {
       setError((err as Error).message);
     } finally {
       setLoading(false);
+      setConfirmTarget(null);
     }
   };
+
+  const openDeleteConfirm = (userId: string, email: string) => setConfirmTarget({ userId, email });
+  const cancelDelete = () => setConfirmTarget(null);
 
   const cancelAll = () => setPending({});
 
@@ -239,7 +245,7 @@ export const AdminUsersPage = () => {
                     <td style={{ width: 120, textAlign: 'right' }}>
                       <button
                         className="danger"
-                        onClick={() => deleteUser(u.userId)}
+                        onClick={() => openDeleteConfirm(u.userId, u.email)}
                         disabled={loading}
                         title="ลบผู้ใช้"
                       >
@@ -253,6 +259,18 @@ export const AdminUsersPage = () => {
           </table>
         </div>
       </section>
+      {confirmTarget ? (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
+          <div style={{ background: '#fff', padding: 20, borderRadius: 8, width: 480, maxWidth: '94%' }}>
+            <h3>ยืนยันการลบผู้ใช้</h3>
+            <p>คุณแน่ใจหรือไม่ว่าต้องการลบผู้ใช้ <strong>{confirmTarget.email}</strong> ? การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+              <button className="secondary" onClick={cancelDelete} disabled={loading}>ยกเลิก</button>
+              <button className="danger" onClick={() => deleteUser(confirmTarget.userId)} disabled={loading}>ลบ</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 };
