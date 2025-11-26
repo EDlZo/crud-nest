@@ -93,7 +93,7 @@ export class AuthService {
     if (!doc.exists) throw new BadRequestException('User not found');
     // If role is 'guest' or not provided, remove the role field (guest = no role)
     if (!role || role === 'guest') {
-      await docRef.update({ role: deleteField() });
+      await docRef.update({ role: FieldValue.delete() });
     } else {
       await docRef.update({ role });
     }
