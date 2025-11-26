@@ -37,7 +37,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('superadmin')
+  @Roles('admin', 'superadmin')
   @Post('users/list')
   async listUsers() {
     return this.authService.listUsers();
