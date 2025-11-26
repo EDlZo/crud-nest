@@ -29,7 +29,8 @@ export const NavBar = () => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('crud-token') : null;
   const decoded = decodeJwt(token);
   const displayEmail = user?.email ?? decoded?.email ?? null;
-  const displayRole = user?.role ?? decoded?.role ?? null;
+  // treat missing role as 'guest' so visibility settings for guest apply
+  const displayRole = user?.role ?? decoded?.role ?? 'guest';
 
   const [visibility, setVisibility] = useState<Record<string, Record<string, boolean>> | null>(null);
   const [visLoading, setVisLoading] = useState(false);
