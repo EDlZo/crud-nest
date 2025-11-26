@@ -41,8 +41,19 @@ export const NavBar = () => {
           <Link to="/">จัดการข้อมูล</Link>
         </li>
         {displayRole === 'superadmin' ? (
-          <li onClick={() => navigate('/admin/users')}>
-            <Link to="/admin/users">จัดการผู้ใช้</Link>
+          <li>
+            <Link
+              to="/admin/users"
+              onClick={(e) => {
+                e.preventDefault();
+                // debug log to confirm click
+                // eslint-disable-next-line no-console
+                console.log('NavBar: admin users link clicked');
+                navigate('/admin/users');
+              }}
+            >
+              จัดการผู้ใช้
+            </Link>
           </li>
         ) : null}
         <li>
