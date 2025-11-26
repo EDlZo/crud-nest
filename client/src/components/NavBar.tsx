@@ -42,29 +42,17 @@ export const NavBar = () => {
         </li>
         {displayRole === 'superadmin' ? (
           <li>
-            <Link
-              to="/admin/users"
-              onClick={(e) => {
-                e.preventDefault();
-                // debug log to confirm click
+            <button
+              type="button"
+              className="nav-link"
+              onClick={() => {
                 // eslint-disable-next-line no-console
-                console.log('NavBar: admin users link clicked');
+                console.log('NavBar: admin users button clicked');
                 navigate('/admin/users');
-                // verify navigation; if SPA navigation didn't apply, fallback to full navigation
-                setTimeout(() => {
-                  // eslint-disable-next-line no-console
-                  console.log('NavBar: after navigate, pathname=', window.location.pathname);
-                }, 50);
-                setTimeout(() => {
-                  if (window.location.pathname !== '/admin/users') {
-                    // eslint-disable-next-line no-restricted-globals
-                    window.location.href = '/admin/users';
-                  }
-                }, 120);
               }}
             >
               จัดการผู้ใช้
-            </Link>
+            </button>
           </li>
         ) : null}
         <li>
