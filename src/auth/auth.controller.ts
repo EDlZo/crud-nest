@@ -25,7 +25,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('superadmin')
   @Post('users/role')
-  async setRole(@Body() body: { userId: string; role: 'admin' | 'superadmin' }) {
+  async setRole(@Body() body: { userId: string; role?: 'admin' | 'superadmin' | 'guest' }) {
     return this.authService.setRole(body.userId, body.role);
   }
 

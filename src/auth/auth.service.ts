@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { db } from '../firebase.config';
+import { deleteField } from 'firebase-admin/firestore';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { UserDocument } from './entities/user.entity';
@@ -86,11 +87,16 @@ export class AuthService {
     return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
   }
 
-  async setRole(userId: string, role: 'admin' | 'superadmin') {
+  async setRole(userId: string, role?: 'admin' | 'superadmin' | 'guest') {
     const docRef = this.collection.doc(userId);
     const doc = await docRef.get();
     if (!doc.exists) throw new BadRequestException('User not found');
-    await docRef.update({ role });
+    // If role is 'guest' or not provided, remove the role field (guest = no role)
+    if (!role || role === 'guest') {
+      await docRef.update({ role: deleteField() });
+    } else {
+      await docRef.update({ role });
+    }
 
     // re-fetch user data to sign a new token for them
     const updated = await docRef.get();
@@ -98,8 +104,13 @@ export class AuthService {
     const email = data?.email as string | undefined;
 
     // Sign and return a fresh token for that user so admin can provide it to the user
-    const token = await this.signToken(userId, email ?? '', role);
-    return { userId, role, token };
+    // Re-read updated data to determine whether a role remains
+    const updated = await docRef.get();
+    const updatedData = updated.data() as any;
+    const updatedRole = updatedData?.role as string | undefined;
+
+    const token = await this.signToken(userId, email ?? '', updatedRole);
+    return { userId, role: updatedRole ?? null, token };
   }
 }
 
