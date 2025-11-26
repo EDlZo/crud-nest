@@ -129,6 +129,26 @@ export const AdminUsersPage = () => {
     }
   };
 
+  const deleteUser = async (userId: string) => {
+    if (!token) return;
+    if (!confirm('ต้องการลบผู้ใช้นี้จริงหรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้')) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/auth/users/delete', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchUsers();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const cancelAll = () => setPending({});
 
   if (!user?.role || user.role !== 'superadmin') {
@@ -216,7 +236,16 @@ export const AdminUsersPage = () => {
                         </label>
                       </div>
                     </td>
-                    <td />
+                    <td style={{ width: 120, textAlign: 'right' }}>
+                      <button
+                        className="danger"
+                        onClick={() => deleteUser(u.userId)}
+                        disabled={loading}
+                        title="ลบผู้ใช้"
+                      >
+                        ลบ
+                      </button>
+                    </td>
                   </tr>
                 );
               })}

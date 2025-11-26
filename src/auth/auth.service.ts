@@ -107,5 +107,14 @@ export class AuthService {
     const token = await this.signToken(userId, email ?? '', updatedRole);
     return { userId, role: updatedRole ?? null, token };
   }
+
+  async deleteUser(userId: string) {
+    const docRef = this.collection.doc(userId);
+    const doc = await docRef.get();
+    if (!doc.exists) throw new BadRequestException('User not found');
+
+    await docRef.delete();
+    return { userId };
+  }
 }
 
