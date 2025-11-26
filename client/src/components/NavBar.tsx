@@ -49,6 +49,13 @@ export const NavBar = () => {
                 // eslint-disable-next-line no-console
                 console.log('NavBar: admin users button clicked');
                 navigate('/admin/users');
+                // force router update in case SPA navigation didn't trigger render
+                try {
+                  // dispatch popstate so Router picks up the change
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                } catch (e) {
+                  // ignore
+                }
               }}
             >
               จัดการผู้ใช้
@@ -60,6 +67,7 @@ export const NavBar = () => {
             ออกจากระบบ
           </button>
         </li>
+        
       </ul>
     </nav>
   );
