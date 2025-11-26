@@ -20,6 +20,9 @@ export class AuthService {
     process.env.FIREBASE_USERS_COLLECTION ?? 'users',
   );
 
+  // single doc under `settings/visibility` to hold role -> page visibility mapping
+  private readonly settingsCollection = db.collection(process.env.FIREBASE_SETTINGS_COLLECTION ?? 'settings');
+
   constructor(private readonly jwtService: JwtService) {}
 
   async register(dto: RegisterAuthDto): Promise<{ token: string }> {
@@ -118,6 +121,30 @@ export class AuthService {
 
     await docRef.delete();
     return { userId };
+  }
+
+  // Visibility settings: stored at settings/visibility
+  async getVisibility() {
+    const ref = this.settingsCollection.doc('visibility');
+    const doc = await ref.get();
+    if (!doc.exists) {
+      // default visibility: superadmin sees everything, admin sees dashboard and users, guest sees dashboard
+      const defaults = {
+        superadmin: { dashboard: true, admin_users: true, visibility: true },
+        admin: { dashboard: true, admin_users: false, visibility: false },
+        guest: { dashboard: true, admin_users: false, visibility: false },
+      };
+      await ref.set(defaults);
+      return defaults;
+    }
+    return doc.data();
+  }
+
+  async setVisibility(visibility: Record<string, any>) {
+    const ref = this.settingsCollection.doc('visibility');
+    await ref.set(visibility, { merge: true });
+    const doc = await ref.get();
+    return doc.data();
   }
 }
 

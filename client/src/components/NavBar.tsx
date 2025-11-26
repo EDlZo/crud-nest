@@ -53,27 +53,34 @@ export const NavBar = () => {
           </button>
         </li>
           {displayRole === 'superadmin' ? (
-          <li>
-            <button
-              type="button"
-              className={`nav-link ${location.pathname.startsWith('/admin') ? 'active' : ''}`}
-              aria-current={location.pathname.startsWith('/admin') ? 'page' : undefined}
-              onClick={() => {
-                // eslint-disable-next-line no-console
-                console.log('NavBar: admin users button clicked');
-                navigate('/admin/users');
-                // force router update in case SPA navigation didn't trigger render
-                try {
-                  // dispatch popstate so Router picks up the change
-                  window.dispatchEvent(new PopStateEvent('popstate'));
-                } catch (e) {
-                  // ignore
-                }
-              }}
-            >
-              จัดการผู้ใช้
-            </button>
-          </li>
+            <>
+              <li>
+                <button
+                  type="button"
+                  className={`nav-link ${location.pathname === '/admin/users' ? 'active' : ''}`}
+                  aria-current={location.pathname === '/admin/users' ? 'page' : undefined}
+                  onClick={() => {
+                    navigate('/admin/users');
+                    try { window.dispatchEvent(new PopStateEvent('popstate')); } catch (e) {}
+                  }}
+                >
+                  จัดการผู้ใช้
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  className={`nav-link ${location.pathname === '/admin/visibility' ? 'active' : ''}`}
+                  aria-current={location.pathname === '/admin/visibility' ? 'page' : undefined}
+                  onClick={() => {
+                    navigate('/admin/visibility');
+                    try { window.dispatchEvent(new PopStateEvent('popstate')); } catch (e) {}
+                  }}
+                >
+                  การมองเห็นหน้าจอ
+                </button>
+              </li>
+            </>
         ) : null}
         <li>
           <button onClick={handleLogout} className="nav-link logout-btn">

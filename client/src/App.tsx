@@ -4,6 +4,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthPage } from './pages/AuthPage';
 import { ContactsPage } from './pages/ContactsPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
+import { VisibilityPage } from './pages/VisibilityPage';
 
 function App() {
   return (
@@ -24,6 +25,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminUsersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/visibility"
+          element={
+            <ProtectedRoute>
+              <VisibilityPage />
             </ProtectedRoute>
           }
         />

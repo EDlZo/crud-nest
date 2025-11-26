@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, Get } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
@@ -41,6 +41,20 @@ export class AuthController {
   @Post('users/list')
   async listUsers() {
     return this.authService.listUsers();
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('superadmin')
+  @Get('visibility')
+  async getVisibility() {
+    return this.authService.getVisibility();
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('superadmin')
+  @Post('visibility')
+  async setVisibility(@Body() body: { visibility: Record<string, any> }) {
+    return this.authService.setVisibility(body.visibility);
   }
 }
 
