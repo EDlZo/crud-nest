@@ -14,8 +14,8 @@ export const AdminUsersPage = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // pending role changes keyed by userId => role ('admin'|'superadmin')
-  const [pending, setPending] = useState<Record<string, 'admin' | 'superadmin' | undefined>>({});
+    // pending role changes keyed by userId => role ('admin'|'superadmin'|'guest')
+    const [pending, setPending] = useState<Record<string, 'admin' | 'superadmin' | 'guest' | undefined>>({});
 
   useEffect(() => {
     if (!token) return;
@@ -76,16 +76,16 @@ export const AdminUsersPage = () => {
   };
 
   // -- New: batched changes UI handlers --
-  const setPendingRole = (userId: string, role: 'admin' | 'superadmin' | undefined) => {
+  const setPendingRole = (userId: string, role: 'admin' | 'superadmin' | 'guest' | undefined) => {
     setPending((p) => ({ ...p, [userId]: role }));
   };
 
   const hasPendingChanges = () => {
     return Object.keys(pending).some((id) => {
       const newRole = pending[id];
-      const current = users.find((u) => u.userId === id)?.role;
-      // treat undefined as no change
-      return typeof newRole !== 'undefined' && newRole !== current;
+      if (typeof newRole === 'undefined') return false;
+      const current = users.find((u) => u.userId === id)?.role ?? 'guest';
+      return newRole !== current;
     });
   };
 
@@ -96,7 +96,7 @@ export const AdminUsersPage = () => {
     try {
       const changes = Object.entries(pending).filter(([id, role]) => {
         if (typeof role === 'undefined') return false;
-        const current = users.find((u) => u.userId === id)?.role;
+        const current = users.find((u) => u.userId === id)?.role ?? 'guest';
         return role !== current;
       });
 
@@ -179,8 +179,8 @@ export const AdminUsersPage = () => {
             </thead>
             <tbody>
               {users.map((u) => {
-                const selected = typeof pending[u.userId] !== 'undefined' ? pending[u.userId] : u.role;
-                const changed = typeof pending[u.userId] !== 'undefined' && pending[u.userId] !== u.role;
+                const selected = (typeof pending[u.userId] !== 'undefined' ? pending[u.userId] : (u.role ?? 'guest')) as 'admin' | 'superadmin' | 'guest' | undefined;
+                const changed = typeof pending[u.userId] !== 'undefined' && pending[u.userId] !== (u.role ?? 'guest');
                 return (
                   <tr key={u.id} style={changed ? { background: 'rgba(110, 231, 183, 0.06)' } : undefined}>
                     <td>{u.email}</td>
@@ -191,7 +191,7 @@ export const AdminUsersPage = () => {
                           <input
                             type="radio"
                             name={`role-${u.userId}`}
-                            checked={selected === undefined || selected === null || selected === undefined ? false : selected === 'admin'}
+                            checked={selected === 'admin'}
                             onChange={() => setPendingRole(u.userId, 'admin')}
                           />
                           <span>Admin</span>
@@ -208,9 +208,9 @@ export const AdminUsersPage = () => {
                         <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                           <input
                             type="radio"
-                            name={`role-none-${u.userId}`}
-                            checked={typeof selected === 'undefined' || selected === undefined || selected === null}
-                            onChange={() => setPendingRole(u.userId, undefined)}
+                            name={`role-${u.userId}`}
+                            checked={selected === 'guest'}
+                            onChange={() => setPendingRole(u.userId, 'guest')}
                           />
                           <span>—</span>
                         </label>
