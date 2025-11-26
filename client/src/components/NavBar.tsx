@@ -32,21 +32,19 @@ export const NavBar = () => {
   return (
     <nav className="app-nav">
       <div className="brand">ระบบจัดการ</div>
-      {displayEmail && (
-        <div style={{ marginBottom: 12, color: '#cbd5e1', fontSize: 13 }}>
-          <div>{displayEmail}</div>
-          <div style={{ opacity: 0.9 }}>{displayRole ?? '—'}</div>
-        </div>
-      )}
+      <div style={{ marginBottom: 12, color: '#cbd5e1', fontSize: 13 }}>
+        <div>{displayEmail ?? 'กำลังโหลดผู้ใช้...'}</div>
+        <div style={{ opacity: 0.9 }}>{displayRole ?? '—'}</div>
+      </div>
       <ul>
         <li>
           <Link to="/">จัดการข้อมูล</Link>
         </li>
-        {displayRole === 'superadmin' && (
+        {displayRole === 'superadmin' ? (
           <li>
             <Link to="/admin/users">จัดการผู้ใช้</Link>
           </li>
-        )}
+        ) : null}
         <li>
           <button onClick={handleLogout} className="secondary logout-btn">
             ออกจากระบบ
