@@ -28,20 +28,20 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const docRef = this.collection.doc();
-    // Determine role: if this is the first user, make them superadmin
+    // Determine role: first user becomes superadmin; subsequent users are guests (no role field)
     const snapshot = await this.collection.limit(1).get();
     const isFirstUser = snapshot.empty;
-    const role = isFirstUser ? 'superadmin' : 'admin';
 
-    const userPayload = {
+    const userPayload: any = {
       userId: docRef.id,
       email: normalizedEmail,
       passwordHash,
-      role,
       createdAt: new Date().toISOString(),
-    } as any;
+    };
+    if (isFirstUser) userPayload.role = 'superadmin';
     await docRef.set(userPayload);
 
+    // Sign token without role claim for guest users (role claim included only for superadmin/admin)
     const token = await this.signToken(docRef.id, normalizedEmail, userPayload.role);
     return { token };
   }
