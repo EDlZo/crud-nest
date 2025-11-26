@@ -24,6 +24,7 @@ export class CrudsService {
       createdAt: timestamp,
       updatedAt: timestamp,
       userId: user.userId,
+      userEmail: user.email ?? undefined,
     };
     const docRef = await this.collection.add(payload);
     return { id: docRef.id, ...payload };
@@ -65,6 +66,7 @@ export class CrudsService {
       ...updateCrudDto,
       updatedAt: timestamp,
       userId: existing.userId ?? user.userId,
+      userEmail: existing.userEmail ?? user.email ?? undefined,
     };
     await docRef.set(payload);
     return { id, ...payload };

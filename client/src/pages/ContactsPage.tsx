@@ -12,6 +12,7 @@ type Contact = {
   createdAt?: string;
   updatedAt?: string;
   userId?: string;
+  userEmail?: string;
 };
 
 const emptyContact: Contact = {
@@ -197,14 +198,9 @@ export const ContactsPage = () => {
       <header className="app__header">
         <div>
           <h1>สมุดรายชื่อ</h1>
-          <p>จัดการข้อมูลติดต่อของคุณในที่เดียว</p>
-        </div>
+       </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {user?.role === 'superadmin' && (
-            <a className="secondary" href="/admin/users">
-              จัดการผู้ใช้
-            </a>
-          )}
+         
           <button className="secondary logout-btn" onClick={performLogout}>
             ออกจากระบบ
           </button>
@@ -277,6 +273,7 @@ export const ContactsPage = () => {
               <thead>
                 <tr>
                   <th>ชื่อ-นามสกุล</th>
+                  <th>ผู้เพิ่ม (email)</th>
                   <th>เบอร์โทร</th>
                   <th>ที่อยู่</th>
                   <th>อัปเดตล่าสุด</th>
@@ -295,6 +292,7 @@ export const ContactsPage = () => {
                           {contact.firstName} {contact.lastName}
                         </strong>
                       </td>
+                      <td>{contact.userEmail ?? '-'}</td>
                       <td>{contact.phone}</td>
                       <td>{contact.address}</td>
                       <td>
