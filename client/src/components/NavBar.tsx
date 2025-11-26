@@ -52,7 +52,7 @@ export const NavBar = () => {
             จัดการข้อมูล
           </button>
         </li>
-          {displayRole === 'superadmin' ? (
+          {displayRole === 'superadmin' || displayRole === 'admin' ? (
             <>
               <li>
                 <button
@@ -77,7 +77,7 @@ export const NavBar = () => {
                     try { window.dispatchEvent(new PopStateEvent('popstate')); } catch (e) {}
                   }}
                 >
-                  การมองเห็นหน้าจอ
+                  การมองเห็น
                 </button>
               </li>
             </>

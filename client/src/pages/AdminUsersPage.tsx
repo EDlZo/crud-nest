@@ -188,7 +188,9 @@ export const AdminUsersPage = () => {
 
   const cancelAll = () => setPending({});
 
-  if (!user?.role || user.role !== 'superadmin') {
+  const canManageRoles = user?.role === 'superadmin';
+
+  if (!user?.role || (user.role !== 'superadmin' && user.role !== 'admin')) {
     return (
       <main className="app">
         <section className="card">
@@ -250,6 +252,7 @@ export const AdminUsersPage = () => {
                             name={`role-${u.userId}`}
                             checked={selected === 'admin'}
                             onChange={() => setPendingRole(u.userId, 'admin')}
+                            disabled={!canManageRoles}
                           />
                           <span>Admin</span>
                         </label>
@@ -259,6 +262,7 @@ export const AdminUsersPage = () => {
                             name={`role-${u.userId}`}
                             checked={selected === 'superadmin'}
                             onChange={() => setPendingRole(u.userId, 'superadmin')}
+                            disabled={!canManageRoles}
                           />
                           <span>Super</span>
                         </label>
@@ -268,6 +272,7 @@ export const AdminUsersPage = () => {
                             name={`role-${u.userId}`}
                             checked={selected === 'guest'}
                             onChange={() => setPendingRole(u.userId, 'guest')}
+                            disabled={!canManageRoles}
                           />
                           <span>Guest</span>
                         </label>
@@ -277,7 +282,7 @@ export const AdminUsersPage = () => {
                       <button
                         className="danger"
                         onClick={() => openDeleteConfirm(u.userId, u.email)}
-                        disabled={loading}
+                        disabled={loading || !canManageRoles}
                         title="ลบผู้ใช้"
                       >
                         ลบ
