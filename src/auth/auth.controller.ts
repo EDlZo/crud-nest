@@ -43,8 +43,7 @@ export class AuthController {
     return this.authService.listUsers();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('superadmin')
+  @UseGuards(JwtAuthGuard)
   @Get('visibility')
   async getVisibility() {
     return this.authService.getVisibility();

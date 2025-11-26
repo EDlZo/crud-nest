@@ -1,4 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import './NavBar.css';
 
@@ -30,6 +31,50 @@ export const NavBar = () => {
   const displayEmail = user?.email ?? decoded?.email ?? null;
   const displayRole = user?.role ?? decoded?.role ?? null;
 
+  const [visibility, setVisibility] = useState<Record<string, Record<string, boolean>> | null>(null);
+  const [visLoading, setVisLoading] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    // fetch visibility settings (any authenticated user can read)
+    let mounted = true;
+    setVisLoading(true);
+    fetch('/auth/visibility', { headers: { Authorization: `Bearer ${token}` } })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`status:${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        if (!mounted) return;
+        setVisibility(data || null);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setVisibility(null);
+      })
+      .finally(() => {
+        if (!mounted) return;
+        setVisLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [token]);
+
+  const canView = (pageKey: string) => {
+    if (visibility && displayRole) {
+      // explicit visibility mapping wins
+      const roleMap = visibility[displayRole];
+      if (roleMap && typeof roleMap[pageKey] !== 'undefined') return Boolean(roleMap[pageKey]);
+      return false;
+    }
+    // fallback: previous behavior while visibility not available
+    if (pageKey === 'dashboard') return true;
+    if (pageKey === 'admin_users') return displayRole === 'superadmin' || displayRole === 'admin';
+    if (pageKey === 'visibility') return displayRole === 'superadmin';
+    return true;
+  };
+
   return (
     <nav className="app-nav">
       <div className="brand">ระบบจัดการ</div>
@@ -38,50 +83,54 @@ export const NavBar = () => {
         <div style={{ opacity: 0.9 }}>Role : {displayRole ?? 'Guest'}</div>
       </div>
       <ul>
-        <li>
-          <button
-            type="button"
-            className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
-            aria-current={location.pathname === '/' ? 'page' : undefined}
-            onClick={() => {
-              // navigate to home (manage data)
-              navigate('/');
-              try { window.dispatchEvent(new PopStateEvent('popstate')); } catch (e) {}
-            }}
-          >
-            จัดการข้อมูล
-          </button>
-        </li>
-          {displayRole === 'superadmin' || displayRole === 'admin' ? (
-            <>
-              <li>
-                <button
-                  type="button"
-                  className={`nav-link ${location.pathname === '/admin/users' ? 'active' : ''}`}
-                  aria-current={location.pathname === '/admin/users' ? 'page' : undefined}
-                  onClick={() => {
-                    navigate('/admin/users');
-                    try { window.dispatchEvent(new PopStateEvent('popstate')); } catch (e) {}
-                  }}
-                >
-                  จัดการผู้ใช้
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  className={`nav-link ${location.pathname === '/admin/visibility' ? 'active' : ''}`}
-                  aria-current={location.pathname === '/admin/visibility' ? 'page' : undefined}
-                  onClick={() => {
-                    navigate('/admin/visibility');
-                    try { window.dispatchEvent(new PopStateEvent('popstate')); } catch (e) {}
-                  }}
-                >
-                  การมองเห็น
-                </button>
-              </li>
-            </>
-        ) : null}
+        {canView('dashboard') && (
+          <li>
+            <button
+              type="button"
+              className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
+              aria-current={location.pathname === '/' ? 'page' : undefined}
+              onClick={() => {
+                // navigate to home (manage data)
+                navigate('/');
+                try { window.dispatchEvent(new PopStateEvent('popstate')); } catch (e) {}
+              }}
+            >
+              จัดการข้อมูล
+            </button>
+          </li>
+        )}
+
+        {canView('admin_users') && (
+          <li>
+            <button
+              type="button"
+              className={`nav-link ${location.pathname === '/admin/users' ? 'active' : ''}`}
+              aria-current={location.pathname === '/admin/users' ? 'page' : undefined}
+              onClick={() => {
+                navigate('/admin/users');
+                try { window.dispatchEvent(new PopStateEvent('popstate')); } catch (e) {}
+              }}
+            >
+              จัดการผู้ใช้
+            </button>
+          </li>
+        )}
+
+        {canView('visibility') && (
+          <li>
+            <button
+              type="button"
+              className={`nav-link ${location.pathname === '/admin/visibility' ? 'active' : ''}`}
+              aria-current={location.pathname === '/admin/visibility' ? 'page' : undefined}
+              onClick={() => {
+                navigate('/admin/visibility');
+                try { window.dispatchEvent(new PopStateEvent('popstate')); } catch (e) {}
+              }}
+            >
+              การมองเห็น
+            </button>
+          </li>
+        )}
         <li>
           <button onClick={handleLogout} className="nav-link logout-btn">
             ออกจากระบบ
