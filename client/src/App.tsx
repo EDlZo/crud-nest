@@ -5,6 +5,8 @@ import { AuthPage } from './pages/AuthPage';
 import { ContactsPage } from './pages/ContactsPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { VisibilityPage } from './pages/VisibilityPage';
+import { CompaniesPage } from './pages/CompaniesPage';
+import { AdminCompaniesPage } from './pages/AdminCompaniesPage';
 
 function App() {
   return (
@@ -33,6 +35,15 @@ function App() {
           element={
             <ProtectedRoute>
               <VisibilityPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/companies/new" element={<CompaniesPage />} />
+        <Route
+          path="/admin/companies"
+          element={
+            <ProtectedRoute>
+              <AdminCompaniesPage />
             </ProtectedRoute>
           }
         />
