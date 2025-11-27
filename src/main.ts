@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import * as express from 'express';
 import { join } from 'path';
@@ -8,6 +9,15 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // Enable CORS so frontend (e.g. Vite dev server or deployed client) can call the API
   app.enableCors();
+
+  // Enable global validation pipe for DTO validation
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: false,
+      transform: true,
+    }),
+  );
 
   // Serve frontend build folder (Vite outputs to `dist` by default)
   const clientDistPath = join(__dirname, '..', 'client', 'dist');
