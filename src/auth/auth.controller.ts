@@ -17,8 +17,15 @@ export class AuthController {
   }
 
   @Post('login')
-  login(@Body() dto: LoginAuthDto) {
-    return this.authService.login(dto);
+  async login(@Body() dto: LoginAuthDto) {
+    try {
+      return await this.authService.login(dto);
+    } catch (err) {
+      // Log full error for server logs (useful on hosting platforms like Railway)
+      console.error('AuthController.login error:', err);
+      // Re-throw so Nest will still return proper HTTP error code
+      throw err;
+    }
   }
 
   // admin endpoints - only accessible by superadmin
