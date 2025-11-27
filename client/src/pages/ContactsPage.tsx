@@ -13,6 +13,7 @@ type Contact = {
   updatedAt?: string;
   userId?: string;
   userEmail?: string;
+  updatedByEmail?: string;
 };
 
 const emptyContact: Contact = {
@@ -273,9 +274,10 @@ export const ContactsPage = () => {
               <thead>
                 <tr>
                   <th>ชื่อ-นามสกุล</th>
-                  <th>ผู้เพิ่ม (email)</th>
                   <th>เบอร์โทร</th>
                   <th>ที่อยู่</th>
+                  <th>ผู้เพิ่ม (email)</th>
+                  <th>ผู้แก้ล่าสุด (email)</th>
                   <th>อัปเดตล่าสุด</th>
                   <th />
                 </tr>
@@ -292,9 +294,10 @@ export const ContactsPage = () => {
                           {contact.firstName} {contact.lastName}
                         </strong>
                       </td>
-                      <td>{contact.userEmail ?? '-'}</td>
                       <td>{contact.phone}</td>
                       <td>{contact.address}</td>
+                      <td>{contact.userEmail ?? '-'}</td>
+                      <td>{contact.updatedByEmail ?? '-'}</td>
                       <td>
                         {contact.updatedAt ? new Date(contact.updatedAt).toLocaleString() : '-'}
                       </td>

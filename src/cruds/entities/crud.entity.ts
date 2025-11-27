@@ -8,4 +8,5 @@ export class Crud {
   updatedAt?: string;
   userId?: string;
   userEmail?: string;
+  updatedByEmail?: string;
 }

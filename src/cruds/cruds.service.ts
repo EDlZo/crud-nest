@@ -25,13 +25,14 @@ export class CrudsService {
       updatedAt: timestamp,
       userId: user.userId,
       userEmail: user.email ?? undefined,
+      updatedByEmail: user.email ?? undefined,
     };
     const docRef = await this.collection.add(payload);
     return { id: docRef.id, ...payload };
   }
 
   async findAll(): Promise<Crud[]> {
-    const snapshot = await this.collection.get();
+    const snapshot = await this.collection.orderBy('updatedAt', 'desc').get();
     return snapshot.docs.map(
       (doc) =>
         ({
@@ -67,6 +68,7 @@ export class CrudsService {
       updatedAt: timestamp,
       userId: existing.userId ?? user.userId,
       userEmail: existing.userEmail ?? user.email ?? undefined,
+      updatedByEmail: user.email ?? existing.updatedByEmail ?? undefined,
     };
     await docRef.set(payload);
     return { id, ...payload };
