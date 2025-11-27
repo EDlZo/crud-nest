@@ -1,4 +1,5 @@
-import { Body, Controller, Post, Get } from '@nestjs/common';
+import { Body, Controller, Post, Get, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
@@ -17,12 +18,19 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(@Body() dto: LoginAuthDto) {
+  async login(@Req() req: Request, @Body() dto: LoginAuthDto) {
     try {
       return await this.authService.login(dto);
     } catch (err) {
-      // Log full error for server logs (useful on hosting platforms like Railway)
+      // Log full error and incoming request details for debugging
       console.error('AuthController.login error:', err);
+      try {
+        console.error('Request headers:', req.headers);
+        // Body may be undefined if parsing failed or request was aborted
+        console.error('Request body (raw parsed):', dto);
+      } catch (logErr) {
+        console.error('Failed to log request details', logErr);
+      }
       // Re-throw so Nest will still return proper HTTP error code
       throw err;
     }
