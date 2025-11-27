@@ -51,7 +51,11 @@ export class AuthService {
   }
 
   async login(dto: LoginAuthDto): Promise<{ token: string }> {
-    const normalizedEmail = dto.email.trim().toLowerCase();
+    if (!dto || typeof dto.email !== 'string' || typeof dto.password !== 'string') {
+      throw new BadRequestException('Invalid request payload');
+    }
+
+    const normalizedEmail = String(dto.email).trim().toLowerCase();
     const user = await this.findByEmail(normalizedEmail);
     if (!user) {
       throw new UnauthorizedException('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
