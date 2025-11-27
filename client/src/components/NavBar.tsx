@@ -72,6 +72,7 @@ export const NavBar = () => {
     // fallback: previous behavior while visibility not available
     if (pageKey === 'dashboard') return true;
     if (pageKey === 'admin_users') return displayRole === 'superadmin' || displayRole === 'admin';
+    if (pageKey === 'admin_companies') return displayRole === 'superadmin' || displayRole === 'admin';
     if (pageKey === 'visibility') return displayRole === 'superadmin';
     return true;
   };
@@ -113,6 +114,22 @@ export const NavBar = () => {
               }}
             >
               จัดการผู้ใช้
+            </button>
+          </li>
+        )}
+
+        {canView('admin_companies') && (
+          <li>
+            <button
+              type="button"
+              className={`nav-link ${location.pathname === '/admin/companies' ? 'active' : ''}`}
+              aria-current={location.pathname === '/admin/companies' ? 'page' : undefined}
+              onClick={() => {
+                navigate('/admin/companies');
+                try { window.dispatchEvent(new PopStateEvent('popstate')); } catch (e) {}
+              }}
+            >
+              บริษัท
             </button>
           </li>
         )}
