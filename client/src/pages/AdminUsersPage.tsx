@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaCog, FaTimesCircle, FaUserCircle } from 'react-icons/fa';
+import { FaTimesCircle, FaUserCircle } from 'react-icons/fa';
 import '../App.css';
 
 type User = {
@@ -233,19 +233,16 @@ export const AdminUsersPage = () => {
               <thead>
                 <tr>
                   <th style={{ width: '5%' }}>#</th>
-                  <th style={{ width: '30%' }}>Name</th>
-                  <th style={{ width: '15%' }}>Date Created</th>
-                  <th style={{ width: '15%' }}>Role</th>
-                  <th style={{ width: '15%' }}>Status</th>
-                  <th style={{ width: '20%' }}>Action</th>
+                  <th style={{ width: '40%' }}>Name</th>
+                  <th style={{ width: '20%' }}>Date Created</th>
+                  <th style={{ width: '20%' }}>Role</th>
+                  <th style={{ width: '15%' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u, index) => {
                   const selected = (typeof pending[u.userId] !== 'undefined' ? pending[u.userId] : (u.role ?? 'guest')) as 'admin' | 'superadmin' | 'guest' | undefined;
                   const changed = typeof pending[u.userId] !== 'undefined' && pending[u.userId] !== (u.role ?? 'guest');
-                  const status = u.status || 'Active'; // Mock status
-                  const statusColor = status === 'Active' ? 'text-success' : status === 'Inactive' ? 'text-warning' : 'text-danger';
 
                   return (
                     <tr key={u.id} className={changed ? 'table-warning' : ''}>
@@ -255,7 +252,6 @@ export const AdminUsersPage = () => {
                           <div className="me-3">
                             {/* Placeholder Avatar */}
                             <FaUserCircle size={40} className="text-gray-400" />
-                            {/* If we had an avatar URL: <img src={u.avatar} alt="" className="rounded-circle" width="40" height="40" /> */}
                           </div>
                           <div>
                             <div className="fw-bold text-dark">{u.email.split('@')[0]}</div>
@@ -279,15 +275,7 @@ export const AdminUsersPage = () => {
                         </select>
                       </td>
                       <td>
-                        <span className={`d-flex align-items-center ${statusColor}`}>
-                          <span className="me-2" style={{ fontSize: '20px' }}>•</span> {status}
-                        </span>
-                      </td>
-                      <td>
                         <div className="d-flex align-items-center">
-                          <button className="btn btn-link text-primary p-0 me-3" title="Settings">
-                            <FaCog size={18} />
-                          </button>
                           <button
                             className="btn btn-link text-danger p-0"
                             title="Delete"
