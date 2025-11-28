@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import Sidebar from './Sidebar';
-import Topbar from './Topbar';
+
 
 interface LayoutProps {
     children: ReactNode;
@@ -12,16 +12,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <Sidebar />
             <div id="content-wrapper" className="d-flex flex-column w-100">
                 <div id="content">
-                    <Topbar />
-                    <div className="container-fluid">
+                    <div className="container-fluid pt-4">
                         {children}
                     </div>
                 </div>
                 <footer className="sticky-footer bg-white">
                     <div className="container my-auto">
-                        <div className="copyright text-center my-auto">
-                            <span>Copyright &copy; Your Website 2025</span>
-                        </div>
                     </div>
                 </footer>
             </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FaLaughWink, FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers } from 'react-icons/fa';
+import { FaLaughWink, FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt } from 'react-icons/fa';
 
 const Sidebar = () => {
     const location = useLocation();
@@ -13,7 +13,6 @@ const Sidebar = () => {
                 <div className="sidebar-brand-icon rotate-n-15">
                     <FaLaughWink size={32} />
                 </div>
-                <div className="sidebar-brand-text mx-3">SB Admin <sup>2</sup></div>
             </Link>
 
             {/* Divider */}
@@ -69,6 +68,21 @@ const Sidebar = () => {
 
             {/* Divider */}
             <hr className="sidebar-divider d-none d-md-block" />
+
+            {/* Divider */}
+            <hr className="sidebar-divider d-none d-md-block" />
+
+            {/* Logout */}
+            <li className="nav-item">
+                <a className="nav-link" href="#" onClick={(e) => {
+                    e.preventDefault();
+                    localStorage.removeItem('crud-token');
+                    window.location.href = '/login';
+                }}>
+                    <FaSignOutAlt className="me-2" />
+                    <span>Logout</span>
+                </a>
+            </li>
 
         </ul>
     );
