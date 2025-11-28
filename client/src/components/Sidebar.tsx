@@ -20,13 +20,7 @@ const Sidebar = () => {
             {/* Divider */}
             <hr className="sidebar-divider my-0" />
 
-            {/* Nav Item - Dashboard */}
-            <li className={`nav-item ${isActive('/') ? 'active' : ''}`}>
-                <Link className="nav-link" to="/">
-                    <FaTachometerAlt className="me-2" />
-                    <span>Dashboard</span>
-                </Link>
-            </li>
+
 
             {/* Divider */}
             <hr className="sidebar-divider" />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { FaCog, FaTimesCircle, FaUserCircle } from 'react-icons/fa';
 import '../App.css';
 
 type User = {
@@ -8,6 +9,8 @@ type User = {
   userId: string;
   email: string;
   role?: string;
+  createdAt?: string; // Assuming backend might return this, or we mock it
+  status?: string; // Assuming backend might return this, or we mock it
 };
 
 export const AdminUsersPage = () => {
@@ -191,6 +194,14 @@ export const AdminUsersPage = () => {
   const canManageRoles = user?.role === 'superadmin';
   // allow any authenticated user to view the users page in read-only mode
 
+  // Helper to get random date for demo if not provided
+  const getRandomDate = () => {
+    const start = new Date(2023, 0, 1);
+    const end = new Date();
+    const date = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+    return date.toLocaleDateString('en-GB'); // DD/MM/YYYY
+  };
+
   return (
     <div className="container-fluid">
       <h1 className="h3 mb-4 text-gray-800">จัดการผู้ใช้</h1>
@@ -218,68 +229,74 @@ export const AdminUsersPage = () => {
           {error && <div className="alert alert-danger">{error}</div>}
 
           <div className="table-responsive">
-            <table className="table table-bordered" width="100%" cellSpacing={0}>
+            <table className="table align-middle">
               <thead>
                 <tr>
-                  <th>Email</th>
-                  <th>User ID</th>
-                  <th>Role</th>
-                  <th>Actions</th>
+                  <th style={{ width: '5%' }}>#</th>
+                  <th style={{ width: '30%' }}>Name</th>
+                  <th style={{ width: '15%' }}>Date Created</th>
+                  <th style={{ width: '15%' }}>Role</th>
+                  <th style={{ width: '15%' }}>Status</th>
+                  <th style={{ width: '20%' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => {
+                {users.map((u, index) => {
                   const selected = (typeof pending[u.userId] !== 'undefined' ? pending[u.userId] : (u.role ?? 'guest')) as 'admin' | 'superadmin' | 'guest' | undefined;
                   const changed = typeof pending[u.userId] !== 'undefined' && pending[u.userId] !== (u.role ?? 'guest');
+                  const status = u.status || 'Active'; // Mock status
+                  const statusColor = status === 'Active' ? 'text-success' : status === 'Inactive' ? 'text-warning' : 'text-danger';
+
                   return (
                     <tr key={u.id} className={changed ? 'table-warning' : ''}>
-                      <td>{u.email}</td>
-                      <td>{u.userId}</td>
+                      <td>{index + 1}</td>
                       <td>
-                        <div className="d-flex gap-3">
-                          <div className="form-check">
-                            <input
-                              className="form-check-input"
-                              type="radio"
-                              name={`role-${u.userId}`}
-                              checked={selected === 'admin'}
-                              onChange={() => setPendingRole(u.userId, 'admin')}
-                              disabled={!canManageRoles}
-                            />
-                            <label className="form-check-label">Admin</label>
+                        <div className="d-flex align-items-center">
+                          <div className="me-3">
+                            {/* Placeholder Avatar */}
+                            <FaUserCircle size={40} className="text-gray-400" />
+                            {/* If we had an avatar URL: <img src={u.avatar} alt="" className="rounded-circle" width="40" height="40" /> */}
                           </div>
-                          <div className="form-check">
-                            <input
-                              className="form-check-input"
-                              type="radio"
-                              name={`role-${u.userId}`}
-                              checked={selected === 'superadmin'}
-                              onChange={() => setPendingRole(u.userId, 'superadmin')}
-                              disabled={!canManageRoles}
-                            />
-                            <label className="form-check-label">Super</label>
-                          </div>
-                          <div className="form-check">
-                            <input
-                              className="form-check-input"
-                              type="radio"
-                              name={`role-${u.userId}`}
-                              checked={selected === 'guest'}
-                              onChange={() => setPendingRole(u.userId, 'guest')}
-                              disabled={!canManageRoles}
-                            />
-                            <label className="form-check-label">Guest</label>
+                          <div>
+                            <div className="fw-bold text-dark">{u.email.split('@')[0]}</div>
+                            <div className="small text-muted">{u.email}</div>
                           </div>
                         </div>
                       </td>
+                      <td>{u.createdAt || getRandomDate()}</td>
                       <td>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={() => openDeleteConfirm(u.userId, u.email)}
-                          disabled={loading || !canManageRoles}
+                        {/* Role Selector (Settings) */}
+                        <select
+                          className="form-select form-select-sm"
+                          style={{ width: 'auto', minWidth: '100px' }}
+                          value={selected}
+                          onChange={(e) => setPendingRole(u.userId, e.target.value as any)}
+                          disabled={!canManageRoles}
                         >
-                          ลบ
-                        </button>
+                          <option value="guest">Guest</option>
+                          <option value="admin">Admin</option>
+                          <option value="superadmin">Superadmin</option>
+                        </select>
+                      </td>
+                      <td>
+                        <span className={`d-flex align-items-center ${statusColor}`}>
+                          <span className="me-2" style={{ fontSize: '20px' }}>•</span> {status}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="d-flex align-items-center">
+                          <button className="btn btn-link text-primary p-0 me-3" title="Settings">
+                            <FaCog size={18} />
+                          </button>
+                          <button
+                            className="btn btn-link text-danger p-0"
+                            title="Delete"
+                            onClick={() => openDeleteConfirm(u.userId, u.email)}
+                            disabled={loading || !canManageRoles}
+                          >
+                            <FaTimesCircle size={18} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -287,6 +304,21 @@ export const AdminUsersPage = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination (Mock UI) */}
+          <div className="d-flex justify-content-between align-items-center mt-3">
+            <div className="small text-muted">Showing {users.length} entries</div>
+            <nav>
+              <ul className="pagination pagination-sm mb-0">
+                <li className="page-item disabled"><a className="page-link" href="#">Previous</a></li>
+                <li className="page-item active"><a className="page-link" href="#">1</a></li>
+                <li className="page-item"><a className="page-link" href="#">2</a></li>
+                <li className="page-item"><a className="page-link" href="#">3</a></li>
+                <li className="page-item"><a className="page-link" href="#">Next</a></li>
+              </ul>
+            </nav>
+          </div>
+
         </div>
       </div>
 

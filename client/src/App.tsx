@@ -8,7 +8,6 @@ import { VisibilityPage } from './pages/VisibilityPage';
 import { CompaniesPage } from './pages/CompaniesPage';
 import { AdminCompaniesPage } from './pages/AdminCompaniesPage';
 import Layout from './components/Layout';
-import DashboardPage from './pages/DashboardPage';
 
 function App() {
   return (
@@ -16,13 +15,7 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <DashboardPage />
-              </Layout>
-            </ProtectedRoute>
-          }
+          element={<Navigate to="/contacts" replace />}
         />
         <Route
           path="/contacts"
