@@ -147,11 +147,18 @@ th {
 }
 
 /* Ensure last column (actions) has consistent width and alignment */
-table th:last-child,
+/* Keep header centered, but constrain the actions column width and use flex only for cells */
+table th:last-child {
+  text-align: center;
+  white-space: nowrap;
+  width: 80px; /* fixed column width for actions */
+  padding: 0 0.6rem;
+}
+
 table td:last-child {
   text-align: center;
-  padding-right: 1.2rem;
-  /* use flexbox to align content exactly in the middle */
+  width: 80px;
+  padding: 0 0.6rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -206,7 +213,7 @@ table th:last-child .btn {
 
 .icon-btn:hover { opacity: 0.9; transform: none; }
 
-.icon-btn.edit { color: #c2410c; } /* amber/darker for edit */
+.icon-btn.edit { color: #f59e0b; } /* yellow for edit */
 .icon-btn.delete { color: #dc2626; } /* red for delete */
 
 .icon-btn svg { width: 18px; height: 18px; display: block; }
