@@ -149,10 +149,26 @@ th {
 /* Ensure last column (actions) has consistent width and alignment */
 table th:last-child,
 table td:last-child {
-  text-align: right;
+  text-align: center;
   padding-right: 1.2rem;
-  height: 80px;
+  vertical-align: middle;
+}
+
+/* Ensure table cells align content vertically and action buttons center their icons */
+table th,
+table td {
+  vertical-align: middle;
+}
+
+/* Make action buttons a square inline-flex so icons are centered */
+table td:last-child .btn,
+table th:last-child .btn {
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
 }
 
 .muted-text {
