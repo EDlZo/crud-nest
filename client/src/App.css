@@ -176,6 +176,28 @@ table th:nth-last-child(2) {
   border-right: 1px solid #e2e8f0;
 }
 
+/* Force padding on previous column to avoid large left-padding pushing Actions off-center */
+table td:nth-last-child(2),
+table th:nth-last-child(2) {
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+}
+
+/* Normalize any button inside the action cell so the icon is perfectly centered */
+table td:last-child button,
+table td:last-child .icon-btn,
+table td:last-child .btn {
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  background: transparent !important;
+  border: none !important;
+}
+
 /* Ensure table cells align content vertically and action buttons center their icons */
 table th,
 table td {
