@@ -1,0 +1,113 @@
+:root{
+  --primary-500: #0b63b5;
+  --primary-700: #063a77;
+  --bg: #ffffff;
+  --text: #0b2545;
+  --muted: #6b7280;
+}
+
+/* Wrapper */
+#wrapper{
+  min-height:100vh;
+  display:flex;
+}
+
+/* Sidebar */
+.sidebar{
+  width: 220px;
+  min-height:100vh;
+  background: linear-gradient(180deg,var(--primary-500),var(--primary-700));
+  padding-top: 1rem;
+  position: fixed;
+  left: 0;
+  top: 0;
+  overflow: auto;
+}
+
+/* Make content sit to the right of sidebar */
+#content-wrapper{
+  margin-left: 220px;
+  min-height:100vh;
+  background: var(--bg);
+}
+
+/* Container inside content */
+.app-container{
+  max-width: 1100px;
+  margin: 1.5rem auto;
+  padding: 1.25rem;
+}
+
+/* Sidebar brand */
+.sidebar .sidebar-brand{
+  height: 72px;
+  margin-bottom: 0.5rem;
+}
+.sidebar .sidebar-brand .sidebar-brand-icon{
+  color: rgba(255,255,255,0.95);
+}
+
+/* Links */
+.sidebar .nav-link{
+  color: rgba(255,255,255,0.95);
+  padding: 0.75rem 1rem;
+  display:flex;
+  align-items:center;
+  gap: 0.6rem;
+  font-weight:600;
+}
+.sidebar .nav-link .me-2{
+  opacity:0.95;
+}
+.sidebar .nav-item.active > .nav-link,
+.sidebar .nav-link:hover{
+  background: rgba(255,255,255,0.08);
+}
+
+.sidebar .sidebar-divider{
+  border-top: 1px solid rgba(255,255,255,0.06);
+  margin: 0.5rem 0;
+}
+
+.sidebar .sidebar-heading{
+  color: rgba(255,255,255,0.85);
+  padding: 0 1rem;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Topbar (if used) */
+.topbar{
+  background: #fff;
+  border-bottom: 1px solid #e6e9ef;
+  box-shadow: 0 2px 6px rgba(11,37,69,0.04);
+}
+
+/* Cards */
+.card{
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 8px 24px rgba(11,37,69,0.06);
+  border: none;
+}
+
+/* Buttons */
+.btn-primary{
+  background: var(--primary-500);
+  border-color: var(--primary-500);
+}
+
+/* Tables */
+.table thead th{
+  color: var(--muted);
+  font-weight:700;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px){
+  .sidebar{ position: relative; width: 100%; min-height: auto }
+  #content-wrapper{ margin-left: 0 }
+  .app-container{ margin: 1rem; }
+}
