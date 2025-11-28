@@ -151,17 +151,29 @@ th {
 table th:last-child {
   text-align: center;
   white-space: nowrap;
-  width: 80px; /* fixed column width for actions */
-  padding: 0 0.6rem;
+  width: 64px; /* slightly narrower fixed column width for actions */
+  padding: 0 0.4rem;
 }
 
 table td:last-child {
   text-align: center;
-  width: 80px;
-  padding: 0 0.6rem;
-  display: flex;
+  width: 64px;
+  padding: 0 0.4rem;
+  vertical-align: middle;
+}
+
+/* keep the action buttons centered by making the group inline-flex */
+table td:last-child .btn-group {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  height: 32px;
+}
+
+/* add a vertical separator between last two columns to restore grid look */
+table td:nth-last-child(2),
+table th:nth-last-child(2) {
+  border-right: 1px solid #e2e8f0;
 }
 
 /* Ensure table cells align content vertically and action buttons center their icons */
@@ -192,8 +204,8 @@ table th:last-child .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   padding: 0;
 }
 
@@ -202,8 +214,8 @@ table th:last-child .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: none;
   background: transparent;
@@ -220,6 +232,14 @@ table th:last-child .btn {
 
 /* avoid added line-height/vertical gaps from button text metrics */
 .icon-btn { line-height: 0; }
+
+/* Ensure delete-only cells (single icon) don't inherit extra gap from btn-group */
+.btn-group:only-child,
+.btn-group:only-child .btn,
+.btn-group:only-child .icon-btn {
+  margin: 0;
+  gap: 0;
+}
 
 .muted-text {
   color: #94a3b8;
