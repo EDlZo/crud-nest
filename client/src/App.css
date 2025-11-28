@@ -151,7 +151,10 @@ table th:last-child,
 table td:last-child {
   text-align: center;
   padding-right: 1.2rem;
-  vertical-align: middle;
+  /* use flexbox to align content exactly in the middle */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Ensure table cells align content vertically and action buttons center their icons */
@@ -206,7 +209,10 @@ table th:last-child .btn {
 .icon-btn.edit { color: #c2410c; } /* amber/darker for edit */
 .icon-btn.delete { color: #dc2626; } /* red for delete */
 
-.icon-btn svg { width: 18px; height: 18px; }
+.icon-btn svg { width: 18px; height: 18px; display: block; }
+
+/* avoid added line-height/vertical gaps from button text metrics */
+.icon-btn { line-height: 0; }
 
 .muted-text {
   color: #94a3b8;
