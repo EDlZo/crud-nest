@@ -41,7 +41,7 @@ export const ContactsPage = () => {
   };
 
   const handleUnauthorized = () => {
-    setError('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+    setError('Session expired. Please log in again');
     performLogout();
   };
 
@@ -60,7 +60,7 @@ export const ContactsPage = () => {
         return;
       }
       if (response.status === 403) {
-        throw new Error('คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้');
+        throw new Error('You do not have permission to access this resource');
       }
       if (!response.ok) {
         const contentType = response.headers.get('content-type') || '';
@@ -103,7 +103,7 @@ export const ContactsPage = () => {
     };
 
     if (!payload.firstName || !payload.lastName || !payload.phone || !payload.address) {
-      setError('กรุณากรอกข้อมูลให้ครบทุกช่อง');
+      setError('Please fill out all fields');
       setSubmitting(false);
       return;
     }
@@ -127,7 +127,7 @@ export const ContactsPage = () => {
         return;
       }
       if (response.status === 403) {
-        throw new Error('คุณไม่มีสิทธิ์แก้ไขข้อมูลนี้');
+        throw new Error('You do not have permission to edit this record');
       }
 
       if (!response.ok) {
@@ -164,7 +164,7 @@ export const ContactsPage = () => {
 
   const handleDelete = async (id?: string) => {
     if (!token || !id) return;
-    const confirmed = window.confirm('ยืนยันการลบข้อมูลนี้หรือไม่?');
+    const confirmed = window.confirm('Are you sure you want to delete this record?');
     if (!confirmed) return;
 
     try {
@@ -179,7 +179,7 @@ export const ContactsPage = () => {
         return;
       }
       if (response.status === 403) {
-        throw new Error('คุณไม่มีสิทธิ์ลบข้อมูลนี้');
+        throw new Error('You do not have permission to delete this record');
       }
       if (!response.ok) {
         const contentType = response.headers.get('content-type') || '';
@@ -199,21 +199,21 @@ export const ContactsPage = () => {
     <div className="container-fluid">
       {/* Page Heading */}
       <div className="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 className="h3 mb-0 text-gray-800">สมุดรายชื่อ</h1>
+        <h1 className="h3 mb-0 text-gray-800">Contacts</h1>
         <button className="btn btn-sm btn-secondary shadow-sm" onClick={performLogout}>
-          <i className="fas fa-sign-out-alt fa-sm text-white-50"></i> ออกจากระบบ
+          <i className="fas fa-sign-out-alt fa-sm text-white-50"></i> Logout
         </button>
       </div>
 
       <div className="card shadow mb-4">
         <div className="card-header py-3">
-          <h6 className="m-0 font-weight-bold text-primary">{editingId ? 'แก้ไขข้อมูล' : 'เพิ่มข้อมูลใหม่'}</h6>
+          <h6 className="m-0 font-weight-bold text-primary">{editingId ? 'Edit Contact' : 'Add New Contact'}</h6>
         </div>
         <div className="card-body">
           <form onSubmit={handleSubmit}>
             <div className="row">
               <div className="col-md-6 mb-3">
-                <label className="form-label">ชื่อ</label>
+                <label className="form-label">First Name</label>
                 <input
                   type="text"
                   className="form-control"
@@ -222,7 +222,7 @@ export const ContactsPage = () => {
                 />
               </div>
               <div className="col-md-6 mb-3">
-                <label className="form-label">นามสกุล</label>
+                <label className="form-label">Last Name</label>
                 <input
                   type="text"
                   className="form-control"
@@ -231,7 +231,7 @@ export const ContactsPage = () => {
                 />
               </div>
               <div className="col-md-6 mb-3">
-                <label className="form-label">เบอร์โทร</label>
+                <label className="form-label">Phone</label>
                 <input
                   type="tel"
                   className="form-control"
@@ -240,7 +240,7 @@ export const ContactsPage = () => {
                 />
               </div>
               <div className="col-md-12 mb-3">
-                <label className="form-label">ที่อยู่</label>
+                <label className="form-label">Address</label>
                 <textarea
                   className="form-control"
                   value={formData.address}
@@ -249,14 +249,14 @@ export const ContactsPage = () => {
                 />
               </div>
             </div>
-            {error && <div className="alert alert-danger">{error}</div>}
+              {error && <div className="alert alert-danger">{error}</div>}
             <div className="d-flex gap-2">
               <button type="submit" className="btn btn-primary" disabled={submitting}>
-                {submitting ? 'กำลังบันทึก...' : editingId ? 'บันทึกการแก้ไข' : 'เพิ่มข้อมูล'}
+                {submitting ? 'Saving...' : editingId ? 'Save changes' : 'Add contact'}
               </button>
               {editingId && (
                 <button type="button" className="btn btn-secondary" onClick={resetForm}>
-                  ยกเลิกการแก้ไข
+                  Cancel edit
                 </button>
               )}
             </div>
@@ -266,26 +266,26 @@ export const ContactsPage = () => {
 
       <div className="card shadow mb-4">
         <div className="card-header py-3 d-flex justify-content-between align-items-center">
-          <h6 className="m-0 font-weight-bold text-primary">รายการข้อมูล</h6>
+          <h6 className="m-0 font-weight-bold text-primary">Contact List</h6>
           <button className="btn btn-sm btn-info shadow-sm" onClick={fetchContacts} disabled={loading}>
-            {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
+            {loading ? 'Loading...' : 'Refresh'}
           </button>
         </div>
         <div className="card-body">
           {contacts.length === 0 && !loading ? (
-            <p className="text-center">ยังไม่มีข้อมูล ลองเพิ่มรายการใหม่</p>
+            <p className="text-center">No contacts yet. Try adding a new one.</p>
           ) : (
             <div className="table-responsive">
               <table className="table table-bordered" width="100%" cellSpacing={0}>
                 <thead>
                   <tr>
-                    <th>ชื่อ-นามสกุล</th>
-                    <th>เบอร์โทร</th>
-                    <th>ที่อยู่</th>
-                    <th>ผู้เพิ่ม (email)</th>
-                    <th>ผู้แก้ล่าสุด (email)</th>
-                    <th>อัปเดตล่าสุด</th>
-                    <th>จัดการ</th>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                    <th>Created By (email)</th>
+                    <th>Last Updated By (email)</th>
+                    <th>Last Updated</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -309,15 +309,15 @@ export const ContactsPage = () => {
                         <td>
                           {canModify ? (
                               <div className="btn-group">
-                                <button className="btn btn-sm btn-warning" aria-label="edit" title="แก้ไข" onClick={() => handleEdit(contact)}>
+                                <button className="btn btn-sm btn-warning" aria-label="edit" title="Edit" onClick={() => handleEdit(contact)}>
                                   <FaCog />
                                 </button>
-                                <button className="btn btn-sm btn-danger" aria-label="delete" title="ลบ" onClick={() => handleDelete(contact.id)}>
+                                <button className="btn btn-sm btn-danger" aria-label="delete" title="Delete" onClick={() => handleDelete(contact.id)}>
                                   <FaTrash />
                                 </button>
                               </div>
                             ) : (
-                              <span className="badge bg-secondary">ไม่มีสิทธิ์</span>
+                              <span className="badge bg-secondary">No permission</span>
                             )}
                         </td>
                       </tr>

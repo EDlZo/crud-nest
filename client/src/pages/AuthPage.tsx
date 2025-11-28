@@ -30,12 +30,12 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
     setError(null);
 
     if (!formData.email || !formData.password) {
-      setError('กรุณากรอกอีเมลและรหัสผ่าน');
+      setError('Please enter email and password');
       return;
     }
 
     if (mode === 'register' && formData.password !== formData.confirmPassword) {
-      setError('รหัสผ่านยืนยันไม่ตรงกัน');
+      setError('Password confirmation does not match');
       return;
     }
 
@@ -55,14 +55,14 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
 
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        const message =
-          (payload as { message?: string | string[] } | null)?.message ?? 'ไม่สามารถดำเนินการได้';
+          const message =
+            (payload as { message?: string | string[] } | null)?.message ?? 'Unable to complete request';
         throw new Error(Array.isArray(message) ? message[0] : message);
       }
 
       const data = payload as { token: string } | null;
       if (!data?.token) {
-        throw new Error('ไม่พบ token จากเซิร์ฟเวอร์');
+        throw new Error('No token received from server');
       }
       login(data.token);
       navigate('/');
@@ -76,16 +76,16 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
   return (
     <main className="auth-container">
       <section className="card auth-card">
-        <h1>{mode === 'login' ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก'}</h1>
+        <h1>{mode === 'login' ? 'Login' : 'Register'}</h1>
         <p className="auth-description">
           {mode === 'login'
-            ? 'กรอกอีเมลและรหัสผ่านเพื่อจัดการข้อมูลติดต่อ'
-            : 'สร้างบัญชีใหม่เพื่อเริ่มใช้งานสมุดรายชื่อ'}
+            ? 'Enter your email and password to manage contacts'
+            : 'Create a new account to start using the contact book'}
         </p>
 
         <form className="form" onSubmit={handleSubmit}>
           <label>
-            อีเมล
+            Email
             <input
               type="email"
               value={formData.email}
@@ -93,7 +93,7 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
             />
           </label>
           <label>
-            รหัสผ่าน
+            Password
             <input
               type="password"
               value={formData.password}
@@ -102,7 +102,7 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
           </label>
           {mode === 'register' && (
             <label>
-              ยืนยันรหัสผ่าน
+              Confirm Password
               <input
                 type="password"
                 value={formData.confirmPassword}
@@ -115,21 +115,21 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
           {error && <p className="error">{error}</p>}
           <button type="submit" disabled={submitting}>
             {submitting
-              ? 'กำลังดำเนินการ...'
+              ? 'Submitting...'
               : mode === 'login'
-              ? 'เข้าสู่ระบบ'
-              : 'สมัครสมาชิก'}
+              ? 'Login'
+              : 'Register'}
           </button>
         </form>
 
         <p className="auth-toggle">
           {mode === 'login' ? (
             <>
-              ยังไม่มีบัญชี? <Link to="/register">สมัครสมาชิก</Link>
+              No account? <Link to="/register">Register</Link>
             </>
           ) : (
             <>
-              มีบัญชีแล้ว? <Link to="/login">เข้าสู่ระบบ</Link>
+              Already have an account? <Link to="/login">Login</Link>
             </>
           )}
         </p>

@@ -68,11 +68,11 @@ export const AdminUsersPage = () => {
       if (data?.token) {
         try {
           await navigator.clipboard.writeText(data.token);
-          alert('โทเค็นใหม่ของผู้ใช้ถูกคัดลอกไปยังคลิปบอร์ดแล้ว\nส่งให้ผู้ใช้เพื่อให้ล็อกอินใหม่');
+          alert('New token copied to clipboard.\nSend it to the user so they can log in');
         } catch {
           // fallback: show prompt so admin can copy manually
           // eslint-disable-next-line no-alert
-          prompt('โทเค็นใหม่ของผู้ใช้ (คัดลอกด้วยมือ):', data.token);
+          prompt('User\'s new token (copy manually):', data.token);
         }
       }
     } catch (err) {
@@ -126,19 +126,19 @@ export const AdminUsersPage = () => {
 
         // If backend returned a token for this user, handle it
         if (data?.token) {
-          try {
+            try {
             // If the affected user is the currently logged-in user, prompt them to re-login
             if (user?.userId && data.userId === user.userId) {
               promptedSignOut = true;
             } else {
               // otherwise copy token for admin to deliver
               await navigator.clipboard.writeText(data.token);
-              alert('โทเค็นใหม่ของผู้ใช้ถูกคัดลอกไปยังคลิปบอร์ดแล้ว\nส่งให้ผู้ใช้เพื่อให้ล็อกอินใหม่');
+              alert('New token copied to clipboard.\nSend it to the user so they can log in');
             }
           } catch {
             // fallback: show prompt so admin can copy manually
             // eslint-disable-next-line no-alert
-            if (!(user?.userId && data.userId === user.userId)) prompt('โทเค็นใหม่ของผู้ใช้ (คัดลอกด้วยมือ):', data.token);
+            if (!(user?.userId && data.userId === user.userId)) prompt('User\'s new token (copy manually):', data.token);
           }
         }
       }
@@ -150,7 +150,7 @@ export const AdminUsersPage = () => {
         // show a modal-like alert then sign the user out and redirect to login
         // use confirm to ensure UX in this tab — we can replace with a nicer modal if desired
         // eslint-disable-next-line no-alert
-        const ok = confirm('สิทธิ์ของบัญชีคุณถูกเปลี่ยน. ต้องการออกจากระบบและไปยังหน้าเข้าสู่ระบบเพื่อสมัครสิทธิ์ใหม่หรือไม่?');
+        const ok = confirm('Your account permissions have changed. Do you want to log out and go to the login page to refresh your permissions?');
         if (ok) {
           logout();
           navigate('/login');
@@ -170,14 +170,14 @@ export const AdminUsersPage = () => {
     if (!token) return;
     setLoading(true);
     setError(null);
-    try {
+              alert('New token copied to clipboard.\nSend it to the user so they can log in');
       const res = await fetch('/auth/users/delete', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
       });
       if (!res.ok) throw new Error(await res.text());
-      await fetchUsers();
+                prompt('User\'s new token (copy manually):', data.token);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -204,22 +204,22 @@ export const AdminUsersPage = () => {
 
   return (
     <div className="container-fluid">
-      <h1 className="h3 mb-4 text-gray-800">จัดการผู้ใช้</h1>
+      <h1 className="h3 mb-4 text-gray-800">Manage Users</h1>
 
       <div className="card shadow mb-4">
         <div className="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-          <h6 className="m-0 font-weight-bold text-primary">รายการผู้ใช้และบทบาท</h6>
+          <h6 className="m-0 font-weight-bold text-primary">Users and Roles</h6>
           <div>
-            <button className="btn btn-sm btn-secondary me-2" onClick={fetchUsers} disabled={loading}>
-              {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
+              <button className="btn btn-sm btn-secondary me-2" onClick={fetchUsers} disabled={loading}>
+              {loading ? 'Loading...' : 'Refresh'}
             </button>
             {canManageRoles && hasPendingChanges() && (
               <>
                 <button className="btn btn-sm btn-primary me-2" onClick={saveAll} disabled={loading}>
-                  บันทึกการเปลี่ยนแปลง
+                  Save changes
                 </button>
                 <button className="btn btn-sm btn-danger" onClick={cancelAll} disabled={loading}>
-                  ยกเลิก
+                  Cancel
                 </button>
               </>
             )}
@@ -315,15 +315,15 @@ export const AdminUsersPage = () => {
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">ยืนยันการลบผู้ใช้</h5>
+                <h5 className="modal-title">Confirm Delete User</h5>
                 <button type="button" className="btn-close" onClick={cancelDelete}></button>
               </div>
               <div className="modal-body">
-                <p>คุณแน่ใจหรือไม่ว่าต้องการลบผู้ใช้ <strong>{confirmTarget.email}</strong> ? การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+                <p>Are you sure you want to delete user <strong>{confirmTarget.email}</strong>? This action cannot be undone.</p>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={cancelDelete}>ยกเลิก</button>
-                <button type="button" className="btn btn-danger" onClick={() => deleteUser(confirmTarget.userId)}>ลบ</button>
+                <button type="button" className="btn btn-secondary" onClick={cancelDelete}>Cancel</button>
+                <button type="button" className="btn btn-danger" onClick={() => deleteUser(confirmTarget.userId)}>Delete</button>
               </div>
             </div>
           </div>

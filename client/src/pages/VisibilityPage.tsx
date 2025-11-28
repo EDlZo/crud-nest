@@ -32,9 +32,9 @@ export const VisibilityPage = () => {
   };
 
   const pageKeys: { key: string; label: string }[] = [
-    { key: 'dashboard', label: 'จัดการข้อมูล' },
-    { key: 'admin_users', label: 'จัดการผู้ใช้' },
-    { key: 'visibility', label: 'จัดการการมองเห็น (หน้านี้)' },
+    { key: 'dashboard', label: 'Manage Data' },
+    { key: 'admin_users', label: 'Manage Users' },
+    { key: 'visibility', label: 'Visibility Settings (this page)' },
   ];
 
   const roles = ['superadmin', 'admin', 'guest'];
@@ -60,7 +60,7 @@ export const VisibilityPage = () => {
       });
       if (!res.ok) throw new Error(await res.text());
       await fetchVisibility();
-      alert('บันทึกการตั้งค่าการมองเห็นเรียบร้อยแล้ว');
+      alert('Visibility settings saved');
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -72,17 +72,17 @@ export const VisibilityPage = () => {
 
   return (
     <div className="container-fluid">
-      <h1 className="h3 mb-4 text-gray-800">ตั้งค่าการมองเห็นหน้าเว็บ</h1>
+      <h1 className="h3 mb-4 text-gray-800">Visibility Settings</h1>
 
       <div className="card shadow mb-4">
         <div className="card-header py-3">
-          <h6 className="m-0 font-weight-bold text-primary">เลือกหน้าที่แต่ละบทบาทสามารถมองเห็นได้</h6>
+          <h6 className="m-0 font-weight-bold text-primary">Select which pages each role can see</h6>
         </div>
         <div className="card-body">
           {error && <div className="alert alert-danger">{error}</div>}
           {loading && <div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div>}
           {!canManageVisibility && (
-            <div className="alert alert-warning">คุณสามารถดูการตั้งค่านี้ได้ แต่ต้องเป็น Superadmin เท่านั้นเพื่อแก้ไข</div>
+            <div className="alert alert-warning">You can view these settings, but only Superadmin can edit them</div>
           )}
 
           <div className="row">
@@ -117,10 +117,10 @@ export const VisibilityPage = () => {
 
           <div className="mt-3">
             <button className="btn btn-primary me-2" onClick={save} disabled={!canManageVisibility || loading}>
-              {loading ? 'กำลังบันทึก...' : 'บันทึก'}
+              {loading ? 'Saving...' : 'Save'}
             </button>
             <button className="btn btn-secondary" onClick={fetchVisibility} disabled={!canManageVisibility || loading}>
-              ยกเลิก
+              Cancel
             </button>
           </div>
         </div>

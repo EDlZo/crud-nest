@@ -31,7 +31,7 @@ export const CompaniesPage = () => {
     setSuccess(null);
 
     if (!form.name) {
-      setError('กรุณากรอกชื่อบริษัท');
+      setError('Please enter company name');
       return;
     }
 
@@ -66,10 +66,10 @@ export const CompaniesPage = () => {
       });
       if (!res.ok) {
         const payload = await res.json().catch(() => null);
-        const message = (payload && (payload.message || payload.error)) || 'ไม่สามารถส่งข้อมูลได้';
+        const message = (payload && (payload.message || payload.error)) || 'Unable to submit data';
         throw new Error(Array.isArray(message) ? message[0] : message);
       }
-      setSuccess('ส่งข้อมูลเรียบร้อยแล้ว ขอบคุณครับ');
+      setSuccess('Company submitted successfully. Thank you');
       setForm({
         name: '', address: '', phone: '', fax: '', taxId: '', branchName: '', branchNumber: '',
         website: '', contactEmail: '', lineId: '', facebook: '', instagram: '', avatarUrl: ''
@@ -83,53 +83,53 @@ export const CompaniesPage = () => {
 
   return (
     <div className="container-fluid">
-      <h1 className="h3 mb-4 text-gray-800">ส่งข้อมูลบริษัท/องค์กร</h1>
+      <h1 className="h3 mb-4 text-gray-800">Submit Company / Organization</h1>
 
       <div className="card shadow mb-4">
         <div className="card-header py-3">
-          <h6 className="m-0 font-weight-bold text-primary">ข้อมูลทั่วไป</h6>
+          <h6 className="m-0 font-weight-bold text-primary">General Information</h6>
         </div>
         <div className="card-body">
           <form onSubmit={handleSubmit}>
             <div className="row">
               <div className="col-md-6 mb-3">
-                <label className="form-label">ชื่อบริษัท <span className="text-danger">*</span></label>
+                <label className="form-label">Company Name <span className="text-danger">*</span></label>
                 <input className="form-control" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
               </div>
               <div className="col-md-6 mb-3">
-                <label className="form-label">เลขผู้เสียภาษี</label>
+                <label className="form-label">Tax ID</label>
                 <input className="form-control" value={form.taxId} onChange={(e) => setForm({ ...form, taxId: e.target.value })} />
               </div>
 
               <div className="col-md-6 mb-3">
-                <label className="form-label">ชื่อสาขา</label>
+                <label className="form-label">Branch Name</label>
                 <input className="form-control" value={form.branchName} onChange={(e) => setForm({ ...form, branchName: e.target.value })} />
               </div>
               <div className="col-md-6 mb-3">
-                <label className="form-label">รหัสสาขา</label>
+                <label className="form-label">Branch Code</label>
                 <input className="form-control" value={form.branchNumber} onChange={(e) => setForm({ ...form, branchNumber: e.target.value })} />
               </div>
 
               <div className="col-md-12 mb-3">
-                <label className="form-label">ที่อยู่</label>
+                <label className="form-label">Address</label>
                 <textarea className="form-control" rows={3} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
               </div>
 
               <div className="col-md-6 mb-3">
-                <label className="form-label">เบอร์โทรศัพท์</label>
+                <label className="form-label">Phone</label>
                 <input className="form-control" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
               </div>
               <div className="col-md-6 mb-3">
-                <label className="form-label">เบอร์แฟกซ์</label>
+                <label className="form-label">Fax</label>
                 <input className="form-control" value={form.fax} onChange={(e) => setForm({ ...form, fax: e.target.value })} />
               </div>
 
               <div className="col-md-6 mb-3">
-                <label className="form-label">อีเมลติดต่อ</label>
+                <label className="form-label">Contact Email</label>
                 <input type="email" className="form-control" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} />
               </div>
               <div className="col-md-6 mb-3">
-                <label className="form-label">รูปโปรไฟล์ (URL)</label>
+                <label className="form-label">Avatar URL</label>
                 <input className="form-control" value={form.avatarUrl} onChange={(e) => setForm({ ...form, avatarUrl: e.target.value })} placeholder="https://example.com/logo.png" />
               </div>
             </div>
@@ -159,7 +159,7 @@ export const CompaniesPage = () => {
             {success && <div className="alert alert-success">{success}</div>}
 
             <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? 'กำลังส่งข้อมูล...' : 'บันทึกข้อมูล'}
+              {submitting ? 'Submitting...' : 'Save'}
             </button>
           </form>
         </div>
