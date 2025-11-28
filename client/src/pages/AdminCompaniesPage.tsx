@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FaCog, FaTrash } from 'react-icons/fa';
 import '../App.css';
+import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
 import apiFetch from '../utils/api';
 
@@ -11,12 +12,31 @@ export const AdminCompaniesPage = () => {
   const [companies, setCompanies] = useState<Array<any>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [misconfigured, setMisconfigured] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    // In production, if VITE_API_BASE_URL is not set the config falls back to window.location.origin
+    // which means API calls will hit the SPA host and return HTML. Detect and show a clear message.
+    try {
+      if (!import.meta.env.DEV && API_BASE_URL === window.location.origin) {
+        setMisconfigured(true);
+        setError('API base URL not configured for production. Set `VITE_API_BASE_URL` to your backend URL so API requests reach the server (not the SPA).');
+      }
+    } catch (e) {
+      // ignore in environments where import.meta is unavailable
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchCompanies = async () => {
     setLoading(true);
     setError(null);
+    if (misconfigured) {
+      setLoading(false);
+      return;
+    }
     try {
       const data = await apiFetch('/companies', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
