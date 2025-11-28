@@ -1,10 +1,10 @@
 import { FormEvent, useState } from 'react';
 import '../App.css';
-import { API_BASE_URL } from '../config';
-
-const withBase = (path: string) => `${API_BASE_URL}${path}`;
+import { useAuth } from '../context/AuthContext';
+import apiFetch from '../utils/api';
 
 export const CompaniesPage = () => {
+  const { token } = useAuth();
   const [form, setForm] = useState({
     name: '',
     address: '',
@@ -59,16 +59,14 @@ export const CompaniesPage = () => {
         // contactEmail: form.contactEmail // DTO didn't show this, but I'll send it just in case or maybe it's unused.
       };
 
-      const res = await fetch(withBase('/companies'), {
+      await apiFetch('/companies', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        const message = (payload && (payload.message || payload.error)) || 'Unable to submit data';
-        throw new Error(Array.isArray(message) ? message[0] : message);
-      }
       setSuccess('Company submitted successfully. Thank you');
       setForm({
         name: '', address: '', phone: '', fax: '', taxId: '', branchName: '', branchNumber: '',
