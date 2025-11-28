@@ -71,48 +71,61 @@ export const VisibilityPage = () => {
   const canManageVisibility = user?.role === 'superadmin';
 
   return (
-    <main className="app">
-      <header className="app__header">
-        <div>
-          <h1>ตั้งค่าการมองเห็นหน้าเว็บ</h1>
-          <p>เลือกหน้าที่แต่ละบทบาทสามารถมองเห็นได้</p>
+    <div className="container-fluid">
+      <h1 className="h3 mb-4 text-gray-800">ตั้งค่าการมองเห็นหน้าเว็บ</h1>
+
+      <div className="card shadow mb-4">
+        <div className="card-header py-3">
+          <h6 className="m-0 font-weight-bold text-primary">เลือกหน้าที่แต่ละบทบาทสามารถมองเห็นได้</h6>
         </div>
-      </header>
+        <div className="card-body">
+          {error && <div className="alert alert-danger">{error}</div>}
+          {loading && <div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div>}
+          {!canManageVisibility && (
+            <div className="alert alert-warning">คุณสามารถดูการตั้งค่านี้ได้ แต่ต้องเป็น Superadmin เท่านั้นเพื่อแก้ไข</div>
+          )}
 
-      <section className="card">
-        {error && <p className="error">{error}</p>}
-        {loading && <p className="muted-text">กำลังโหลด...</p>}
-        {!canManageVisibility && (
-          <p className="muted-text">คุณสามารถดูการตั้งค่านี้ได้ แต่ต้องเป็น Superadmin เท่านั้นเพื่อแก้ไข</p>
-        )}
-
-        <div style={{ display: 'grid', gap: 12 }}>
-          {roles.map((role) => (
-            <div key={role} style={{ borderBottom: '1px dashed #e6eef8', paddingBottom: 8 }}>
-              <h3 style={{ margin: '0 0 8px' }}>{role}</h3>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                {pageKeys.map((p) => (
-                  <label key={p.key} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={Boolean(visibility?.[role]?.[p.key])}
-                      onChange={() => toggle(role, p.key)}
-                      disabled={!canManageVisibility}
-                    />
-                    <span>{p.label}</span>
-                  </label>
-                ))}
+          <div className="row">
+            {roles.map((role) => (
+              <div key={role} className="col-md-4 mb-4">
+                <div className="card border-left-primary shadow h-100 py-2">
+                  <div className="card-body">
+                    <div className="row no-gutters align-items-center">
+                      <div className="col mr-2">
+                        <div className="text-xs font-weight-bold text-primary text-uppercase mb-1">{role}</div>
+                        <div className="h5 mb-0 font-weight-bold text-gray-800">
+                          {pageKeys.map((p) => (
+                            <div key={p.key} className="form-check">
+                              <input
+                                className="form-check-input"
+                                type="checkbox"
+                                checked={Boolean(visibility?.[role]?.[p.key])}
+                                onChange={() => toggle(role, p.key)}
+                                disabled={!canManageVisibility}
+                              />
+                              <label className="form-check-label">{p.label}</label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-          <button onClick={save} disabled={!canManageVisibility || loading}>{loading ? 'กำลังบันทึก...' : 'บันทึก'}</button>
-          <button className="secondary" onClick={fetchVisibility} disabled={!canManageVisibility || loading}>ยกเลิก</button>
+          <div className="mt-3">
+            <button className="btn btn-primary me-2" onClick={save} disabled={!canManageVisibility || loading}>
+              {loading ? 'กำลังบันทึก...' : 'บันทึก'}
+            </button>
+            <button className="btn btn-secondary" onClick={fetchVisibility} disabled={!canManageVisibility || loading}>
+              ยกเลิก
+            </button>
+          </div>
         </div>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 };
 

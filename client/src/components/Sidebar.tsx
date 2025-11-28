@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FaLaughWink, FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt } from 'react-icons/fa';
+import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
     const location = useLocation();
+    const { user, logout } = useAuth();
     const isActive = (path: string) => location.pathname === path;
 
     return (
@@ -72,16 +74,34 @@ const Sidebar = () => {
             {/* Divider */}
             <hr className="sidebar-divider d-none d-md-block" />
 
-            {/* Logout */}
+            {/* User Profile & Logout */}
+            <div className="sidebar-heading">
+                User Profile
+            </div>
+
             <li className="nav-item">
-                <a className="nav-link" href="#" onClick={(e) => {
-                    e.preventDefault();
-                    localStorage.removeItem('crud-token');
-                    window.location.href = '/login';
-                }}>
-                    <FaSignOutAlt className="me-2" />
-                    <span>Logout</span>
-                </a>
+                <div className="nav-link d-flex flex-column align-items-start">
+                    <div className="d-flex align-items-center mb-2">
+                        <div className="rounded-circle bg-white d-flex align-items-center justify-content-center me-2" style={{ width: 32, height: 32 }}>
+                            <FaUser className="text-primary" />
+                        </div>
+                        <div className="d-flex flex-column">
+                            <span className="text-white small font-weight-bold">{user?.email || 'User'}</span>
+                            <span className="text-white-50 x-small" style={{ fontSize: '0.75rem' }}>{user?.role || 'Guest'}</span>
+                        </div>
+                    </div>
+                    <button
+                        className="btn btn-danger btn-sm w-100 d-flex align-items-center justify-content-center"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            logout();
+                            window.location.href = '/login';
+                        }}
+                    >
+                        <FaSignOutAlt className="me-2" />
+                        Logout
+                    </button>
+                </div>
             </li>
 
         </ul>

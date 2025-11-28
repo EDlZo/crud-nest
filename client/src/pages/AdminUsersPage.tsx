@@ -16,8 +16,8 @@ export const AdminUsersPage = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-    // pending role changes keyed by userId => role ('admin'|'superadmin'|'guest')
-    const [pending, setPending] = useState<Record<string, 'admin' | 'superadmin' | 'guest' | undefined>>({});
+  // pending role changes keyed by userId => role ('admin'|'superadmin'|'guest')
+  const [pending, setPending] = useState<Record<string, 'admin' | 'superadmin' | 'guest' | undefined>>({});
 
   useEffect(() => {
     if (!token) return;
@@ -192,111 +192,123 @@ export const AdminUsersPage = () => {
   // allow any authenticated user to view the users page in read-only mode
 
   return (
-    <main className="app">
-      <header className="app__header">
-        <div>
-          <h1>จัดการผู้ใช้</h1>
-          <p>รายการผู้ใช้และบทบาท</p>
-        </div>
-      </header>
+    <div className="container-fluid">
+      <h1 className="h3 mb-4 text-gray-800">จัดการผู้ใช้</h1>
 
-      <section className="card">
-        {error && <p className="error">{error}</p>}
-        <div style={{ marginBottom: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button className="secondary" onClick={fetchUsers} disabled={loading}>
-            {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
-          </button>
-          <div style={{ marginLeft: 'auto' }}>
-            <button onClick={saveAll} disabled={!canManageRoles || !hasPendingChanges() || loading} style={{ marginRight: 8 }}>
-              บันทึกการเปลี่ยนแปลง
+      <div className="card shadow mb-4">
+        <div className="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+          <h6 className="m-0 font-weight-bold text-primary">รายการผู้ใช้และบทบาท</h6>
+          <div>
+            <button className="btn btn-sm btn-secondary me-2" onClick={fetchUsers} disabled={loading}>
+              {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
             </button>
-            <button onClick={cancelAll} disabled={!canManageRoles || !hasPendingChanges() || loading} className="secondary">
-              ยกเลิก
-            </button>
+            {canManageRoles && hasPendingChanges() && (
+              <>
+                <button className="btn btn-sm btn-primary me-2" onClick={saveAll} disabled={loading}>
+                  บันทึกการเปลี่ยนแปลง
+                </button>
+                <button className="btn btn-sm btn-danger" onClick={cancelAll} disabled={loading}>
+                  ยกเลิก
+                </button>
+              </>
+            )}
           </div>
         </div>
+        <div className="card-body">
+          {error && <div className="alert alert-danger">{error}</div>}
 
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>email</th>
-                <th>userId</th>
-                <th>role</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => {
-                const selected = (typeof pending[u.userId] !== 'undefined' ? pending[u.userId] : (u.role ?? 'guest')) as 'admin' | 'superadmin' | 'guest' | undefined;
-                const changed = typeof pending[u.userId] !== 'undefined' && pending[u.userId] !== (u.role ?? 'guest');
-                return (
-                  <tr key={u.id} style={changed ? { background: 'rgba(110, 231, 183, 0.06)' } : undefined}>
-                    <td>{u.email}</td>
-                    <td>{u.userId}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                        <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <input
-                            type="radio"
-                            name={`role-${u.userId}`}
-                            checked={selected === 'admin'}
-                            onChange={() => setPendingRole(u.userId, 'admin')}
-                            disabled={!canManageRoles}
-                          />
-                          <span>Admin</span>
-                        </label>
-                        <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <input
-                            type="radio"
-                            name={`role-${u.userId}`}
-                            checked={selected === 'superadmin'}
-                            onChange={() => setPendingRole(u.userId, 'superadmin')}
-                            disabled={!canManageRoles}
-                          />
-                          <span>Super</span>
-                        </label>
-                        <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <input
-                            type="radio"
-                            name={`role-${u.userId}`}
-                            checked={selected === 'guest'}
-                            onChange={() => setPendingRole(u.userId, 'guest')}
-                            disabled={!canManageRoles}
-                          />
-                          <span>Guest</span>
-                        </label>
-                      </div>
-                    </td>
-                    <td style={{ width: 120, textAlign: 'right' }}>
-                      <button
-                        className="danger"
-                        onClick={() => openDeleteConfirm(u.userId, u.email)}
-                        disabled={loading || !canManageRoles}
-                        title="ลบผู้ใช้"
-                      >
-                        ลบ
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="table-responsive">
+            <table className="table table-bordered" width="100%" cellSpacing={0}>
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>User ID</th>
+                  <th>Role</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((u) => {
+                  const selected = (typeof pending[u.userId] !== 'undefined' ? pending[u.userId] : (u.role ?? 'guest')) as 'admin' | 'superadmin' | 'guest' | undefined;
+                  const changed = typeof pending[u.userId] !== 'undefined' && pending[u.userId] !== (u.role ?? 'guest');
+                  return (
+                    <tr key={u.id} className={changed ? 'table-warning' : ''}>
+                      <td>{u.email}</td>
+                      <td>{u.userId}</td>
+                      <td>
+                        <div className="d-flex gap-3">
+                          <div className="form-check">
+                            <input
+                              className="form-check-input"
+                              type="radio"
+                              name={`role-${u.userId}`}
+                              checked={selected === 'admin'}
+                              onChange={() => setPendingRole(u.userId, 'admin')}
+                              disabled={!canManageRoles}
+                            />
+                            <label className="form-check-label">Admin</label>
+                          </div>
+                          <div className="form-check">
+                            <input
+                              className="form-check-input"
+                              type="radio"
+                              name={`role-${u.userId}`}
+                              checked={selected === 'superadmin'}
+                              onChange={() => setPendingRole(u.userId, 'superadmin')}
+                              disabled={!canManageRoles}
+                            />
+                            <label className="form-check-label">Super</label>
+                          </div>
+                          <div className="form-check">
+                            <input
+                              className="form-check-input"
+                              type="radio"
+                              name={`role-${u.userId}`}
+                              checked={selected === 'guest'}
+                              onChange={() => setPendingRole(u.userId, 'guest')}
+                              disabled={!canManageRoles}
+                            />
+                            <label className="form-check-label">Guest</label>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <button
+                          className="btn btn-sm btn-danger"
+                          onClick={() => openDeleteConfirm(u.userId, u.email)}
+                          disabled={loading || !canManageRoles}
+                        >
+                          ลบ
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </section>
-      {confirmTarget ? (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-          <div style={{ background: '#fff', padding: 20, borderRadius: 8, width: 480, maxWidth: '94%' }}>
-            <h3>ยืนยันการลบผู้ใช้</h3>
-            <p>คุณแน่ใจหรือไม่ว่าต้องการลบผู้ใช้ <strong>{confirmTarget.email}</strong> ? การกระทำนี้ไม่สามารถย้อนกลับได้</p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-              <button className="secondary" onClick={cancelDelete} disabled={loading}>ยกเลิก</button>
-              <button className="danger" onClick={() => deleteUser(confirmTarget.userId)} disabled={loading}>ลบ</button>
+      </div>
+
+      {confirmTarget && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">ยืนยันการลบผู้ใช้</h5>
+                <button type="button" className="btn-close" onClick={cancelDelete}></button>
+              </div>
+              <div className="modal-body">
+                <p>คุณแน่ใจหรือไม่ว่าต้องการลบผู้ใช้ <strong>{confirmTarget.email}</strong> ? การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={cancelDelete}>ยกเลิก</button>
+                <button type="button" className="btn btn-danger" onClick={() => deleteUser(confirmTarget.userId)}>ลบ</button>
+              </div>
             </div>
           </div>
         </div>
-      ) : null}
-    </main>
+      )}
+    </div>
   );
 };
