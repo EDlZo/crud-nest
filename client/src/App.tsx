@@ -7,6 +7,8 @@ import { AdminUsersPage } from './pages/AdminUsersPage';
 import { VisibilityPage } from './pages/VisibilityPage';
 import { CompaniesPage } from './pages/CompaniesPage';
 import { AdminCompaniesPage } from './pages/AdminCompaniesPage';
+import Layout from './components/Layout';
+import DashboardPage from './pages/DashboardPage';
 
 function App() {
   return (
@@ -16,7 +18,19 @@ function App() {
           path="/"
           element={
             <ProtectedRoute>
-              <ContactsPage />
+              <Layout>
+                <DashboardPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/contacts"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <ContactsPage />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -26,7 +40,9 @@ function App() {
           path="/admin/users"
           element={
             <ProtectedRoute>
-              <AdminUsersPage />
+              <Layout>
+                <AdminUsersPage />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -34,16 +50,29 @@ function App() {
           path="/admin/visibility"
           element={
             <ProtectedRoute>
-              <VisibilityPage />
+              <Layout>
+                <VisibilityPage />
+              </Layout>
             </ProtectedRoute>
           }
         />
-        <Route path="/companies/new" element={<CompaniesPage />} />
+        <Route
+          path="/companies/new"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <CompaniesPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/admin/companies"
           element={
             <ProtectedRoute>
-              <AdminCompaniesPage />
+              <Layout>
+                <AdminCompaniesPage />
+              </Layout>
             </ProtectedRoute>
           }
         />

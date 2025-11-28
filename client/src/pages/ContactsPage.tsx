@@ -195,133 +195,138 @@ export const ContactsPage = () => {
   };
 
   return (
-    <main className="app">
-      <header className="app__header">
-        <div>
-          <h1>สมุดรายชื่อ</h1>
-       </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-         
-          <button className="secondary logout-btn" onClick={performLogout}>
-            ออกจากระบบ
-          </button>
+    <div className="container-fluid">
+      {/* Page Heading */}
+      <div className="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 className="h3 mb-0 text-gray-800">สมุดรายชื่อ</h1>
+        <button className="btn btn-sm btn-secondary shadow-sm" onClick={performLogout}>
+          <i className="fas fa-sign-out-alt fa-sm text-white-50"></i> ออกจากระบบ
+        </button>
+      </div>
+
+      <div className="card shadow mb-4">
+        <div className="card-header py-3">
+          <h6 className="m-0 font-weight-bold text-primary">{editingId ? 'แก้ไขข้อมูล' : 'เพิ่มข้อมูลใหม่'}</h6>
         </div>
-      </header>
-
-      <section className="card">
-        <h2>{editingId ? 'แก้ไขข้อมูล' : 'เพิ่มข้อมูลใหม่'}</h2>
-        <form onSubmit={handleSubmit} className="form">
-          <div className="grid">
-            <label>
-              ชื่อ
-              <input
-                type="text"
-                value={formData.firstName}
-                onChange={(e) => handleChange('firstName', e.target.value)}
-              />
-            </label>
-            <label>
-              นามสกุล
-              <input
-                type="text"
-                value={formData.lastName}
-                onChange={(e) => handleChange('lastName', e.target.value)}
-              />
-            </label>
-            <label>
-              เบอร์โทร
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-              />
-            </label>
-            <label className="full">
-              ที่อยู่
-              <textarea
-                value={formData.address}
-                onChange={(e) => handleChange('address', e.target.value)}
-                rows={3}
-              />
-            </label>
-          </div>
-          {error && <p className="error">{error}</p>}
-          <div className="actions">
-            <button type="submit" disabled={submitting}>
-              {submitting ? 'กำลังบันทึก...' : editingId ? 'บันทึกการแก้ไข' : 'เพิ่มข้อมูล'}
-            </button>
-            {editingId && (
-              <button type="button" className="secondary" onClick={resetForm}>
-                ยกเลิกการแก้ไข
+        <div className="card-body">
+          <form onSubmit={handleSubmit}>
+            <div className="row">
+              <div className="col-md-6 mb-3">
+                <label className="form-label">ชื่อ</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={formData.firstName}
+                  onChange={(e) => handleChange('firstName', e.target.value)}
+                />
+              </div>
+              <div className="col-md-6 mb-3">
+                <label className="form-label">นามสกุล</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={formData.lastName}
+                  onChange={(e) => handleChange('lastName', e.target.value)}
+                />
+              </div>
+              <div className="col-md-6 mb-3">
+                <label className="form-label">เบอร์โทร</label>
+                <input
+                  type="tel"
+                  className="form-control"
+                  value={formData.phone}
+                  onChange={(e) => handleChange('phone', e.target.value)}
+                />
+              </div>
+              <div className="col-md-12 mb-3">
+                <label className="form-label">ที่อยู่</label>
+                <textarea
+                  className="form-control"
+                  value={formData.address}
+                  onChange={(e) => handleChange('address', e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            {error && <div className="alert alert-danger">{error}</div>}
+            <div className="d-flex gap-2">
+              <button type="submit" className="btn btn-primary" disabled={submitting}>
+                {submitting ? 'กำลังบันทึก...' : editingId ? 'บันทึกการแก้ไข' : 'เพิ่มข้อมูล'}
               </button>
-            )}
-          </div>
-        </form>
-      </section>
+              {editingId && (
+                <button type="button" className="btn btn-secondary" onClick={resetForm}>
+                  ยกเลิกการแก้ไข
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      </div>
 
-      <section className="card">
-        <div className="list-header">
-          <h2>รายการข้อมูล</h2>
-          <button className="secondary" onClick={fetchContacts} disabled={loading}>
+      <div className="card shadow mb-4">
+        <div className="card-header py-3 d-flex justify-content-between align-items-center">
+          <h6 className="m-0 font-weight-bold text-primary">รายการข้อมูล</h6>
+          <button className="btn btn-sm btn-info shadow-sm" onClick={fetchContacts} disabled={loading}>
             {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
           </button>
         </div>
-        {contacts.length === 0 && !loading ? (
-          <p>ยังไม่มีข้อมูล ลองเพิ่มรายการใหม่</p>
-        ) : (
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>ชื่อ-นามสกุล</th>
-                  <th>เบอร์โทร</th>
-                  <th>ที่อยู่</th>
-                  <th>ผู้เพิ่ม (email)</th>
-                  <th>ผู้แก้ล่าสุด (email)</th>
-                  <th>อัปเดตล่าสุด</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {contacts.map((contact) => {
-                  // Only allow modification if the current logged-in user is the owner
-                  const canModify =
-                    user?.role === 'admin' || user?.role === 'superadmin' || contact.userId === user?.userId;
-                  return (
-                    <tr key={contact.id}>
-                      <td>
-                        <strong>
-                          {contact.firstName} {contact.lastName}
-                        </strong>
-                      </td>
-                      <td>{contact.phone}</td>
-                      <td>{contact.address}</td>
-                      <td>{contact.userEmail ?? '-'}</td>
-                      <td>{contact.updatedByEmail ?? '-'}</td>
-                      <td>
-                        {contact.updatedAt ? new Date(contact.updatedAt).toLocaleString() : '-'}
-                      </td>
-                      <td className="actions-cell">
-                        {canModify ? (
-                          <>
-                            <button onClick={() => handleEdit(contact)}>แก้ไข</button>
-                            <button className="danger" onClick={() => handleDelete(contact.id)}>
-                              ลบ
-                            </button>
-                          </>
-                        ) : (
-                          <span className="muted-text">ไม่มีสิทธิ์</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-    </main>
+        <div className="card-body">
+          {contacts.length === 0 && !loading ? (
+            <p className="text-center">ยังไม่มีข้อมูล ลองเพิ่มรายการใหม่</p>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-bordered" width="100%" cellSpacing={0}>
+                <thead>
+                  <tr>
+                    <th>ชื่อ-นามสกุล</th>
+                    <th>เบอร์โทร</th>
+                    <th>ที่อยู่</th>
+                    <th>ผู้เพิ่ม (email)</th>
+                    <th>ผู้แก้ล่าสุด (email)</th>
+                    <th>อัปเดตล่าสุด</th>
+                    <th>จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contacts.map((contact) => {
+                    const canModify =
+                      user?.role === 'admin' || user?.role === 'superadmin' || contact.userId === user?.userId;
+                    return (
+                      <tr key={contact.id}>
+                        <td>
+                          <strong>
+                            {contact.firstName} {contact.lastName}
+                          </strong>
+                        </td>
+                        <td>{contact.phone}</td>
+                        <td>{contact.address}</td>
+                        <td>{contact.userEmail ?? '-'}</td>
+                        <td>{contact.updatedByEmail ?? '-'}</td>
+                        <td>
+                          {contact.updatedAt ? new Date(contact.updatedAt).toLocaleString() : '-'}
+                        </td>
+                        <td>
+                          {canModify ? (
+                            <div className="btn-group">
+                              <button className="btn btn-sm btn-warning" onClick={() => handleEdit(contact)}>แก้ไข</button>
+                              <button className="btn btn-sm btn-danger" onClick={() => handleDelete(contact.id)}>
+                                ลบ
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="badge bg-secondary">ไม่มีสิทธิ์</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
