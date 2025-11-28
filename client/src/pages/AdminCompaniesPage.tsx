@@ -107,10 +107,10 @@ export const AdminCompaniesPage = () => {
           <p className="mb-2">API base URL not configured for production.</p>
           <p className="mb-2">Set <code>VITE_API_BASE_URL</code> to your backend URL so API requests reach the server (not the SPA). Example:</p>
           <pre className="small">VITE_API_BASE_URL=https://api.example.com</pre>
-          <div className="mt-2">
+          <div className="mt-2 mb-2">
             <button
               type="button"
-              className="btn btn-sm btn-secondary"
+              className="btn btn-sm btn-secondary mr-2"
               onClick={() => {
                 const example = 'VITE_API_BASE_URL=https://api.example.com';
                 try {
@@ -124,6 +124,56 @@ export const AdminCompaniesPage = () => {
             >
               Copy example
             </button>
+          </div>
+
+          <div className="mb-2">
+            <label className="form-label">Temporary override (stores in browser)</label>
+            <div className="input-group">
+              <input type="text" id="api-override" className="form-control form-control-sm" placeholder="https://api.example.com" />
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                onClick={() => {
+                  const el = document.getElementById('api-override') as HTMLInputElement | null;
+                  if (!el) return;
+                  const v = el.value.trim();
+                  if (!v) {
+                    // eslint-disable-next-line no-alert
+                    alert('Please enter a URL');
+                    return;
+                  }
+                  try {
+                    window.localStorage.setItem('API_BASE_URL_OVERRIDE', v.replace(/\/$/, ''));
+                    // eslint-disable-next-line no-alert
+                    alert('Saved override. Fetching companies...');
+                    setMisconfigured(false);
+                    fetchCompanies();
+                  } catch (e) {
+                    // eslint-disable-next-line no-alert
+                    alert('Unable to save override in this browser');
+                  }
+                }}
+              >
+                Save override
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                onClick={() => {
+                  try {
+                    window.localStorage.removeItem('API_BASE_URL_OVERRIDE');
+                    // eslint-disable-next-line no-alert
+                    alert('Override cleared. Reload the page if needed.');
+                    setMisconfigured(true);
+                    setError('API base URL not configured for production. Please set VITE_API_BASE_URL in your host.');
+                  } catch (e) {
+                    // ignore
+                  }
+                }}
+              >
+                Clear
+              </button>
+            </div>
           </div>
         </div>
       ) : (

@@ -1,9 +1,26 @@
-import { API_BASE_URL } from '../config';
-
 type FetchOptions = RequestInit | undefined;
 
+function getApiBase() {
+  // runtime override from localStorage (key: API_BASE_URL_OVERRIDE)
+  if (typeof window !== 'undefined') {
+    const override = window.localStorage.getItem('API_BASE_URL_OVERRIDE');
+    if (override && override.trim()) return override.trim().replace(/\/$/, '');
+  }
+
+  const envBase = import.meta.env.VITE_API_BASE_URL?.trim();
+  if (envBase) return envBase.replace(/\/$/, '');
+
+  if (import.meta.env.DEV) return '';
+
+  // fallback to current origin in production (may be misconfigured)
+  if (typeof window !== 'undefined') return window.location.origin.replace(/\/$/, '');
+
+  return '';
+}
+
 export async function apiFetch(path: string, options?: FetchOptions) {
-  const full = `${API_BASE_URL}${path}`;
+  const base = getApiBase();
+  const full = `${base}${path}`;
   const res = await fetch(full, options);
 
   const contentType = res.headers.get('content-type') || '';
