@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { FaCog, FaTrash } from 'react-icons/fa';
+import { FaPen, FaTrash } from 'react-icons/fa';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -200,9 +200,7 @@ export const ContactsPage = () => {
       {/* Page Heading */}
       <div className="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 className="h3 mb-0 text-gray-800">Contacts</h1>
-        <button className="btn btn-sm btn-secondary shadow-sm" onClick={performLogout}>
-          <i className="fas fa-sign-out-alt fa-sm text-white-50"></i> Logout
-        </button>
+        
       </div>
 
       <div className="card shadow mb-4">
@@ -309,10 +307,10 @@ export const ContactsPage = () => {
                         <td>
                           {canModify ? (
                               <div className="btn-group">
-                                <button className="btn btn-sm btn-warning" aria-label="edit" title="Edit" onClick={() => handleEdit(contact)}>
-                                  <FaCog />
+                                <button className="icon-btn edit" aria-label="edit" title="Edit" onClick={() => handleEdit(contact)}>
+                                  <FaPen />
                                 </button>
-                                <button className="btn btn-sm btn-danger" aria-label="delete" title="Delete" onClick={() => handleDelete(contact.id)}>
+                                <button className="icon-btn delete" aria-label="delete" title="Delete" onClick={() => handleDelete(contact.id)}>
                                   <FaTrash />
                                 </button>
                               </div>

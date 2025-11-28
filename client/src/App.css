@@ -187,6 +187,27 @@ table th:last-child .btn {
   padding: 0;
 }
 
+/* Icon-only buttons for table actions */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.icon-btn:hover { opacity: 0.9; transform: none; }
+
+.icon-btn.edit { color: #c2410c; } /* amber/darker for edit */
+.icon-btn.delete { color: #dc2626; } /* red for delete */
+
+.icon-btn svg { width: 18px; height: 18px; }
+
 .muted-text {
   color: #94a3b8;
   font-size: 0.85rem;
