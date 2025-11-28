@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaTimesCircle, FaUserCircle } from 'react-icons/fa';
+import { FaTrash, FaUserCircle } from 'react-icons/fa';
 import '../App.css';
 
 type User = {

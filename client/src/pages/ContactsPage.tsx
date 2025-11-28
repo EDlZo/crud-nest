@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FaCog, FaTrash } from 'react-icons/fa';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -307,15 +308,17 @@ export const ContactsPage = () => {
                         </td>
                         <td>
                           {canModify ? (
-                            <div className="btn-group">
-                              <button className="btn btn-sm btn-warning" onClick={() => handleEdit(contact)}>แก้ไข</button>
-                              <button className="btn btn-sm btn-danger" onClick={() => handleDelete(contact.id)}>
-                                ลบ
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="badge bg-secondary">ไม่มีสิทธิ์</span>
-                          )}
+                              <div className="btn-group">
+                                <button className="btn btn-sm btn-warning" aria-label="edit" title="แก้ไข" onClick={() => handleEdit(contact)}>
+                                  <FaCog />
+                                </button>
+                                <button className="btn btn-sm btn-danger" aria-label="delete" title="ลบ" onClick={() => handleDelete(contact.id)}>
+                                  <FaTrash />
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="badge bg-secondary">ไม่มีสิทธิ์</span>
+                            )}
                         </td>
                       </tr>
                     );

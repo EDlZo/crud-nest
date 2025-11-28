@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { FaCog, FaTrash } from 'react-icons/fa';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -109,8 +110,12 @@ export const AdminCompaniesPage = () => {
                 <td>{company.website}</td>
                 <td>{company.status}</td>
                 <td>
-                  <button className="btn btn-primary btn-sm" onClick={() => handleEdit(company)}>แก้ไข</button>
-                  <button className="btn btn-danger btn-sm" onClick={() => handleDelete(company.id)}>ลบ</button>
+                  <button className="btn btn-primary btn-sm" aria-label="edit" title="แก้ไข" onClick={() => handleEdit(company)}>
+                    <FaCog />
+                  </button>
+                  <button className="btn btn-danger btn-sm" aria-label="delete" title="ลบ" onClick={() => handleDelete(company.id)}>
+                    <FaTrash />
+                  </button>
                 </td>
               </tr>
             ))}
