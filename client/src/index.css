@@ -4,8 +4,36 @@
 
 body {
   margin: 0;
-  font-family: 'Noto Sans Thai', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'TorsilpKanittha', 'Kanit', 'Noto Sans Thai', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #ffffff;
   color: #0b2545;
+}
+
+/* Theme button overrides to match the requested look */
+.btn-primary {
+  --bs-btn-bg: #0d6efd;
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: #fff;
+}
+.btn-primary:hover {
+  background-color: #0b5ed7;
+  border-color: #0b5ed7;
+}
+
+.btn-info {
+  --bs-btn-bg: #11cdef;
+  background-color: #11cdef;
+  border-color: #11cdef;
+  color: #fff;
+}
+.btn-info:hover {
+  background-color: #0fb4d6;
+  border-color: #0fb4d6;
+}
+
+/* Small visual polish to match screenshot: rounded small buttons */
+.btn-sm {
+  border-radius: 8px;
 }
 
