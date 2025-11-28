@@ -31,9 +31,9 @@ export const VisibilityPage = () => {
         }
     };
     const pageKeys = [
-        { key: 'dashboard', label: 'จัดการข้อมูล' },
-        { key: 'admin_users', label: 'จัดการผู้ใช้' },
-        { key: 'visibility', label: 'จัดการการมองเห็น (หน้านี้)' },
+        { key: 'dashboard', label: 'Manage Data' },
+        { key: 'admin_users', label: 'Manage Users' },
+        { key: 'visibility', label: 'Visibility Settings (this page)' },
     ];
     const roles = ['superadmin', 'admin', 'guest'];
     const toggle = (role, pageKey) => {
@@ -58,7 +58,7 @@ export const VisibilityPage = () => {
             if (!res.ok)
                 throw new Error(await res.text());
             await fetchVisibility();
-            alert('บันทึกการตั้งค่าการมองเห็นเรียบร้อยแล้ว');
+            alert('Visibility settings saved');
         }
         catch (err) {
             setError(err.message);
@@ -68,6 +68,6 @@ export const VisibilityPage = () => {
         }
     };
     const canManageVisibility = user?.role === 'superadmin';
-    return (_jsxs("div", { className: "container-fluid", children: [_jsx("h1", { className: "h3 mb-4 text-gray-800", children: "\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E01\u0E32\u0E23\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A" }), _jsxs("div", { className: "card shadow mb-4", children: [_jsx("div", { className: "card-header py-3", children: _jsx("h6", { className: "m-0 font-weight-bold text-primary", children: "\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E41\u0E15\u0E48\u0E25\u0E30\u0E1A\u0E17\u0E1A\u0E32\u0E17\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49" }) }), _jsxs("div", { className: "card-body", children: [error && _jsx("div", { className: "alert alert-danger", children: error }), loading && _jsx("div", { className: "spinner-border text-primary", role: "status", children: _jsx("span", { className: "visually-hidden", children: "Loading..." }) }), !canManageVisibility && (_jsx("div", { className: "alert alert-warning", children: "\u0E04\u0E38\u0E13\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E14\u0E39\u0E01\u0E32\u0E23\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E19\u0E35\u0E49\u0E44\u0E14\u0E49 \u0E41\u0E15\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E1B\u0E47\u0E19 Superadmin \u0E40\u0E17\u0E48\u0E32\u0E19\u0E31\u0E49\u0E19\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E41\u0E01\u0E49\u0E44\u0E02" })), _jsx("div", { className: "row", children: roles.map((role) => (_jsx("div", { className: "col-md-4 mb-4", children: _jsx("div", { className: "card border-left-primary shadow h-100 py-2", children: _jsx("div", { className: "card-body", children: _jsx("div", { className: "row no-gutters align-items-center", children: _jsxs("div", { className: "col mr-2", children: [_jsx("div", { className: "text-xs font-weight-bold text-primary text-uppercase mb-1", children: role }), _jsx("div", { className: "h5 mb-0 font-weight-bold text-gray-800", children: pageKeys.map((p) => (_jsxs("div", { className: "form-check", children: [_jsx("input", { className: "form-check-input", type: "checkbox", checked: Boolean(visibility?.[role]?.[p.key]), onChange: () => toggle(role, p.key), disabled: !canManageVisibility }), _jsx("label", { className: "form-check-label", children: p.label })] }, p.key))) })] }) }) }) }) }, role))) }), _jsxs("div", { className: "mt-3", children: [_jsx("button", { className: "btn btn-primary me-2", onClick: save, disabled: !canManageVisibility || loading, children: loading ? 'กำลังบันทึก...' : 'บันทึก' }), _jsx("button", { className: "btn btn-secondary", onClick: fetchVisibility, disabled: !canManageVisibility || loading, children: "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01" })] })] })] })] }));
+    return (_jsxs("div", { className: "container-fluid", children: [_jsx("h1", { className: "h3 mb-4 text-gray-800", children: "Visibility Settings" }), _jsxs("div", { className: "card shadow mb-4", children: [_jsx("div", { className: "card-header py-3", children: _jsx("h6", { className: "m-0 font-weight-bold text-primary", children: "Select which pages each role can see" }) }), _jsxs("div", { className: "card-body", children: [error && _jsx("div", { className: "alert alert-danger", children: error }), loading && _jsx("div", { className: "spinner-border text-primary", role: "status", children: _jsx("span", { className: "visually-hidden", children: "Loading..." }) }), !canManageVisibility && (_jsx("div", { className: "alert alert-warning", children: "You can view these settings, but only Superadmin can edit them" })), _jsx("div", { className: "row", children: roles.map((role) => (_jsx("div", { className: "col-md-4 mb-4", children: _jsx("div", { className: "card border-left-primary shadow h-100 py-2", children: _jsx("div", { className: "card-body", children: _jsx("div", { className: "row no-gutters align-items-center", children: _jsxs("div", { className: "col mr-2", children: [_jsx("div", { className: "text-xs font-weight-bold text-primary text-uppercase mb-1", children: role }), _jsx("div", { className: "h5 mb-0 font-weight-bold text-gray-800", children: pageKeys.map((p) => (_jsxs("div", { className: "form-check", children: [_jsx("input", { className: "form-check-input", type: "checkbox", checked: Boolean(visibility?.[role]?.[p.key]), onChange: () => toggle(role, p.key), disabled: !canManageVisibility }), _jsx("label", { className: "form-check-label", children: p.label })] }, p.key))) })] }) }) }) }) }, role))) }), _jsxs("div", { className: "mt-3", children: [_jsx("button", { className: "btn btn-primary me-2", onClick: save, disabled: !canManageVisibility || loading, children: loading ? 'Saving...' : 'Save' }), _jsx("button", { className: "btn btn-secondary", onClick: fetchVisibility, disabled: !canManageVisibility || loading, children: "Cancel" })] })] })] })] }));
 };
 export default VisibilityPage;

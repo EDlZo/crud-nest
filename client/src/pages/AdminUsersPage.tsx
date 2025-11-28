@@ -170,14 +170,14 @@ export const AdminUsersPage = () => {
     if (!token) return;
     setLoading(true);
     setError(null);
-              alert('New token copied to clipboard.\nSend it to the user so they can log in');
+    try {
       const res = await fetch('/auth/users/delete', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
       });
       if (!res.ok) throw new Error(await res.text());
-                prompt('User\'s new token (copy manually):', data.token);
+      await fetchUsers();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -282,7 +282,7 @@ export const AdminUsersPage = () => {
                             onClick={() => openDeleteConfirm(u.userId, u.email)}
                             disabled={loading || !canManageRoles}
                           >
-                            <FaTimesCircle size={18} />
+                            <FaTrash size={18} />
                           </button>
                         </div>
                       </td>

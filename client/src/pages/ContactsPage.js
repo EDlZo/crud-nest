@@ -1,5 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useCallback, useEffect, useState } from 'react';
+import { FaCog, FaTrash } from 'react-icons/fa';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -23,7 +24,7 @@ export const ContactsPage = () => {
         logout();
     };
     const handleUnauthorized = () => {
-        setError('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+        setError('Session expired. Please log in again');
         performLogout();
     };
     const fetchContacts = useCallback(async () => {
@@ -42,7 +43,7 @@ export const ContactsPage = () => {
                 return;
             }
             if (response.status === 403) {
-                throw new Error('คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้');
+                throw new Error('You do not have permission to access this resource');
             }
             if (!response.ok) {
                 const contentType = response.headers.get('content-type') || '';
@@ -82,7 +83,7 @@ export const ContactsPage = () => {
             address: formData.address.trim(),
         };
         if (!payload.firstName || !payload.lastName || !payload.phone || !payload.address) {
-            setError('กรุณากรอกข้อมูลให้ครบทุกช่อง');
+            setError('Please fill out all fields');
             setSubmitting(false);
             return;
         }
@@ -101,7 +102,7 @@ export const ContactsPage = () => {
                 return;
             }
             if (response.status === 403) {
-                throw new Error('คุณไม่มีสิทธิ์แก้ไขข้อมูลนี้');
+                throw new Error('You do not have permission to edit this record');
             }
             if (!response.ok) {
                 const contentType = response.headers.get('content-type') || '';
@@ -137,7 +138,7 @@ export const ContactsPage = () => {
     const handleDelete = async (id) => {
         if (!token || !id)
             return;
-        const confirmed = window.confirm('ยืนยันการลบข้อมูลนี้หรือไม่?');
+        const confirmed = window.confirm('Are you sure you want to delete this record?');
         if (!confirmed)
             return;
         try {
@@ -152,7 +153,7 @@ export const ContactsPage = () => {
                 return;
             }
             if (response.status === 403) {
-                throw new Error('คุณไม่มีสิทธิ์ลบข้อมูลนี้');
+                throw new Error('You do not have permission to delete this record');
             }
             if (!response.ok) {
                 const contentType = response.headers.get('content-type') || '';
@@ -168,8 +169,8 @@ export const ContactsPage = () => {
             setError(err.message);
         }
     };
-    return (_jsxs("div", { className: "container-fluid", children: [_jsxs("div", { className: "d-sm-flex align-items-center justify-content-between mb-4", children: [_jsx("h1", { className: "h3 mb-0 text-gray-800", children: "\u0E2A\u0E21\u0E38\u0E14\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D" }), _jsxs("button", { className: "btn btn-sm btn-secondary shadow-sm", onClick: performLogout, children: [_jsx("i", { className: "fas fa-sign-out-alt fa-sm text-white-50" }), " \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E23\u0E30\u0E1A\u0E1A"] })] }), _jsxs("div", { className: "card shadow mb-4", children: [_jsx("div", { className: "card-header py-3", children: _jsx("h6", { className: "m-0 font-weight-bold text-primary", children: editingId ? 'แก้ไขข้อมูล' : 'เพิ่มข้อมูลใหม่' }) }), _jsx("div", { className: "card-body", children: _jsxs("form", { onSubmit: handleSubmit, children: [_jsxs("div", { className: "row", children: [_jsxs("div", { className: "col-md-6 mb-3", children: [_jsx("label", { className: "form-label", children: "\u0E0A\u0E37\u0E48\u0E2D" }), _jsx("input", { type: "text", className: "form-control", value: formData.firstName, onChange: (e) => handleChange('firstName', e.target.value) })] }), _jsxs("div", { className: "col-md-6 mb-3", children: [_jsx("label", { className: "form-label", children: "\u0E19\u0E32\u0E21\u0E2A\u0E01\u0E38\u0E25" }), _jsx("input", { type: "text", className: "form-control", value: formData.lastName, onChange: (e) => handleChange('lastName', e.target.value) })] }), _jsxs("div", { className: "col-md-6 mb-3", children: [_jsx("label", { className: "form-label", children: "\u0E40\u0E1A\u0E2D\u0E23\u0E4C\u0E42\u0E17\u0E23" }), _jsx("input", { type: "tel", className: "form-control", value: formData.phone, onChange: (e) => handleChange('phone', e.target.value) })] }), _jsxs("div", { className: "col-md-12 mb-3", children: [_jsx("label", { className: "form-label", children: "\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48" }), _jsx("textarea", { className: "form-control", value: formData.address, onChange: (e) => handleChange('address', e.target.value), rows: 3 })] })] }), error && _jsx("div", { className: "alert alert-danger", children: error }), _jsxs("div", { className: "d-flex gap-2", children: [_jsx("button", { type: "submit", className: "btn btn-primary", disabled: submitting, children: submitting ? 'กำลังบันทึก...' : editingId ? 'บันทึกการแก้ไข' : 'เพิ่มข้อมูล' }), editingId && (_jsx("button", { type: "button", className: "btn btn-secondary", onClick: resetForm, children: "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E01\u0E32\u0E23\u0E41\u0E01\u0E49\u0E44\u0E02" }))] })] }) })] }), _jsxs("div", { className: "card shadow mb-4", children: [_jsxs("div", { className: "card-header py-3 d-flex justify-content-between align-items-center", children: [_jsx("h6", { className: "m-0 font-weight-bold text-primary", children: "\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25" }), _jsx("button", { className: "btn btn-sm btn-info shadow-sm", onClick: fetchContacts, disabled: loading, children: loading ? 'กำลังโหลด...' : 'รีเฟรช' })] }), _jsx("div", { className: "card-body", children: contacts.length === 0 && !loading ? (_jsx("p", { className: "text-center", children: "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25 \u0E25\u0E2D\u0E07\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E43\u0E2B\u0E21\u0E48" })) : (_jsx("div", { className: "table-responsive", children: _jsxs("table", { className: "table table-bordered", width: "100%", cellSpacing: 0, children: [_jsx("thead", { children: _jsxs("tr", { children: [_jsx("th", { children: "\u0E0A\u0E37\u0E48\u0E2D-\u0E19\u0E32\u0E21\u0E2A\u0E01\u0E38\u0E25" }), _jsx("th", { children: "\u0E40\u0E1A\u0E2D\u0E23\u0E4C\u0E42\u0E17\u0E23" }), _jsx("th", { children: "\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48" }), _jsx("th", { children: "\u0E1C\u0E39\u0E49\u0E40\u0E1E\u0E34\u0E48\u0E21 (email)" }), _jsx("th", { children: "\u0E1C\u0E39\u0E49\u0E41\u0E01\u0E49\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 (email)" }), _jsx("th", { children: "\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14" }), _jsx("th", { children: "\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23" })] }) }), _jsx("tbody", { children: contacts.map((contact) => {
+    return (_jsxs("div", { className: "container-fluid", children: [_jsxs("div", { className: "d-sm-flex align-items-center justify-content-between mb-4", children: [_jsx("h1", { className: "h3 mb-0 text-gray-800", children: "Contacts" }), _jsxs("button", { className: "btn btn-sm btn-secondary shadow-sm", onClick: performLogout, children: [_jsx("i", { className: "fas fa-sign-out-alt fa-sm text-white-50" }), " Logout"] })] }), _jsxs("div", { className: "card shadow mb-4", children: [_jsx("div", { className: "card-header py-3", children: _jsx("h6", { className: "m-0 font-weight-bold text-primary", children: editingId ? 'Edit Contact' : 'Add New Contact' }) }), _jsx("div", { className: "card-body", children: _jsxs("form", { onSubmit: handleSubmit, children: [_jsxs("div", { className: "row", children: [_jsxs("div", { className: "col-md-6 mb-3", children: [_jsx("label", { className: "form-label", children: "First Name" }), _jsx("input", { type: "text", className: "form-control", value: formData.firstName, onChange: (e) => handleChange('firstName', e.target.value) })] }), _jsxs("div", { className: "col-md-6 mb-3", children: [_jsx("label", { className: "form-label", children: "Last Name" }), _jsx("input", { type: "text", className: "form-control", value: formData.lastName, onChange: (e) => handleChange('lastName', e.target.value) })] }), _jsxs("div", { className: "col-md-6 mb-3", children: [_jsx("label", { className: "form-label", children: "Phone" }), _jsx("input", { type: "tel", className: "form-control", value: formData.phone, onChange: (e) => handleChange('phone', e.target.value) })] }), _jsxs("div", { className: "col-md-12 mb-3", children: [_jsx("label", { className: "form-label", children: "Address" }), _jsx("textarea", { className: "form-control", value: formData.address, onChange: (e) => handleChange('address', e.target.value), rows: 3 })] })] }), error && _jsx("div", { className: "alert alert-danger", children: error }), _jsxs("div", { className: "d-flex gap-2", children: [_jsx("button", { type: "submit", className: "btn btn-primary", disabled: submitting, children: submitting ? 'Saving...' : editingId ? 'Save changes' : 'Add contact' }), editingId && (_jsx("button", { type: "button", className: "btn btn-secondary", onClick: resetForm, children: "Cancel edit" }))] })] }) })] }), _jsxs("div", { className: "card shadow mb-4", children: [_jsxs("div", { className: "card-header py-3 d-flex justify-content-between align-items-center", children: [_jsx("h6", { className: "m-0 font-weight-bold text-primary", children: "Contact List" }), _jsx("button", { className: "btn btn-sm btn-info shadow-sm", onClick: fetchContacts, disabled: loading, children: loading ? 'Loading...' : 'Refresh' })] }), _jsx("div", { className: "card-body", children: contacts.length === 0 && !loading ? (_jsx("p", { className: "text-center", children: "No contacts yet. Try adding a new one." })) : (_jsx("div", { className: "table-responsive", children: _jsxs("table", { className: "table table-bordered", width: "100%", cellSpacing: 0, children: [_jsx("thead", { children: _jsxs("tr", { children: [_jsx("th", { children: "Name" }), _jsx("th", { children: "Phone" }), _jsx("th", { children: "Address" }), _jsx("th", { children: "Created By (email)" }), _jsx("th", { children: "Last Updated By (email)" }), _jsx("th", { children: "Last Updated" }), _jsx("th", { children: "Actions" })] }) }), _jsx("tbody", { children: contacts.map((contact) => {
                                             const canModify = user?.role === 'admin' || user?.role === 'superadmin' || contact.userId === user?.userId;
-                                            return (_jsxs("tr", { children: [_jsx("td", { children: _jsxs("strong", { children: [contact.firstName, " ", contact.lastName] }) }), _jsx("td", { children: contact.phone }), _jsx("td", { children: contact.address }), _jsx("td", { children: contact.userEmail ?? '-' }), _jsx("td", { children: contact.updatedByEmail ?? '-' }), _jsx("td", { children: contact.updatedAt ? new Date(contact.updatedAt).toLocaleString() : '-' }), _jsx("td", { children: canModify ? (_jsxs("div", { className: "btn-group", children: [_jsx("button", { className: "btn btn-sm btn-warning", onClick: () => handleEdit(contact), children: "\u0E41\u0E01\u0E49\u0E44\u0E02" }), _jsx("button", { className: "btn btn-sm btn-danger", onClick: () => handleDelete(contact.id), children: "\u0E25\u0E1A" })] })) : (_jsx("span", { className: "badge bg-secondary", children: "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2A\u0E34\u0E17\u0E18\u0E34\u0E4C" })) })] }, contact.id));
+                                            return (_jsxs("tr", { children: [_jsx("td", { children: _jsxs("strong", { children: [contact.firstName, " ", contact.lastName] }) }), _jsx("td", { children: contact.phone }), _jsx("td", { children: contact.address }), _jsx("td", { children: contact.userEmail ?? '-' }), _jsx("td", { children: contact.updatedByEmail ?? '-' }), _jsx("td", { children: contact.updatedAt ? new Date(contact.updatedAt).toLocaleString() : '-' }), _jsx("td", { children: canModify ? (_jsxs("div", { className: "btn-group", children: [_jsx("button", { className: "btn btn-sm btn-warning", "aria-label": "edit", title: "Edit", onClick: () => handleEdit(contact), children: _jsx(FaCog, {}) }), _jsx("button", { className: "btn btn-sm btn-danger", "aria-label": "delete", title: "Delete", onClick: () => handleDelete(contact.id), children: _jsx(FaTrash, {}) })] })) : (_jsx("span", { className: "badge bg-secondary", children: "No permission" })) })] }, contact.id));
                                         }) })] }) })) })] })] }));
 };
