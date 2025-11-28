@@ -102,7 +102,33 @@ export const AdminCompaniesPage = () => {
   return (
     <div className="container-fluid">
       <h1 className="h3 mb-4 text-gray-800">Companies / Organizations</h1>
-      {error && <div className="alert alert-danger">{error}</div>}
+      {misconfigured ? (
+        <div className="alert alert-danger">
+          <p className="mb-2">API base URL not configured for production.</p>
+          <p className="mb-2">Set <code>VITE_API_BASE_URL</code> to your backend URL so API requests reach the server (not the SPA). Example:</p>
+          <pre className="small">VITE_API_BASE_URL=https://api.example.com</pre>
+          <div className="mt-2">
+            <button
+              type="button"
+              className="btn btn-sm btn-secondary"
+              onClick={() => {
+                const example = 'VITE_API_BASE_URL=https://api.example.com';
+                try {
+                  navigator.clipboard.writeText(example);
+                  // eslint-disable-next-line no-alert
+                  alert('Copied example to clipboard');
+                } catch (e) {
+                  // fallback: do nothing
+                }
+              }}
+            >
+              Copy example
+            </button>
+          </div>
+        </div>
+      ) : (
+        error && <div className="alert alert-danger">{error}</div>
+      )}
       {loading ? (
         <div className="spinner-border text-primary" role="status">
           <span className="sr-only">Loading...</span>
