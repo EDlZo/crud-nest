@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { FaCog, FaTrash } from 'react-icons/fa';
 import '../App.css';
-import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
+import apiFetch from '../utils/api';
 
-const withBase = (path: string) => `${API_BASE_URL}${path}`;
+// use apiFetch for network calls (provides better error messages)
 
 export const AdminCompaniesPage = () => {
   const { token } = useAuth();
@@ -18,11 +18,16 @@ export const AdminCompaniesPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(withBase('/companies'), {
+      const data = await apiFetch('/companies', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res.ok) throw new Error('Unable to fetch companies');
-      const data = await res.json();
+
+      if (typeof data === 'string') {
+        // server returned non-JSON (likely HTML) — show a helpful preview
+        const preview = data.slice(0, 300);
+        throw new Error(`Expected JSON but server returned non-JSON response. Preview: ${preview}`);
+      }
+
       setCompanies(data || []);
     } catch (err) {
       setError((err as Error).message);
@@ -39,11 +44,10 @@ export const AdminCompaniesPage = () => {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this company?')) return;
     try {
-      const res = await fetch(withBase(`/companies/${id}`), {
+      await apiFetch(`/companies/${id}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res.ok) throw new Error('Unable to delete');
       fetchCompanies();
     } catch (err) {
       setError((err as Error).message);
@@ -58,12 +62,14 @@ export const AdminCompaniesPage = () => {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(withBase(`/companies/${company.id}`), {
+      await apiFetch(`/companies/${company.id}`, {
         method: 'PUT',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(company),
       });
-      if (!res.ok) throw new Error('ไม่สามารถแก้ไขได้');
       fetchCompanies();
     } catch (err) {
       setError((err as Error).message);

@@ -22,10 +22,11 @@ body {
 }
 
 .btn-info {
-  --bs-btn-bg: #11cdef;
-  background-color: #11cdef;
-  border-color: #11cdef;
+  --bs-btn-bg: #604775;
+  background-color: #604775;
+  border-color: #604775;
   color: #fff;
+  
 }
 .btn-info:hover {
   background-color: #0fb4d6;

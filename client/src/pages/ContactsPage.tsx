@@ -223,8 +223,8 @@ export const ContactsPage = () => {
         <div className="card-header py-3 d-flex justify-content-between align-items-center">
           <h6 className="m-0 font-weight-bold text-primary">Contact List</h6>
           <div>
-            <button className="btn btn-sm btn-primary me-2" onClick={openAddModal}>Add</button>
-            <button className="btn btn-sm btn-info shadow-sm" onClick={fetchContacts} disabled={loading}>
+            <button className="btn btn-sm btn-primary me-2" onClick={openAddModal}>Add New Contect</button>
+            <button style={{ color: '#ffff' }} className="btn btn-sm btn-info shadow-sm" onClick={fetchContacts} disabled={loading}>
               {loading ? 'Loading...' : 'Refresh'}
             </button>
           </div>

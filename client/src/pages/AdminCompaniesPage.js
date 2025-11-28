@@ -19,9 +19,25 @@ export const AdminCompaniesPage = () => {
             const res = await fetch(withBase('/companies'), {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
             });
-            if (!res.ok)
-                throw new Error('Unable to fetch companies');
-            const data = await res.json();
+            if (!res.ok) {
+                // try to read body for a useful message
+                const text = await res.text().catch(() => null);
+                const msg = text ? text.slice(0, 500) : 'Unable to fetch companies';
+                throw new Error(msg);
+            }
+            // Some servers (or proxies) may return HTML (index.html) on unknown routes
+            // which will cause res.json() to throw with "Unexpected token '<'...".
+            // Read text first and parse JSON explicitly so we can show a clearer error.
+            const text = await res.text();
+            let data = null;
+            try {
+                data = text ? JSON.parse(text) : null;
+            }
+            catch (parseErr) {
+                // show a helpful message instead of a JSON parse exception
+                const preview = text ? text.slice(0, 300) : '(empty response)';
+                throw new Error(`Invalid JSON response from server: ${preview}`);
+            }
             setCompanies(data || []);
         }
         catch (err) {
@@ -64,7 +80,7 @@ export const AdminCompaniesPage = () => {
                 body: JSON.stringify(company),
             });
             if (!res.ok)
-                throw new Error('ไม่สามารถแก้ไขได้');
+                throw new Error('Unable to save company');
             fetchCompanies();
         }
         catch (err) {
