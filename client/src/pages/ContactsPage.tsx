@@ -30,6 +30,7 @@ export const ContactsPage = () => {
   const { token, user, logout } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [formData, setFormData] = useState<Contact>(emptyContact);
+  const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +90,16 @@ export const ContactsPage = () => {
     setFormData(emptyContact);
   };
 
+  const openAddModal = () => {
+    resetForm();
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    resetForm();
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!token) return;
@@ -144,6 +155,7 @@ export const ContactsPage = () => {
         setContacts((prev) => [saved, ...prev]);
       }
       resetForm();
+      setShowModal(false);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -160,6 +172,7 @@ export const ContactsPage = () => {
       address: contact.address,
       id: contact.id,
     });
+    setShowModal(true);
   };
 
   const handleDelete = async (id?: string) => {
@@ -196,6 +209,7 @@ export const ContactsPage = () => {
   };
 
   return (
+    <>
     <div className="container-fluid">
       {/* Page Heading */}
       <div className="d-sm-flex align-items-center justify-content-between mb-4">
@@ -203,71 +217,17 @@ export const ContactsPage = () => {
         
       </div>
 
-      <div className="card shadow mb-4">
-        <div className="card-header py-3">
-          <h6 className="m-0 font-weight-bold text-primary">{editingId ? 'Edit Contact' : 'Add New Contact'}</h6>
-        </div>
-        <div className="card-body">
-          <form onSubmit={handleSubmit}>
-            <div className="row">
-              <div className="col-md-6 mb-3">
-                <label className="form-label">First Name</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.firstName}
-                  onChange={(e) => handleChange('firstName', e.target.value)}
-                />
-              </div>
-              <div className="col-md-6 mb-3">
-                <label className="form-label">Last Name</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.lastName}
-                  onChange={(e) => handleChange('lastName', e.target.value)}
-                />
-              </div>
-              <div className="col-md-6 mb-3">
-                <label className="form-label">Phone</label>
-                <input
-                  type="tel"
-                  className="form-control"
-                  value={formData.phone}
-                  onChange={(e) => handleChange('phone', e.target.value)}
-                />
-              </div>
-              <div className="col-md-12 mb-3">
-                <label className="form-label">Address</label>
-                <textarea
-                  className="form-control"
-                  value={formData.address}
-                  onChange={(e) => handleChange('address', e.target.value)}
-                  rows={3}
-                />
-              </div>
-            </div>
-              {error && <div className="alert alert-danger">{error}</div>}
-            <div className="d-flex gap-2">
-              <button type="submit" className="btn btn-primary" disabled={submitting}>
-                {submitting ? 'Saving...' : editingId ? 'Save changes' : 'Add contact'}
-              </button>
-              {editingId && (
-                <button type="button" className="btn btn-secondary" onClick={resetForm}>
-                  Cancel edit
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
-      </div>
+      {/* Add/Edit form is moved into a modal. Use the Add button to open it. */}
 
       <div className="card shadow mb-4">
         <div className="card-header py-3 d-flex justify-content-between align-items-center">
           <h6 className="m-0 font-weight-bold text-primary">Contact List</h6>
-          <button className="btn btn-sm btn-info shadow-sm" onClick={fetchContacts} disabled={loading}>
-            {loading ? 'Loading...' : 'Refresh'}
-          </button>
+          <div>
+            <button className="btn btn-sm btn-primary me-2" onClick={openAddModal}>Add</button>
+            <button className="btn btn-sm btn-info shadow-sm" onClick={fetchContacts} disabled={loading}>
+              {loading ? 'Loading...' : 'Refresh'}
+            </button>
+          </div>
         </div>
         <div className="card-body">
           {contacts.length === 0 && !loading ? (
@@ -328,6 +288,71 @@ export const ContactsPage = () => {
         </div>
       </div>
     </div>
+    {/* Modal for Add/Edit contact */}
+    {showModal && (
+      <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div className="modal-dialog">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">{editingId ? 'Edit Contact' : 'Add New Contact'}</h5>
+              <button type="button" className="btn-close" onClick={closeModal}></button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleSubmit}>
+                <div className="row">
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">First Name</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={formData.firstName}
+                      onChange={(e) => handleChange('firstName', e.target.value)}
+                    />
+                  </div>
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Last Name</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={formData.lastName}
+                      onChange={(e) => handleChange('lastName', e.target.value)}
+                    />
+                  </div>
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Phone</label>
+                    <input
+                      type="tel"
+                      className="form-control"
+                      value={formData.phone}
+                      onChange={(e) => handleChange('phone', e.target.value)}
+                    />
+                  </div>
+                  <div className="col-md-12 mb-3">
+                    <label className="form-label">Address</label>
+                    <textarea
+                      className="form-control"
+                      value={formData.address}
+                      onChange={(e) => handleChange('address', e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                </div>
+                {error && <div className="alert alert-danger">{error}</div>}
+                <div className="d-flex gap-2">
+                  <button type="submit" className="btn btn-primary" disabled={submitting}>
+                    {submitting ? 'Saving...' : editingId ? 'Save changes' : 'Add contact'}
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={closeModal} disabled={submitting}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 
