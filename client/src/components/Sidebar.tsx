@@ -86,7 +86,7 @@ const Sidebar = () => {
                             <FaUser className="text-primary" />
                         </div>
                         <div className="d-flex flex-column">
-                            <span className="text-white small font-weight-bold">{user?.email || 'User'}</span>
+                            <span className="text-white small font-weight-bold" title={user?.email}>{user?.email || 'Loading...'}</span>
                             <span className="text-white-50 x-small" style={{ fontSize: '0.75rem' }}>{user?.role || 'Guest'}</span>
                         </div>
                     </div>
