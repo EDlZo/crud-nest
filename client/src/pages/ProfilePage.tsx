@@ -175,19 +175,21 @@ export const ProfilePage = () => {
     setSubmitting(true);
     setError(null);
 
-    const payload = {
-      avatarUrl: formData.avatarUrl.trim() || undefined,
-      socials: {
-        ...(formData.line.trim() && { line: formData.line.trim() }),
-        ...(formData.facebook.trim() && { facebook: formData.facebook.trim() }),
-        ...(formData.instagram.trim() && { instagram: formData.instagram.trim() }),
-      },
+    const socials: { line?: string; facebook?: string; instagram?: string } = {
+      ...(formData.line.trim() && { line: formData.line.trim() }),
+      ...(formData.facebook.trim() && { facebook: formData.facebook.trim() }),
+      ...(formData.instagram.trim() && { instagram: formData.instagram.trim() }),
     };
 
-    // Remove empty socials object
-    if (Object.keys(payload.socials).length === 0) {
-      payload.socials = undefined;
-    }
+    // Build payload - use type assertion to allow conditional socials
+    const payload: {
+      avatarUrl?: string;
+      socials?: { line?: string; facebook?: string; instagram?: string };
+    } = {
+      avatarUrl: formData.avatarUrl.trim() || undefined,
+      // Send empty object if no socials - backend will delete the field
+      socials: Object.keys(socials).length > 0 ? socials : {},
+    };
 
     try {
       const response = await fetch(withBase('/auth/profile'), {

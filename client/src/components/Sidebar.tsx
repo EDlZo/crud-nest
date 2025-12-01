@@ -111,10 +111,21 @@ const Sidebar = () => {
     };
 
     const toggleSection = (section: string) => {
-        setExpandedSections(prev => ({
-            ...prev,
-            [section]: !prev[section],
-        }));
+        setExpandedSections(prev => {
+            // If the section is already expanded, close it
+            if (prev[section]) {
+                return {
+                    ...prev,
+                    [section]: false,
+                };
+            }
+            // Otherwise, close all sections and open only the selected one
+            return {
+                component: false,
+                manage: false,
+                [section]: true,
+            };
+        });
     };
 
     return (
