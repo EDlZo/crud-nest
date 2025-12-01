@@ -3,10 +3,10 @@ import './App.css';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthPage } from './pages/AuthPage';
 import { ContactsPage } from './pages/ContactsPage';
+import { CompaniesPage } from './pages/CompaniesPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { VisibilityPage } from './pages/VisibilityPage';
-import { CompaniesPage } from './pages/CompaniesPage';
-import { AdminCompaniesPage } from './pages/AdminCompaniesPage';
 import Layout from './components/Layout';
 
 function App() {
@@ -27,8 +27,28 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/companies"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <CompaniesPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
         <Route path="/login" element={<AuthPage mode="login" />} />
         <Route path="/register" element={<AuthPage mode="register" />} />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <ProfilePage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/admin/users"
           element={
@@ -45,26 +65,6 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <VisibilityPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/companies/new"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <CompaniesPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/companies"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <AdminCompaniesPage />
               </Layout>
             </ProtectedRoute>
           }

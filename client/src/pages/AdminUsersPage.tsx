@@ -9,6 +9,7 @@ type User = {
   userId: string;
   email: string;
   role?: string;
+  avatarUrl?: string;
   createdAt?: string; // Assuming backend might return this, or we mock it
   status?: string; // Assuming backend might return this, or we mock it
 };
@@ -21,12 +22,37 @@ export const AdminUsersPage = () => {
   const [error, setError] = useState<string | null>(null);
   // pending role changes keyed by userId => role ('admin'|'superadmin'|'guest')
   const [pending, setPending] = useState<Record<string, 'admin' | 'superadmin' | 'guest' | undefined>>({});
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     if (!token) return;
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      // Refresh users list when profile is updated
+      if (token) {
+        fetchUsers();
+      }
+    };
+
+    window.addEventListener('profileUpdated', handleProfileUpdate as EventListener);
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate as EventListener);
+    };
+  }, [token]);
+
+  // Reset to first page if current page exceeds total pages
+  useEffect(() => {
+    const totalPages = Math.ceil(users.length / itemsPerPage);
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [users.length, currentPage, itemsPerPage]);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -38,9 +64,17 @@ export const AdminUsersPage = () => {
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      setUsers(data || []);
+      // Sort users by createdAt descending (newest first)
+      const sortedUsers = (data || []).sort((a: User, b: User) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA; // Descending order (newest first)
+      });
+      setUsers(sortedUsers);
       // reset pending when we refetch authoritative data
       setPending({});
+      // Reset to first page when users list changes
+      setCurrentPage(1);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -194,12 +228,74 @@ export const AdminUsersPage = () => {
   const canManageRoles = user?.role === 'superadmin';
   // allow any authenticated user to view the users page in read-only mode
 
-  // Helper to get random date for demo if not provided
-  const getRandomDate = () => {
-    const start = new Date(2023, 0, 1);
-    const end = new Date();
-    const date = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-    return date.toLocaleDateString('en-GB'); // DD/MM/YYYY
+  // Pagination calculations
+  const totalPages = Math.ceil(users.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentUsers = users.slice(startIndex, endIndex);
+  const startEntry = users.length > 0 ? startIndex + 1 : 0;
+  const endEntry = Math.min(endIndex, users.length);
+
+  // Pagination handlers
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const goToPrevious = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToNext = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  // Generate page numbers to display (show max 3 pages)
+  const getPageNumbers = () => {
+    const pages: number[] = [];
+    if (totalPages <= 3) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage === 1) {
+        pages.push(1, 2, 3);
+      } else if (currentPage === totalPages) {
+        pages.push(totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(currentPage - 1, currentPage, currentPage + 1);
+      }
+    }
+    return pages;
+  };
+
+  // Helper to format date from ISO string or return formatted date
+  const formatDate = (dateString?: string): string => {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      // Check if date is valid
+      if (isNaN(date.getTime())) return '-';
+      // Format as DD/MM/YYYY HH:MM
+      const dateStr = date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      const timeStr = date.toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      return `${dateStr} ${timeStr}`;
+    } catch {
+      return '-';
+    }
   };
 
   return (
@@ -236,22 +332,41 @@ export const AdminUsersPage = () => {
                   <th style={{ width: '40%' }}>Name</th>
                   <th style={{ width: '20%' }}>Date Created</th>
                   <th style={{ width: '20%' }}>Role</th>
-                  <th style={{ width: '15%' }}>Action</th>
+                  <th style={{ width: '15%', textAlign: 'center' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((u, index) => {
+                {currentUsers.map((u, index) => {
+                  const globalIndex = startIndex + index;
                   const selected = (typeof pending[u.userId] !== 'undefined' ? pending[u.userId] : (u.role ?? 'guest')) as 'admin' | 'superadmin' | 'guest' | undefined;
                   const changed = typeof pending[u.userId] !== 'undefined' && pending[u.userId] !== (u.role ?? 'guest');
 
                   return (
                     <tr key={u.id} className={changed ? 'table-warning' : ''}>
-                      <td>{index + 1}</td>
+                      <td>{globalIndex + 1}</td>
                       <td>
                         <div className="d-flex align-items-center">
                           <div className="me-3">
-                            {/* Placeholder Avatar */}
-                            <FaUserCircle size={40} className="text-gray-400" />
+                            {u.avatarUrl ? (
+                              <img
+                                src={u.avatarUrl}
+                                alt={u.email}
+                                className="rounded-circle"
+                                style={{ width: 40, height: 40, objectFit: 'cover' }}
+                                onError={(e) => {
+                                  // Fallback to icon if image fails to load
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  const icon = target.nextElementSibling as HTMLElement;
+                                  if (icon) icon.style.display = 'block';
+                                }}
+                              />
+                            ) : null}
+                            <FaUserCircle 
+                              size={40} 
+                              className="text-gray-400"
+                              style={{ display: u.avatarUrl ? 'none' : 'block' }}
+                            />
                           </div>
                           <div>
                             <div className="fw-bold text-dark">{u.email.split('@')[0]}</div>
@@ -259,7 +374,7 @@ export const AdminUsersPage = () => {
                           </div>
                         </div>
                       </td>
-                      <td>{u.createdAt || getRandomDate()}</td>
+                      <td>{formatDate(u.createdAt)}</td>
                       <td>
                         {/* Role Selector (Settings) */}
                         <select
@@ -274,8 +389,8 @@ export const AdminUsersPage = () => {
                           <option value="superadmin">Superadmin</option>
                         </select>
                       </td>
-                      <td>
-                        <div className="d-flex align-items-center">
+                      <td style={{ textAlign: 'center' }}>
+                        <div className="d-flex align-items-center justify-content-center">
                           <button
                             className="btn btn-link text-danger p-0"
                             title="Delete"
@@ -293,16 +408,66 @@ export const AdminUsersPage = () => {
             </table>
           </div>
 
-          {/* Pagination (Mock UI) */}
+          {/* Pagination */}
           <div className="d-flex justify-content-between align-items-center mt-3">
-            <div className="small text-muted">Showing {users.length} entries</div>
+            <div className="d-flex align-items-center gap-3">
+              <div className="small text-muted">
+                Showing {startEntry} to {endEntry} of {users.length} entries
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <label htmlFor="itemsPerPage" className="small text-muted mb-0">
+                  Show:
+                </label>
+                <select
+                  id="itemsPerPage"
+                  className="form-select form-select-sm"
+                  style={{ width: 'auto' }}
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1); // Reset to first page when changing items per page
+                  }}
+                >
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+            </div>
             <nav>
               <ul className="pagination pagination-sm mb-0">
-                <li className="page-item disabled"><a className="page-link" href="#">Previous</a></li>
-                <li className="page-item active"><a className="page-link" href="#">1</a></li>
-                <li className="page-item"><a className="page-link" href="#">2</a></li>
-                <li className="page-item"><a className="page-link" href="#">3</a></li>
-                <li className="page-item"><a className="page-link" href="#">Next</a></li>
+                <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                  <button 
+                    className="page-link" 
+                    onClick={goToPrevious}
+                    disabled={currentPage === 1}
+                    style={{ cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+                  >
+                    Previous
+                  </button>
+                </li>
+                {getPageNumbers().map((pageNum) => (
+                  <li key={pageNum} className={`page-item ${currentPage === pageNum ? 'active' : ''}`}>
+                    <button 
+                      className="page-link" 
+                      onClick={() => goToPage(pageNum)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {pageNum}
+                    </button>
+                  </li>
+                ))}
+                <li className={`page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}`}>
+                  <button 
+                    className="page-link" 
+                    onClick={goToNext}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    style={{ cursor: currentPage === totalPages || totalPages === 0 ? 'not-allowed' : 'pointer' }}
+                  >
+                    Next
+                  </button>
+                </li>
               </ul>
             </nav>
           </div>

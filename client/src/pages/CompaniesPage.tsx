@@ -7,16 +7,16 @@ import { useAuth } from '../context/AuthContext';
 type Company = {
   id?: string;
   name: string;
-  address: string;
-  phone: string;
+  address?: string;
+  phone?: string;
   fax?: string;
   taxId?: string;
   branchName?: string;
   branchNumber?: string;
   createdAt?: string;
   updatedAt?: string;
-  userId?: string;
-  userEmail?: string;
+  ownerUserId?: string;
+  ownerEmail?: string;
   updatedByEmail?: string;
 };
 
@@ -57,22 +57,24 @@ export const CompaniesPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(withBase('/companies'), {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await fetch(withBase('/companies'), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-      if (res.status === 401) {
+      if (response.status === 401) {
         handleUnauthorized();
         return;
       }
-      if (res.status === 403) {
+      if (response.status === 403) {
         throw new Error('You do not have permission to access this resource');
       }
-      if (!res.ok) {
-        const contentType = res.headers.get('content-type') || '';
-        const body = contentType.includes('application/json') ? await res.json() : await res.text();
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        const body = contentType.includes('application/json') ? await response.json() : await response.text();
         throw new Error(typeof body === 'string' ? body : JSON.stringify(body));
       }
-      const data = await res.json();
+      const data = await response.json();
       setCompanies(Array.isArray(data) ? data : []);
     } catch (err) {
       setError((err as Error).message);
@@ -104,55 +106,60 @@ export const CompaniesPage = () => {
     resetForm();
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!token) return;
     setSubmitting(true);
     setError(null);
 
     const payload = {
       name: formData.name.trim(),
-      address: formData.address.trim(),
-      phone: formData.phone.trim(),
-      fax: formData.fax?.trim(),
-      taxId: formData.taxId?.trim(),
-      branchName: formData.branchName?.trim(),
-      branchNumber: formData.branchNumber?.trim(),
+      address: formData.address?.trim() || undefined,
+      phone: formData.phone?.trim() || undefined,
+      fax: formData.fax?.trim() || undefined,
+      taxId: formData.taxId?.trim() || undefined,
+      branchName: formData.branchName?.trim() || undefined,
+      branchNumber: formData.branchNumber?.trim() || undefined,
     };
 
-    if (!payload.name || !payload.address || !payload.phone) {
-      setError('Please fill out company name, address and phone');
+    if (!payload.name) {
+      setError('Please enter company name');
       setSubmitting(false);
       return;
     }
 
     try {
       const isEdit = Boolean(editingId);
-      const res = await fetch(withBase(`/companies${isEdit ? `/${editingId}` : ''}`), {
-        method: isEdit ? 'PATCH' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        withBase(`/companies${isEdit ? `/${editingId}` : ''}`),
+        {
+          method: isEdit ? 'PATCH' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
         },
-        body: JSON.stringify(payload),
-      });
+      );
 
-      if (res.status === 401) {
+      if (response.status === 401) {
         handleUnauthorized();
         return;
       }
-      if (res.status === 403) {
-        throw new Error('You do not have permission to modify this record');
+      if (response.status === 403) {
+        throw new Error('You do not have permission to edit this data');
       }
-      if (!res.ok) {
-        const contentType = res.headers.get('content-type') || '';
-        const body = contentType.includes('application/json') ? await res.json() : await res.text();
+
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        const body = contentType.includes('application/json') ? await response.json() : await response.text();
         throw new Error(typeof body === 'string' ? body : JSON.stringify(body));
       }
 
-      const saved = await res.json();
+      const saved = (await response.json()) as Company;
+
       if (isEdit) {
-        setCompanies((prev) => prev.map((c) => (c.id === saved.id ? saved : c)));
+        setCompanies((prev) => prev.map((item) => (item.id === saved.id ? saved : item)));
       } else {
         setCompanies((prev) => [saved, ...prev]);
       }
@@ -165,16 +172,17 @@ export const CompaniesPage = () => {
     }
   };
 
-  const handleEdit = (c: Company) => {
-    setEditingId(c.id ?? null);
+  const handleEdit = (company: Company) => {
+    setEditingId(company.id ?? null);
     setFormData({
-      name: c.name,
-      address: c.address,
-      phone: c.phone,
-      fax: c.fax ?? '',
-      taxId: c.taxId ?? '',
-      branchName: c.branchName ?? '',
-      branchNumber: c.branchNumber ?? '',
+      name: company.name,
+      address: company.address || '',
+      phone: company.phone || '',
+      fax: company.fax || '',
+      taxId: company.taxId || '',
+      branchName: company.branchName || '',
+      branchNumber: company.branchNumber || '',
+      id: company.id,
     });
     setShowModal(true);
   };
@@ -185,24 +193,28 @@ export const CompaniesPage = () => {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(withBase(`/companies/${id}`), {
+      const response = await fetch(withBase(`/companies/${id}`), {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-      if (res.status === 401) {
+      if (response.status === 401) {
         handleUnauthorized();
         return;
       }
-      if (res.status === 403) {
-        throw new Error('You do not have permission to delete this record');
+      if (response.status === 403) {
+        throw new Error('You do not have permission to delete this data');
       }
-      if (!res.ok) {
-        const contentType = res.headers.get('content-type') || '';
-        const body = contentType.includes('application/json') ? await res.json() : await res.text();
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        const body = contentType.includes('application/json') ? await response.json() : await response.text();
         throw new Error(typeof body === 'string' ? body : JSON.stringify(body));
       }
-      setCompanies((prev) => prev.filter((x) => x.id !== id));
-      if (editingId === id) resetForm();
+      setCompanies((prev) => prev.filter((item) => item.id !== id));
+      if (editingId === id) {
+        resetForm();
+      }
     } catch (err) {
       setError((err as Error).message);
     }
@@ -211,58 +223,96 @@ export const CompaniesPage = () => {
   return (
     <>
       <div className="container-fluid">
+        {/* Page Heading */}
         <div className="d-sm-flex align-items-center justify-content-between mb-4">
           <h1 className="h3 mb-0 text-gray-800">Companies</h1>
         </div>
 
         <div className="card shadow mb-4">
           <div className="card-header py-3 d-flex justify-content-between align-items-center">
-            <h6 className="m-0 font-weight-bold text-primary">Company List</h6>
+            <h6 className="m-0 font-weight-bold text-primary">Companies List</h6>
             <div>
-              <button className="btn btn-sm btn-primary me-2" onClick={openAddModal}>Add New Company</button>
-              <button className="btn btn-sm btn-info" onClick={fetchCompanies} disabled={loading}>{loading ? 'Loading...' : 'Refresh'}</button>
+              <button className="btn btn-sm btn-primary me-2" onClick={openAddModal}>
+                Add New Company
+              </button>
+              <button
+                style={{ color: '#ffff' }}
+                className="btn btn-sm btn-info shadow-sm"
+                onClick={fetchCompanies}
+                disabled={loading}
+              >
+                {loading ? 'Loading...' : 'Refresh'}
+              </button>
             </div>
           </div>
           <div className="card-body">
+            {error && <div className="alert alert-danger">{error}</div>}
             {companies.length === 0 && !loading ? (
-              <p className="text-center">No companies yet. Try adding a new one.</p>
+              <p className="text-center">There is no company information yet. Try adding new information.</p>
             ) : (
               <div className="table-responsive">
                 <table className="table table-bordered" width="100%" cellSpacing={0}>
                   <thead>
                     <tr>
-                      <th>Name</th>
-                      <th>Phone</th>
+                      <th>Company Name</th>
                       <th>Address</th>
+                      <th>Phone</th>
+                      <th>Fax</th>
                       <th>Tax ID</th>
-                      <th>Branch</th>
+                      <th>Branch Name</th>
+                      <th>Branch Number</th>
+                      <th>Created By (email)</th>
+                      <th>Updated By (email)</th>
                       <th>Last Updated</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {companies.map((c) => {
-                      const canModify = user?.role === 'admin' || user?.role === 'superadmin' || c.userId === user?.userId;
+                    {companies.map((company) => {
+                      const canModify =
+                        user?.role === 'admin' ||
+                        user?.role === 'superadmin' ||
+                        company.ownerUserId === user?.userId;
                       return (
-                        <tr key={c.id}>
-                          <td><strong>{c.name}</strong></td>
-                          <td>{c.phone}</td>
-                          <td>{c.address}</td>
-                          <td>{c.taxId ?? '-'}</td>
-                          <td>{c.branchName ? `${c.branchName} (${c.branchNumber ?? '-'})` : '-'}</td>
-                          <td>{c.updatedAt ? new Date(c.updatedAt).toLocaleString() : '-'}</td>
+                        <tr key={company.id}>
+                          <td>
+                            <strong>{company.name}</strong>
+                          </td>
+                          <td>{company.address || '-'}</td>
+                          <td>{company.phone || '-'}</td>
+                          <td>{company.fax || '-'}</td>
+                          <td>{company.taxId || '-'}</td>
+                          <td>{company.branchName || '-'}</td>
+                          <td>{company.branchNumber || '-'}</td>
+                          <td>{company.ownerEmail || '-'}</td>
+                          <td>{company.updatedByEmail || '-'}</td>
+                          <td>
+                            {company.updatedAt
+                              ? new Date(company.updatedAt).toLocaleString('th-TH')
+                              : '-'}
+                          </td>
                           <td>
                             {canModify ? (
                               <div className="btn-group">
-                                <button className="icon-btn edit" aria-label="edit" title="Edit" onClick={() => handleEdit(c)}>
+                                <button
+                                  className="icon-btn edit"
+                                  aria-label="edit"
+                                  title="Edit"
+                                  onClick={() => handleEdit(company)}
+                                >
                                   <FaPen />
                                 </button>
-                                <button className="icon-btn delete" aria-label="delete" title="Delete" onClick={() => handleDelete(c.id)}>
+                                <button
+                                  className="icon-btn delete"
+                                  aria-label="delete"
+                                  title="Delete"
+                                  onClick={() => handleDelete(company.id)}
+                                >
                                   <FaTrash />
                                 </button>
                               </div>
                             ) : (
-                              <span className="badge bg-secondary">No permission</span>
+                              <span className="badge bg-secondary">No Permission</span>
                             )}
                           </td>
                         </tr>
@@ -275,56 +325,104 @@ export const CompaniesPage = () => {
           </div>
         </div>
       </div>
-
+      {/* Modal for Add/Edit company */}
       {showModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
+          <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">{editingId ? 'Edit Company' : 'Add New Company'}</h5>
+                <h5 className="modal-title">
+                  {editingId ? 'Edit Company' : 'Add New Company'}
+                </h5>
                 <button type="button" className="btn-close" onClick={closeModal}></button>
               </div>
               <div className="modal-body">
                 <form onSubmit={handleSubmit}>
                   <div className="row">
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Company Name</label>
-                      <input type="text" className="form-control" value={formData.name} onChange={(e) => handleChange('name', e.target.value)} />
+                    <div className="col-md-12 mb-3">
+                      <label className="form-label">
+                        Company Name <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={formData.name}
+                        onChange={(e) => handleChange('name', e.target.value)}
+                        required
+                      />
                     </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Tax ID</label>
-                      <input className="form-control" value={formData.taxId} onChange={(e) => handleChange('taxId', e.target.value)} />
-                    </div>
-
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Branch Name</label>
-                      <input className="form-control" value={formData.branchName} onChange={(e) => handleChange('branchName', e.target.value)} />
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Branch Number</label>
-                      <input className="form-control" value={formData.branchNumber} onChange={(e) => handleChange('branchNumber', e.target.value)} />
-                    </div>
-
                     <div className="col-md-12 mb-3">
                       <label className="form-label">Address</label>
-                      <textarea className="form-control" rows={3} value={formData.address} onChange={(e) => handleChange('address', e.target.value)} />
+                      <textarea
+                        className="form-control"
+                        value={formData.address || ''}
+                        onChange={(e) => handleChange('address', e.target.value)}
+                        rows={3}
+                      />
                     </div>
-
                     <div className="col-md-6 mb-3">
                       <label className="form-label">Phone</label>
-                      <input className="form-control" value={formData.phone} onChange={(e) => handleChange('phone', e.target.value)} />
+                      <input
+                        type="tel"
+                        className="form-control"
+                        value={formData.phone || ''}
+                        onChange={(e) => handleChange('phone', e.target.value)}
+                      />
                     </div>
                     <div className="col-md-6 mb-3">
                       <label className="form-label">Fax</label>
-                      <input className="form-control" value={formData.fax} onChange={(e) => handleChange('fax', e.target.value)} />
+                      <input
+                        type="tel"
+                        className="form-control"
+                        value={formData.fax || ''}
+                        onChange={(e) => handleChange('fax', e.target.value)}
+                      />
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Tax ID</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={formData.taxId || ''}
+                        onChange={(e) => handleChange('taxId', e.target.value)}
+                      />
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Branch Name</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={formData.branchName || ''}
+                        onChange={(e) => handleChange('branchName', e.target.value)}
+                      />
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Branch Number</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={formData.branchNumber || ''}
+                        onChange={(e) => handleChange('branchNumber', e.target.value)}
+                      />
                     </div>
                   </div>
-
                   {error && <div className="alert alert-danger">{error}</div>}
-
                   <div className="d-flex gap-2">
-                    <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? 'Saving...' : editingId ? 'Save changes' : 'Add company'}</button>
-                    <button type="button" className="btn btn-secondary" onClick={closeModal} disabled={submitting}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" disabled={submitting}>
+                      {submitting
+                        ? 'Saving...'
+                        : editingId
+                        ? 'Save Changes'
+                        : 'Add Company'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={closeModal}
+                      disabled={submitting}
+                    >
+                      Cancel
+                    </button>
                   </div>
                 </form>
               </div>
@@ -335,3 +433,4 @@ export const CompaniesPage = () => {
     </>
   );
 };
+

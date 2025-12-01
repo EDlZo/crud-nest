@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../config';
 import '../App.css';
 
 type VisibilityMap = Record<string, Record<string, boolean>>;
@@ -20,7 +21,7 @@ export const VisibilityPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/auth/visibility', { method: 'GET', headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API_BASE_URL}/auth/visibility`, { method: 'GET', headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setVisibility(data || {});
@@ -33,6 +34,7 @@ export const VisibilityPage = () => {
 
   const pageKeys: { key: string; label: string }[] = [
     { key: 'dashboard', label: 'Manage Data' },
+    { key: 'companies', label: 'Companies' },
     { key: 'admin_users', label: 'Manage Users' },
     { key: 'visibility', label: 'Visibility Settings (this page)' },
   ];
@@ -53,7 +55,7 @@ export const VisibilityPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/auth/visibility', {
+      const res = await fetch(`${API_BASE_URL}/auth/visibility`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ visibility }),
@@ -61,6 +63,8 @@ export const VisibilityPage = () => {
       if (!res.ok) throw new Error(await res.text());
       await fetchVisibility();
       alert('Visibility settings saved');
+      // Dispatch custom event to notify Sidebar to refresh visibility
+      window.dispatchEvent(new CustomEvent('visibilityUpdated'));
     } catch (err) {
       setError((err as Error).message);
     } finally {

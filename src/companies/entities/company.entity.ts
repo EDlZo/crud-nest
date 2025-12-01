@@ -1,6 +1,7 @@
 export class Company {
   id?: string;
   ownerUserId: string;
+  ownerEmail?: string;
   name: string;
   address?: string;
   phone?: string;
@@ -12,4 +13,5 @@ export class Company {
   avatarUrl?: string;
   createdAt?: string;
   updatedAt?: string;
+  updatedByEmail?: string;
 }

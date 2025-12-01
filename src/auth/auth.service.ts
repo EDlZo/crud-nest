@@ -134,9 +134,9 @@ export class AuthService {
     if (!doc.exists) {
       // default visibility: superadmin sees everything, admin sees dashboard and users, guest sees dashboard
       const defaults = {
-        superadmin: { dashboard: true, admin_users: true, visibility: true },
-        admin: { dashboard: true, admin_users: false, visibility: false },
-        guest: { dashboard: true, admin_users: false, visibility: false },
+        superadmin: { dashboard: true, companies: true, admin_users: true, visibility: true },
+        admin: { dashboard: true, companies: true, admin_users: false, visibility: false },
+        guest: { dashboard: true, companies: true, admin_users: false, visibility: false },
       };
       await ref.set(defaults);
       return defaults;
@@ -149,6 +149,61 @@ export class AuthService {
     await ref.set(visibility, { merge: true });
     const doc = await ref.get();
     return doc.data();
+  }
+
+  // Profile management
+  async getProfile(userId: string) {
+    const doc = await this.collection.doc(userId).get();
+    if (!doc.exists) throw new BadRequestException('User not found');
+    const data = doc.data() as any;
+    return {
+      email: data.email,
+      role: data.role,
+      avatarUrl: data.avatarUrl,
+      socials: data.socials || {},
+      createdAt: data.createdAt,
+    };
+  }
+
+  async updateProfile(userId: string, updateData: { avatarUrl?: string; socials?: Record<string, string> }) {
+    try {
+      console.log('AuthService.updateProfile - userId:', userId, 'updateData:', updateData);
+      const docRef = this.collection.doc(userId);
+      const doc = await docRef.get();
+      if (!doc.exists) throw new BadRequestException('User not found');
+      
+      const updatePayload: any = {};
+      // Handle avatarUrl: if empty string, remove it; if provided, set it
+      if (updateData.avatarUrl !== undefined) {
+        if (updateData.avatarUrl === '' || updateData.avatarUrl === null) {
+          updatePayload.avatarUrl = FieldValue.delete();
+        } else {
+          updatePayload.avatarUrl = updateData.avatarUrl;
+        }
+      }
+      if (updateData.socials !== undefined) {
+        if (Object.keys(updateData.socials).length === 0) {
+          updatePayload.socials = FieldValue.delete();
+        } else {
+          updatePayload.socials = updateData.socials;
+        }
+      }
+      
+      console.log('AuthService.updateProfile - updatePayload:', updatePayload);
+      await docRef.update(updatePayload);
+      const updatedDoc = await docRef.get();
+      const data = updatedDoc.data() as any;
+      return {
+        email: data.email,
+        role: data.role,
+        avatarUrl: data.avatarUrl,
+        socials: data.socials || {},
+        createdAt: data.createdAt,
+      };
+    } catch (err) {
+      console.error('AuthService.updateProfile error:', err);
+      throw err;
+    }
   }
 }
 

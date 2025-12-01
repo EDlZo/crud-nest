@@ -3,6 +3,7 @@ import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UseGuards } from '@nestjs/common';
 import { Roles } from './roles.decorator';
 import { RolesGuard } from './roles.guard';
@@ -68,6 +69,30 @@ export class AuthController {
   @Post('visibility')
   async setVisibility(@Body() body: { visibility: Record<string, any> }) {
     return this.authService.setVisibility(body.visibility);
+  }
+
+  // Profile endpoints
+  @UseGuards(JwtAuthGuard)
+  @Get('profile')
+  async getProfile(@Req() req: any) {
+    try {
+      return await this.authService.getProfile(req.user.userId);
+    } catch (err) {
+      console.error('AuthController.getProfile error:', err);
+      throw err;
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('profile')
+  async updateProfile(@Req() req: any, @Body() dto: UpdateProfileDto) {
+    try {
+      console.log('AuthController.updateProfile - received dto:', dto);
+      return await this.authService.updateProfile(req.user.userId, dto);
+    } catch (err) {
+      console.error('AuthController.updateProfile error:', err);
+      throw err;
+    }
   }
 }
 

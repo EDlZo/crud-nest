@@ -327,7 +327,7 @@ table th:last-child .btn {
   align-self: flex-start;
   padding: 0.65rem 1.25rem;
   border-radius: 999px;
-  background: linear-gradient(90deg,#6d28d9,#4f46e5);
+  background: linear-gradient(90deg,#3763a0,#3763a0);
   box-shadow: 0 12px 30px rgba(79,70,229,0.14);
 }
 

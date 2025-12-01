@@ -6,7 +6,14 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: true,
+  });
+  
+  // Increase body size limit for profile image uploads (base64 can be large)
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+  
   // Enable CORS so frontend (e.g. Vite dev server or deployed client) can call the API
   app.enableCors();
 
@@ -32,7 +39,8 @@ async function bootstrap() {
       if (
         req.path.startsWith('/api') ||
         req.path.startsWith('/cruds') ||
-        req.path.startsWith('/auth')
+        req.path.startsWith('/auth') ||
+        req.path.startsWith('/companies')
       ) {
         return next();
       }
