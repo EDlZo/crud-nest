@@ -1094,6 +1094,7 @@ export const ActivitiesPage = () => {
                 {(user?.role === 'admin' ||
                   user?.role === 'superadmin' ||
                   viewingActivity.assignedTo === user?.userId) && (
+
                   <button
                     type="button"
                     className="btn btn-primary"

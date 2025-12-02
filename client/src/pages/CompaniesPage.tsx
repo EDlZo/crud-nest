@@ -193,6 +193,7 @@ export const CompaniesPage = () => {
   const handleEdit = (company: Company) => {
     setEditingId(company.id ?? null);
     setFormData({
+      type: company.type || 'company',
       name: company.name,
       address: company.address || '',
       phone: company.phone || '',
