@@ -7,6 +7,9 @@ import { CompaniesPage } from './pages/CompaniesPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { VisibilityPage } from './pages/VisibilityPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { ActivitiesPage } from './pages/ActivitiesPage';
+import { DealsPage } from './pages/DealsPage';
 import Layout from './components/Layout';
 
 function App() {
@@ -15,7 +18,17 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={<Navigate to="/contacts" replace />}
+          element={<Navigate to="/dashboard" replace />}
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <DashboardPage />
+              </Layout>
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/contacts"
@@ -65,6 +78,26 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <VisibilityPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/activities"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <ActivitiesPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/deals"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <DealsPage />
               </Layout>
             </ProtectedRoute>
           }

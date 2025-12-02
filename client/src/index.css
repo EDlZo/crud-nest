@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 * {
   box-sizing: border-box;
 }
@@ -11,30 +15,67 @@ body {
 
 /* Theme button overrides to match the requested look */
 .btn-primary {
-  --bs-btn-bg: #0d6efd;
-  background-color: #0d6efd;
-  border-color: #0d6efd;
+  --bs-btn-bg: #3663a0;
+  background-color: #3663a0;
+  border-color: #3663a0;
   color: #fff;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .btn-primary:hover {
   background-color: #0b5ed7;
   border-color: #0b5ed7;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(54, 99, 160, 0.3);
+}
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(54, 99, 160, 0.2);
 }
 
 .btn-info {
-  --bs-btn-bg: #604775;
-  background-color: #604775;
-  border-color: #604775;
+  --bs-btn-bg: #aeaeae;
+  background-color: #aeaeae;
+  border-color: #aeaeae;
   color: #fff;
-  
+  --bs-btn-active-bg: #5d5d5d;
+  --bs-btn-active-border-color: #5d5d5d;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .btn-info:hover {
-  background-color: #0fb4d6;
-  border-color: #0fb4d6;
+  background-color: #5d5d5d;
+  border-color: #5d5d5d;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(174, 174, 174, 0.3);
+}
+.btn-info:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(174, 174, 174, 0.2);
+}
+
+.btn-info:disabled,
+.btn-info:disabled:hover {
+  background-color: #5d5d5d;
+  border-color: #5d5d5d;
+  color: #fff;
+  opacity: 0.9;
 }
 
 /* Small visual polish to match screenshot: rounded small buttons */
 .btn-sm {
   border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth transitions for all buttons */
+.btn {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
