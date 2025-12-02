@@ -1,0 +1,19 @@
+{
+  "indexes": [
+    {
+      "collectionId": "activities",
+      "fields": [
+        { "fieldPath": "ownerUserId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionId": "deals",
+      "fields": [
+        { "fieldPath": "ownerUserId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
