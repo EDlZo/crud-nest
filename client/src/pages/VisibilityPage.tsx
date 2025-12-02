@@ -36,7 +36,7 @@ export const VisibilityPage = () => {
     { key: 'dashboard', label: 'Manage Data' },
     { key: 'companies', label: 'Companies' },
     { key: 'admin_users', label: 'Manage Users' },
-    { key: 'visibility', label: 'Visibility Settings (this page)' },
+    { key: 'visibility', label: 'Visibility Settings' },
   ];
 
   const roles = ['superadmin', 'admin', 'guest'];

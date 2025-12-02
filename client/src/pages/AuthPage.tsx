@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { FaEnvelope, FaLock, FaUser, FaUserCircle } from 'react-icons/fa';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -15,6 +16,8 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
     email: '',
     password: '',
     confirmPassword: '',
+    firstName: '',
+    lastName: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -50,6 +53,10 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
         body: JSON.stringify({
           email: formData.email.trim(),
           password: formData.password,
+          ...(mode === 'register' && {
+            firstName: formData.firstName.trim(),
+            lastName: formData.lastName.trim(),
+          }),
         }),
       });
 
@@ -75,61 +82,119 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
 
   return (
     <main className="auth-container">
+      <div className="auth-background-decoration"></div>
       <section className="card auth-card">
-        <h1>{mode === 'login' ? 'Login' : 'Register'}</h1>
+        <div className="auth-header">
+          <div className="auth-icon-wrapper">
+            <FaUserCircle className="auth-icon" />
+          </div>
+          <h1>{mode === 'login' ? 'Welcome' : 'Create Account'}</h1>
         <p className="auth-description">
           {mode === 'login'
-            ? 'Enter your email and password to manage contacts'
-            : 'Create a new account to start using the contact book'}
+              ? 'Sign in to manage your data'
+              : 'Fill in your information to create a new account'}
         </p>
+        </div>
 
         <form className="form" onSubmit={handleSubmit}>
+          {mode === 'register' && (
+            <div className="form-row">
+              <div className="form-group">
+                <label>
+                  <FaUser className="input-icon" />
+                  First Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter your first name"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  <FaUser className="input-icon" />
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter your last name"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          <div className="form-group">
           <label>
+              <FaEnvelope className="input-icon" />
             Email
+            </label>
             <input
               type="email"
+              placeholder="example@email.com"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
-          </label>
+          </div>
+          <div className="form-group">
           <label>
+              <FaLock className="input-icon" />
             Password
+            </label>
             <input
               type="password"
+              placeholder="••••••••"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
-          </label>
+          </div>
           {mode === 'register' && (
+            <div className="form-group">
             <label>
+                <FaLock className="input-icon" />
               Confirm Password
+              </label>
               <input
                 type="password"
+                placeholder="••••••••"
                 value={formData.confirmPassword}
                 onChange={(e) =>
                   setFormData({ ...formData, confirmPassword: e.target.value })
                 }
               />
-            </label>
+            </div>
           )}
-          {error && <p className="error">{error}</p>}
-          <button type="submit" disabled={submitting}>
-            {submitting
-              ? 'Submitting...'
-              : mode === 'login'
-              ? 'Login'
-              : 'Register'}
+          {error && (
+            <div className="error-message">
+              <span className="error-icon">⚠</span>
+              <span>{error}</span>
+            </div>
+          )}
+          <button type="submit" className="auth-submit-btn" disabled={submitting}>
+            {submitting ? (
+              <>
+                <span className="spinner"></span>
+                <span>Processing...</span>
+              </>
+            ) : (
+              <span>{mode === 'login' ? 'Sign In' : 'Register'}</span>
+            )}
           </button>
         </form>
+
+        <div className="auth-divider">
+          <span></span>
+        </div>
 
         <p className="auth-toggle">
           {mode === 'login' ? (
             <>
-              No account? <Link to="/register">Register</Link>
+              Don't have an account? <Link to="/register">Register</Link>
             </>
           ) : (
             <>
-              Already have an account? <Link to="/login">Login</Link>
+              Already have an account? <Link to="/login">Sign In</Link>
             </>
           )}
         </p>

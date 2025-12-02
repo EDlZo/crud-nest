@@ -243,14 +243,14 @@ export const ProfilePage = () => {
   return (
     <div className="container-fluid">
       <div className="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 className="h3 mb-0 text-gray-800">แก้ไขโปรไฟล์</h1>
+        <h1 className="h3 mb-0 text-gray-800">Edit Profile</h1>
       </div>
 
       <div className="row">
         <div className="col-lg-8">
           <div className="card shadow mb-4">
             <div className="card-header py-3">
-              <h6 className="m-0 font-weight-bold text-primary">ข้อมูลโปรไฟล์</h6>
+              <h6 className="m-0 font-weight-bold text-primary">Profile Information</h6>
             </div>
             <div className="card-body">
               {error && <div className="alert alert-danger">{error}</div>}
@@ -260,7 +260,7 @@ export const ProfilePage = () => {
                 <div className="mb-4">
                   <label className="form-label d-flex align-items-center">
                     <FaImage className="me-2" />
-                    รูปภาพโปรไฟล์ (Avatar/Profile Photo)
+                    Profile Photo
                   </label>
                   <div className="mb-3">
                     <input
@@ -270,7 +270,7 @@ export const ProfilePage = () => {
                       onChange={handleAvatarChange}
                     />
                     <small className="form-text text-muted">
-                      รองรับไฟล์รูปภาพ (JPG, PNG, GIF) ขนาดไม่เกิน 5MB
+                     
                     </small>
                   </div>
                   {avatarPreview && (
@@ -279,11 +279,12 @@ export const ProfilePage = () => {
                         src={avatarPreview}
                         alt="Avatar Preview"
                         style={{ 
-                          maxWidth: '200px', 
-                          maxHeight: '200px', 
+                          width: '180px',
+                          height: '180px',
                           borderRadius: '50%', 
                           objectFit: 'cover',
-                          border: '3px solid #dee2e6'
+                          border: '4px solid #dee2e6',
+                          boxShadow: '0 10px 25px rgba(15, 23, 42, 0.12)',
                         }}
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = 'none';
@@ -292,7 +293,17 @@ export const ProfilePage = () => {
                       <button
                         type="button"
                         className="btn btn-sm btn-danger position-absolute"
-                        style={{ top: '0', right: '0', borderRadius: '50%', width: '30px', height: '30px', padding: 0 }}
+                        style={{
+                          top: '10px',
+                          right: '10px',
+                          borderRadius: '50%',
+                          width: '36px',
+                          height: '36px',
+                          padding: 0,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
                         onClick={handleRemoveAvatar}
                         title="ลบรูปภาพ"
                       >
@@ -371,7 +382,7 @@ export const ProfilePage = () => {
         <div className="col-lg-4">
           <div className="card shadow mb-4">
             <div className="card-header py-3">
-              <h6 className="m-0 font-weight-bold text-primary">ข้อมูลผู้ใช้</h6>
+              <h6 className="m-0 font-weight-bold text-primary">Profile Information</h6>
             </div>
             <div className="card-body text-center">
               {profile?.avatarUrl ? (

@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 
 type Company = {
   id?: string;
+  type: 'individual' | 'company';
   name: string;
   address?: string;
   phone?: string;
@@ -13,6 +14,9 @@ type Company = {
   taxId?: string;
   branchName?: string;
   branchNumber?: string;
+  billingDate?: string; // วันที่เรียกเก็บเงิน (1-31)
+  notificationDate?: string; // วันที่แจ้งเตือนล่วงหน้า (1-31)
+  billingCycle?: 'monthly' | 'yearly' | 'quarterly';
   createdAt?: string;
   updatedAt?: string;
   ownerUserId?: string;
@@ -21,6 +25,7 @@ type Company = {
 };
 
 const emptyCompany: Company = {
+  type: 'company',
   name: '',
   address: '',
   phone: '',
@@ -28,6 +33,9 @@ const emptyCompany: Company = {
   taxId: '',
   branchName: '',
   branchNumber: '',
+  billingDate: '',
+  notificationDate: '',
+  billingCycle: 'monthly',
 };
 
 const withBase = (path: string) => `${API_BASE_URL}${path}`;
@@ -41,6 +49,8 @@ export const CompaniesPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<string>('all');
 
   const performLogout = () => {
     setCompanies([]);
@@ -112,15 +122,23 @@ export const CompaniesPage = () => {
     setSubmitting(true);
     setError(null);
 
-    const payload = {
+    const payload: any = {
+      type: formData.type,
       name: formData.name.trim(),
       address: formData.address?.trim() || undefined,
       phone: formData.phone?.trim() || undefined,
       fax: formData.fax?.trim() || undefined,
       taxId: formData.taxId?.trim() || undefined,
-      branchName: formData.branchName?.trim() || undefined,
-      branchNumber: formData.branchNumber?.trim() || undefined,
+      billingDate: formData.billingDate?.trim() || undefined,
+      notificationDate: formData.notificationDate?.trim() || undefined,
+      billingCycle: formData.billingCycle || undefined,
     };
+
+    // เพิ่ม branch fields เฉพาะเมื่อเป็น company
+    if (formData.type === 'company') {
+      payload.branchName = formData.branchName?.trim() || undefined;
+      payload.branchNumber = formData.branchNumber?.trim() || undefined;
+    }
 
     if (!payload.name) {
       setError('Please enter company name');
@@ -175,6 +193,7 @@ export const CompaniesPage = () => {
   const handleEdit = (company: Company) => {
     setEditingId(company.id ?? null);
     setFormData({
+      type: company.type || 'company',
       name: company.name,
       address: company.address || '',
       phone: company.phone || '',
@@ -232,7 +251,7 @@ export const CompaniesPage = () => {
           <div className="card-header py-3 d-flex justify-content-between align-items-center">
             <h6 className="m-0 font-weight-bold text-primary">Companies List</h6>
             <div>
-              <button className="btn btn-sm btn-primary me-2" onClick={openAddModal}>
+              <button className="btn btn-sm btn-add me-2" onClick={openAddModal}>
                 Add New Company
               </button>
               <button
@@ -254,38 +273,76 @@ export const CompaniesPage = () => {
                 <table className="table table-bordered" width="100%" cellSpacing={0}>
                   <thead>
                     <tr>
-                      <th>Company Name</th>
+                      <th>Type</th>
+                      <th>Name</th>
                       <th>Address</th>
                       <th>Phone</th>
-                      <th>Fax</th>
                       <th>Tax ID</th>
-                      <th>Branch Name</th>
-                      <th>Branch Number</th>
-                      <th>Created By (email)</th>
-                      <th>Updated By (email)</th>
+                      <th>Branch</th>
+                      <th>Billing Cycle</th>
+                      <th>Billing Date</th>
+                      <th>Notification Date</th>
+                      <th>Created By</th>
                       <th>Last Updated</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {companies.map((company) => {
+                    {companies
+                      .filter((company) => {
+                        // Search filter
+                        if (searchTerm) {
+                          const searchLower = searchTerm.toLowerCase();
+                          const matchesSearch = 
+                            company.name?.toLowerCase().includes(searchLower) ||
+                            company.address?.toLowerCase().includes(searchLower) ||
+                            company.phone?.toLowerCase().includes(searchLower) ||
+                            company.taxId?.toLowerCase().includes(searchLower);
+                          if (!matchesSearch) return false;
+                        }
+                        // Type filter
+                        if (filterType !== 'all' && company.type !== filterType) {
+                          return false;
+                        }
+                        return true;
+                      })
+                      .map((company) => {
                       const canModify =
                         user?.role === 'admin' ||
                         user?.role === 'superadmin' ||
                         company.ownerUserId === user?.userId;
+                      const getBillingCycleLabel = (cycle?: string) => {
+                        switch (cycle) {
+                          case 'monthly': return 'Monthly';
+                          case 'yearly': return 'Yearly';
+                          case 'quarterly': return 'Quarterly';
+                          default: return '-';
+                        }
+                      };
+
                       return (
                         <tr key={company.id}>
+                          <td>
+                            <span className={`badge ${company.type === 'company' ? 'bg-primary' : 'bg-info'}`}>
+                              {company.type === 'company' ? 'Company' : 'Individual'}
+                            </span>
+                          </td>
                           <td>
                             <strong>{company.name}</strong>
                           </td>
                           <td>{company.address || '-'}</td>
                           <td>{company.phone || '-'}</td>
-                          <td>{company.fax || '-'}</td>
                           <td>{company.taxId || '-'}</td>
-                          <td>{company.branchName || '-'}</td>
-                          <td>{company.branchNumber || '-'}</td>
+                          <td>
+                            {company.type === 'company' 
+                              ? `${company.branchName || '-'}${company.branchNumber ? ` (${company.branchNumber})` : ''}`
+                              : '-'
+                            }
+                          </td>
+                          <td>{getBillingCycleLabel(company.billingCycle)}</td>
+                          <td>{company.billingDate ? `Day ${company.billingDate}` : '-'}</td>
+                          <td>{company.notificationDate ? `Day ${company.notificationDate}` : '-'}</td>
                           <td>{company.ownerEmail || '-'}</td>
-                          <td>{company.updatedByEmail || '-'}</td>
                           <td>
                             {company.updatedAt
                               ? new Date(company.updatedAt).toLocaleString('th-TH')
@@ -341,7 +398,21 @@ export const CompaniesPage = () => {
                   <div className="row">
                     <div className="col-md-12 mb-3">
                       <label className="form-label">
-                        Company Name <span className="text-danger">*</span>
+                        Type <span className="text-danger">*</span>
+                      </label>
+                      <select
+                        className="form-select"
+                        value={formData.type}
+                        onChange={(e) => handleChange('type', e.target.value as 'individual' | 'company')}
+                        required
+                      >
+                        <option value="company">Company (นิติบุคคล)</option>
+                        <option value="individual">Individual (บุคคล)</option>
+                      </select>
+                    </div>
+                    <div className="col-md-12 mb-3">
+                      <label className="form-label">
+                        {formData.type === 'company' ? 'Company Name' : 'Name'} <span className="text-danger">*</span>
                       </label>
                       <input
                         type="text"
@@ -387,6 +458,8 @@ export const CompaniesPage = () => {
                         onChange={(e) => handleChange('taxId', e.target.value)}
                       />
                     </div>
+                    {formData.type === 'company' && (
+                      <>
                     <div className="col-md-6 mb-3">
                       <label className="form-label">Branch Name</label>
                       <input
@@ -404,6 +477,50 @@ export const CompaniesPage = () => {
                         value={formData.branchNumber || ''}
                         onChange={(e) => handleChange('branchNumber', e.target.value)}
                       />
+                        </div>
+                      </>
+                    )}
+                    <div className="col-md-12 mb-3">
+                      <hr />
+                      <h6 className="mb-3">Billing Information</h6>
+                    </div>
+                    <div className="col-md-4 mb-3">
+                      <label className="form-label">Billing Cycle</label>
+                      <select
+                        className="form-select"
+                        value={formData.billingCycle || 'monthly'}
+                        onChange={(e) => handleChange('billingCycle', e.target.value)}
+                      >
+                        <option value="monthly">Monthly</option>
+                        <option value="quarterly">Quarterly</option>
+                        <option value="yearly">Yearly</option>
+                      </select>
+                    </div>
+                    <div className="col-md-4 mb-3">
+                      <label className="form-label">Billing Date (Day of month)</label>
+                      <input
+                        type="number"
+                        className="form-control"
+                        min="1"
+                        max="31"
+                        placeholder="e.g., 5"
+                        value={formData.billingDate || ''}
+                        onChange={(e) => handleChange('billingDate', e.target.value)}
+                      />
+                      <small className="form-text text-muted">Day of month to bill (1-31)</small>
+                    </div>
+                    <div className="col-md-4 mb-3">
+                      <label className="form-label">Notification Date (Day of month)</label>
+                      <input
+                        type="number"
+                        className="form-control"
+                        min="1"
+                        max="31"
+                        placeholder="e.g., 1"
+                        value={formData.notificationDate || ''}
+                        onChange={(e) => handleChange('notificationDate', e.target.value)}
+                      />
+                      <small className="form-text text-muted">Day to send notification (1-31)</small>
                     </div>
                   </div>
                   {error && <div className="alert alert-danger">{error}</div>}

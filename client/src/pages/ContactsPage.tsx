@@ -35,6 +35,7 @@ export const ContactsPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const performLogout = () => {
     setContacts([]);
@@ -223,13 +224,27 @@ export const ContactsPage = () => {
         <div className="card-header py-3 d-flex justify-content-between align-items-center">
           <h6 className="m-0 font-weight-bold text-primary">Contact List</h6>
           <div>
-            <button className="btn btn-sm btn-primary me-2" onClick={openAddModal}>Add New Contect</button>
+            <button className="btn btn-sm btn-add me-2" onClick={openAddModal}>Add New Contect</button>
             <button style={{ color: '#ffff' }} className="btn btn-sm btn-info shadow-sm" onClick={fetchContacts} disabled={loading}>
               {loading ? 'Loading...' : 'Refresh'}
             </button>
           </div>
         </div>
         <div className="card-body">
+          {/* Search */}
+          <div className="row mb-3">
+            <div className="col-md-6">
+              <label className="form-label">Search</label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search by name, phone, address..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
           {contacts.length === 0 && !loading ? (
             <p className="text-center">No contacts yet. Try adding a new one.</p>
           ) : (
@@ -247,7 +262,17 @@ export const ContactsPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {contacts.map((contact) => {
+                  {contacts
+                    .filter((contact) => {
+                      if (!searchTerm) return true;
+                      const searchLower = searchTerm.toLowerCase();
+                      return (
+                        `${contact.firstName} ${contact.lastName}`.toLowerCase().includes(searchLower) ||
+                        contact.phone?.toLowerCase().includes(searchLower) ||
+                        contact.address?.toLowerCase().includes(searchLower)
+                      );
+                    })
+                    .map((contact) => {
                     const canModify =
                       user?.role === 'admin' || user?.role === 'superadmin' || contact.userId === user?.userId;
                     return (
