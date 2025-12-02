@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt, FaChevronDown, FaChevronRight, FaCubes } from 'react-icons/fa';
+import { FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt, FaChevronDown, FaChevronRight, FaCubes, FaTasks, FaDollarSign } from 'react-icons/fa';
 import { PiAddressBookFill } from 'react-icons/pi';
 import { Dropdown } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
@@ -17,7 +17,6 @@ const Sidebar = () => {
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [visibility, setVisibility] = useState<VisibilityMap | null>(null);
     const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
-        component: false,
         manage: false,
     });
 
@@ -81,6 +80,16 @@ const Sidebar = () => {
         };
     }, [token]);
 
+    // Collapse manage accordion when navigating to non-admin routes.
+    // Keep it open if user navigates within /admin/* so submenu stays visible.
+    useEffect(() => {
+        if (!expandedSections.manage) return;
+        const isAdminRoute = location.pathname.startsWith('/admin');
+        if (!isAdminRoute) {
+            setExpandedSections(prev => ({ ...prev, manage: false }));
+        }
+    }, [location.pathname]);
+
     const fetchProfileAvatar = async () => {
         if (!token) return;
         try {
@@ -121,7 +130,6 @@ const Sidebar = () => {
             }
             // Otherwise, close all sections and open only the selected one
             return {
-                component: false,
                 manage: false,
                 [section]: true,
             };
@@ -150,39 +158,85 @@ const Sidebar = () => {
                 Interface
             </div>
 
-            {/* Component Section */}
-            {(isPageVisible('dashboard') || isPageVisible('companies')) && (
+            {/* Dashboard */}
+            {isPageVisible('dashboard') && (
                 <li className="nav-item accordion-section">
                     <div className="accordion-card">
-                        <a 
-                            className="nav-link accordion-header collapsed" 
-                            onClick={() => toggleSection('component')}
-                            style={{ cursor: 'pointer' }}
+                        <Link 
+                            className={`nav-link accordion-header ${isActive('/dashboard') ? 'active' : ''}`} 
+                            to="/dashboard"
                         >
-                            <FaCubes className="me-2" />
-                            <span>Component</span>
-                            {expandedSections.component ? (
-                                <FaChevronDown className="ms-auto" size={12} />
-                            ) : (
-                                <FaChevronRight className="ms-auto" size={12} />
-                            )}
-                        </a>
-                        {expandedSections.component && (
-                            <div className="accordion-content">
-                                {isPageVisible('dashboard') && (
-                                    <Link className={`accordion-item ${isActive('/contacts') ? 'active' : ''}`} to="/contacts">
-                                        <FaTable className="me-2" />
-                                        <span>Contacts</span>
-                                    </Link>
-                                )}
-                                {isPageVisible('companies') && (
-                                    <Link className={`accordion-item ${isActive('/companies') ? 'active' : ''}`} to="/companies">
-                                        <FaBuilding className="me-2" />
-                                        <span>Companies</span>
-                                    </Link>
-                                )}
-                            </div>
-                        )}
+                            <FaTachometerAlt className="me-2" />
+                            <span>Dashboard</span>
+                        </Link>
+                    </div>
+                </li>
+            )}
+
+            {/* Divider */}
+            <hr className="sidebar-divider" />
+
+            {/* Heading */}
+            <div className="sidebar-heading">
+                CRM
+            </div>
+
+            {/* Contacts */}
+            {isPageVisible('dashboard') && (
+                <li className="nav-item accordion-section">
+                    <div className="accordion-card">
+                        <Link 
+                            className={`nav-link accordion-header ${isActive('/contacts') ? 'active' : ''}`} 
+                            to="/contacts"
+                        >
+                            <FaTable className="me-2" />
+                            <span>Contacts</span>
+                        </Link>
+                    </div>
+                </li>
+            )}
+
+            {/* Companies */}
+            {isPageVisible('companies') && (
+                <li className="nav-item accordion-section">
+                    <div className="accordion-card">
+                        <Link 
+                            className={`nav-link accordion-header ${isActive('/companies') ? 'active' : ''}`} 
+                            to="/companies"
+                        >
+                            <FaBuilding className="me-2" />
+                            <span>Companies</span>
+                        </Link>
+                    </div>
+                </li>
+            )}
+
+            {/* Activities */}
+            {isPageVisible('dashboard') && (
+                <li className="nav-item accordion-section">
+                    <div className="accordion-card">
+                        <Link 
+                            className={`nav-link accordion-header ${isActive('/activities') ? 'active' : ''}`} 
+                            to="/activities"
+                        >
+                            <FaTasks className="me-2" />
+                            <span>Activities & Tasks</span>
+                        </Link>
+                    </div>
+                </li>
+            )}
+
+            {/* Deals */}
+            {isPageVisible('dashboard') && (
+                <li className="nav-item accordion-section">
+                    <div className="accordion-card">
+                        <Link 
+                            className={`nav-link accordion-header ${isActive('/deals') ? 'active' : ''}`} 
+                            to="/deals"
+                        >
+                            <FaDollarSign className="me-2" />
+                            <span>Deals Pipeline</span>
+                        </Link>
                     </div>
                 </li>
             )}
@@ -204,22 +258,28 @@ const Sidebar = () => {
                                 <FaChevronRight className="ms-auto" size={12} />
                             )}
                         </a>
-                        {expandedSections.manage && (
-                            <div className="accordion-content">
-                                {isPageVisible('admin_users') && (
-                                    <Link className={`accordion-item ${isActive('/admin/users') ? 'active' : ''}`} to="/admin/users">
-                                        <FaUsers className="me-2" />
-                                        <span>User</span>
-                                    </Link>
-                                )}
-                                {isPageVisible('visibility') && (
-                                    <Link className={`accordion-item ${isActive('/admin/visibility') ? 'active' : ''}`} to="/admin/visibility">
-                                        <FaCog className="me-2" />
-                                        <span>Visibility</span>
-                                    </Link>
-                                )}
-                            </div>
-                        )}
+                        <div 
+                            className="accordion-content"
+                            style={{
+                                maxHeight: expandedSections.manage ? '500px' : '0',
+                                opacity: expandedSections.manage ? 1 : 0,
+                                transition: 'max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            {isPageVisible('admin_users') && (
+                                <Link className={`accordion-item ${isActive('/admin/users') ? 'active' : ''}`} to="/admin/users">
+                                    <FaUsers className="me-2" />
+                                    <span>User</span>
+                                </Link>
+                            )}
+                            {isPageVisible('visibility') && (
+                                <Link className={`accordion-item ${isActive('/admin/visibility') ? 'active' : ''}`} to="/admin/visibility">
+                                    <FaCog className="me-2" />
+                                    <span>Visibility</span>
+                                </Link>
+                            )}
+                        </div>
                     </div>
                 </li>
             )}
@@ -238,7 +298,7 @@ const Sidebar = () => {
                 User Profile
             </div>
 
-            <li className="nav-item" style={{ position: 'relative' }}>
+            <li className="nav-item sidebar-profile" style={{ position: 'relative' }}>
                 <Dropdown show={showProfileDropdown} onToggle={setShowProfileDropdown} align="end">
                     <Dropdown.Toggle 
                         as="div" 
