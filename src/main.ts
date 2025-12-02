@@ -40,7 +40,9 @@ async function bootstrap() {
         req.path.startsWith('/api') ||
         req.path.startsWith('/cruds') ||
         req.path.startsWith('/auth') ||
-        req.path.startsWith('/companies')
+        req.path.startsWith('/companies') ||
+        req.path.startsWith('/activities') ||
+        req.path.startsWith('/deals')
       ) {
         return next();
       }
