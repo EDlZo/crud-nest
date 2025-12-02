@@ -60,3 +60,4 @@ set VITE_API_BASE_URL=https://crud-nest.your-domain.com && npm run build
 npm run test
 npm run test:e2e
 ```
+# crm
