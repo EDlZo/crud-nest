@@ -57,3 +57,11 @@ client/dist
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Ignore client node modules and build
+client/node_modules/
+client/dist/
+client/.vite/
+client/src/*.js
+client/src/*.js.map
+
