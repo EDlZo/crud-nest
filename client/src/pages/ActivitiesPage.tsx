@@ -433,7 +433,7 @@ export const ActivitiesPage = () => {
                       const canModify =
                         user?.role === 'admin' ||
                         user?.role === 'superadmin' ||
-                        activity.assignedTo === user?.userId;
+                        activity.assignedTo === user?.userId;                      
                       const statusBadge = getStatusBadge(activity.status);
                       const priorityBadge = getPriorityBadge(activity.priority);
                       
