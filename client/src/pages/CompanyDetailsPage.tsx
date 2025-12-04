@@ -248,15 +248,14 @@ export const CompanyDetailsPage = () => {
                                         <thead className="bg-light">
                                             <tr>
                                                 <th className="border-0 ps-4">Name</th>
-                                                <th className="border-0">Title</th>
-                                                <th className="border-0">Stage</th>
+                                                <th className="border-0">Address</th>
                                                 <th className="border-0 text-end pe-4">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {contacts.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={4} className="text-center py-4 text-muted">
+                                                    <td colSpan={3} className="text-center py-4 text-muted">
                                                         No contacts linked to this company.
                                                     </td>
                                                 </tr>
@@ -274,20 +273,21 @@ export const CompanyDetailsPage = () => {
                                                                 <span className="fw-medium">{contact.firstName} {contact.lastName}</span>
                                                             </div>
                                                         </td>
-                                                        <td>{contact.position || '-'}</td>
-                                                        <td>
-                                                            {contact.status && (
-                                                                <span className="badge bg-light text-success border border-success rounded-pill px-3">
-                                                                    {contact.status}
-                                                                </span>
-                                                            )}
-                                                        </td>
+                                                        <td>{(contact as any).address || '-'}</td>
                                                         <td className="text-end pe-4">
                                                             <div className="btn-group">
-                                                                <button className="btn btn-sm btn-outline-secondary border-0" title="Email">
+                                                                <button
+                                                                    className="btn btn-sm btn-outline-secondary border-0"
+                                                                    title="Email"
+                                                                    onClick={() => alert(`Email: ${contact.email || 'No email available'}`)}
+                                                                >
                                                                     <FaEnvelope />
                                                                 </button>
-                                                                <button className="btn btn-sm btn-outline-secondary border-0" title="Call">
+                                                                <button
+                                                                    className="btn btn-sm btn-outline-secondary border-0"
+                                                                    title="Call"
+                                                                    onClick={() => alert(`Phone: ${contact.phone || 'No phone available'}`)}
+                                                                >
                                                                     <FaPhone />
                                                                 </button>
                                                                 <button className="btn btn-sm btn-outline-secondary border-0" title="View">
