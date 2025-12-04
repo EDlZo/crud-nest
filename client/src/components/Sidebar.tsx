@@ -162,8 +162,8 @@ const Sidebar = () => {
             {isPageVisible('dashboard') && (
                 <li className="nav-item accordion-section">
                     <div className="accordion-card">
-                        <Link 
-                            className={`nav-link accordion-header ${isActive('/dashboard') ? 'active' : ''}`} 
+                        <Link
+                            className={`nav-link accordion-header ${isActive('/dashboard') ? 'active' : ''}`}
                             to="/dashboard"
                         >
                             <FaTachometerAlt className="me-2" />
@@ -185,8 +185,8 @@ const Sidebar = () => {
             {isPageVisible('dashboard') && (
                 <li className="nav-item accordion-section">
                     <div className="accordion-card">
-                        <Link 
-                            className={`nav-link accordion-header ${isActive('/contacts') ? 'active' : ''}`} 
+                        <Link
+                            className={`nav-link accordion-header ${isActive('/contacts') ? 'active' : ''}`}
                             to="/contacts"
                         >
                             <FaTable className="me-2" />
@@ -200,12 +200,12 @@ const Sidebar = () => {
             {isPageVisible('companies') && (
                 <li className="nav-item accordion-section">
                     <div className="accordion-card">
-                        <Link 
-                            className={`nav-link accordion-header ${isActive('/companies') ? 'active' : ''}`} 
+                        <Link
+                            className={`nav-link accordion-header ${isActive('/companies') ? 'active' : ''}`}
                             to="/companies"
                         >
                             <FaBuilding className="me-2" />
-                            <span>Com</span>
+                            <span>Companies</span>
                         </Link>
                     </div>
                 </li>
@@ -215,8 +215,8 @@ const Sidebar = () => {
             {isPageVisible('activities') && (
                 <li className="nav-item accordion-section">
                     <div className="accordion-card">
-                        <Link 
-                            className={`nav-link accordion-header ${isActive('/activities') ? 'active' : ''}`} 
+                        <Link
+                            className={`nav-link accordion-header ${isActive('/activities') ? 'active' : ''}`}
                             to="/activities"
                         >
                             <FaTasks className="me-2" />
@@ -245,8 +245,8 @@ const Sidebar = () => {
             {(isPageVisible('admin_users') || isPageVisible('visibility')) && (
                 <li className="nav-item accordion-section">
                     <div className="accordion-card">
-                        <a 
-                            className="nav-link accordion-header collapsed" 
+                        <a
+                            className="nav-link accordion-header collapsed"
                             onClick={() => toggleSection('manage')}
                             style={{ cursor: 'pointer' }}
                         >
@@ -258,7 +258,7 @@ const Sidebar = () => {
                                 <FaChevronRight className="ms-auto" size={12} />
                             )}
                         </a>
-                        <div 
+                        <div
                             className="accordion-content"
                             style={{
                                 maxHeight: expandedSections.manage ? '500px' : '0',
@@ -300,8 +300,8 @@ const Sidebar = () => {
 
             <li className="nav-item sidebar-profile" style={{ position: 'sticky', bottom: 0, zIndex: 20 }}>
                 <Dropdown show={showProfileDropdown} onToggle={setShowProfileDropdown} align="end">
-                    <Dropdown.Toggle 
-                        as="div" 
+                    <Dropdown.Toggle
+                        as="div"
                         className="nav-link d-flex align-items-center justify-content-between cursor-pointer"
                         style={{ cursor: 'pointer' }}
                     >

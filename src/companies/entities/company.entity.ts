@@ -11,6 +11,7 @@ export class Company {
   branchNumber?: string;
   socials?: Record<string, string>;
   avatarUrl?: string;
+  contacts?: string[];
   createdAt?: string;
   updatedAt?: string;
   updatedByEmail?: string;

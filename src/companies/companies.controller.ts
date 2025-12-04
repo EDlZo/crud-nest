@@ -4,6 +4,8 @@ import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
+import { VisibilityGuard } from '../auth/visibility.guard';
+import { PageVisibility } from '../auth/page-visibility.decorator';
 
 @Controller('companies')
 export class CompaniesController {
@@ -22,7 +24,8 @@ export class CompaniesController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, VisibilityGuard)
+  @PageVisibility('companies')
   @Get()
   async findAll(@Request() req: any) {
     try {
@@ -38,7 +41,8 @@ export class CompaniesController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, VisibilityGuard)
+  @PageVisibility('companies')
   @Get(':id')
   async findOne(@Param('id') id: string, @Request() req: any) {
     try {

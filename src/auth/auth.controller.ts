@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Get, Req } from '@nestjs/common';
+import { Body, Controller, Post, Get, Req, ForbiddenException } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterAuthDto } from './dto/register-auth.dto';
@@ -60,8 +60,14 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('visibility')
-  async getVisibility() {
-    return this.authService.getVisibility();
+  async getVisibility(@Req() req: any) {
+    const visibility = await this.authService.getVisibility();
+    const role = (req.user?.role || 'guest').toLowerCase();
+    // If this role is not allowed to see the visibility page, forbid
+    if (!visibility?.[role]?.visibility) {
+      throw new ForbiddenException('ไม่อนุญาตให้เข้าถึงหน้า Visibility');
+    }
+    return visibility;
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

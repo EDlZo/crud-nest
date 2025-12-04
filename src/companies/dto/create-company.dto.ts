@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsObject } from 'class-validator';
+import { IsOptional, IsString, IsObject, IsArray } from 'class-validator';
 
 export class CreateCompanyDto {
   @IsString()
@@ -35,4 +35,9 @@ export class CreateCompanyDto {
   @IsOptional()
   @IsString()
   avatarUrl?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  contacts?: string[];
 }

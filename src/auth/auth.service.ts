@@ -134,9 +134,9 @@ export class AuthService {
     if (!doc.exists) {
       // default visibility: superadmin sees everything, admin sees dashboard and users, guest sees dashboard
       const defaults = {
-        superadmin: { dashboard: true, companies: true, admin_users: true, visibility: true },
-        admin: { dashboard: true, companies: true, admin_users: false, visibility: false },
-        guest: { dashboard: true, companies: true, admin_users: false, visibility: false },
+        superadmin: { dashboard: true, companies: true, admin_users: true, visibility: true, activities: true, deals: true },
+        admin: { dashboard: true, companies: true, admin_users: false, visibility: false, activities: true, deals: true },
+        guest: { dashboard: true, companies: true, admin_users: false, visibility: false, activities: true, deals: true },
       };
       await ref.set(defaults);
       return defaults;

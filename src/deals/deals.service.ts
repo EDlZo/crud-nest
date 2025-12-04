@@ -26,15 +26,11 @@ export class DealsService {
   }
 
   async findAll(user?: AuthUser): Promise<Deal[]> {
-    if (user?.role === 'superadmin' || user?.role === 'admin') {
-      const snap = await this.collection.orderBy('updatedAt', 'desc').get();
-      return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as Deal));
-    }
+    // Return all deals for any authenticated user so lists appear the same across roles
     if (!user) return [];
-    const snap = await this.collection.get();
+    const snap = await this.collection.orderBy('updatedAt', 'desc').get();
     const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as Deal));
-    const filtered = all.filter((a) => a.ownerUserId === user.userId || a.ownerUserId === undefined);
-    return filtered.sort((a, b) => (b.updatedAt ? new Date(b.updatedAt).getTime() : 0) - (a.updatedAt ? new Date(a.updatedAt).getTime() : 0));
+    return all;
   }
 
   async findOne(id: string, user?: AuthUser): Promise<Deal> {
