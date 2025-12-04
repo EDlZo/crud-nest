@@ -10,6 +10,10 @@ const emptyActivity = {
     description: '',
     status: 'pending',
     priority: 'medium',
+    relatedTo: undefined,
+    relatedId: '',
+    assignedTo: '',
+    dueDate: '',
 };
 const withBase = (path) => `${API_BASE_URL}${path}`;
 export const ActivitiesPage = () => {
@@ -44,11 +48,14 @@ export const ActivitiesPage = () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(withBase('/activities'), {
+            const url = withBase('/activities');
+            console.log('Fetching activities from:', url);
+            const response = await fetch(url, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
             });
+            console.log('Response status:', response.status, response.statusText);
             if (response.status === 401) {
                 handleUnauthorized();
                 return;
@@ -57,19 +64,25 @@ export const ActivitiesPage = () => {
                 const contentType = response.headers.get('content-type') || '';
                 if (contentType.includes('application/json')) {
                     const body = await response.json();
+                    console.error('Error response:', body);
                     throw new Error(typeof body === 'string' ? body : JSON.stringify(body));
                 }
                 else {
                     const text = await response.text();
+                    console.error('Error text:', text);
                     throw new Error(`Server error: ${response.status} ${response.statusText}`);
                 }
             }
             const contentType = response.headers.get('content-type') || '';
             if (!contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('Non-JSON response:', text);
                 throw new Error('Server returned non-JSON response. Please check if backend is running.');
             }
             const data = await response.json();
+            console.log('Fetched activities data:', data);
             let filteredData = Array.isArray(data) ? data : [];
+            console.log('Filtered data (before filters):', filteredData.length, 'items');
             // Filter by type
             if (filterType !== 'all') {
                 filteredData = filteredData.filter((activity) => activity.type === filterType);
@@ -78,9 +91,11 @@ export const ActivitiesPage = () => {
             if (filterStatus !== 'all') {
                 filteredData = filteredData.filter((activity) => activity.status === filterStatus);
             }
+            console.log('Final filtered data:', filteredData.length, 'items');
             setActivities(filteredData);
         }
         catch (err) {
+            console.error('Error fetching activities:', err);
             setError(err.message);
         }
         finally {
@@ -89,7 +104,17 @@ export const ActivitiesPage = () => {
     }, [token, filterType, filterStatus]);
     useEffect(() => {
         fetchActivities();
-    }, [fetchActivities]);
+        // Fetch users list on mount to display assignedTo emails
+        if (token) {
+            fetch(withBase('/auth/users/list'), {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+            })
+                .then((res) => res.ok && res.json())
+                .then((data) => Array.isArray(data) && setUsers(data))
+                .catch((err) => console.error('Error fetching users:', err));
+        }
+    }, [fetchActivities, token]);
     const handleChange = (key, value) => {
         setFormData((prev) => ({ ...prev, [key]: value }));
     };
@@ -140,8 +165,18 @@ export const ActivitiesPage = () => {
         resetForm();
     };
     const handleEdit = (activity) => {
-        // Keep dueDate as is - the input will handle the conversion
-        setFormData(activity);
+        // Normalize all fields to ensure no undefined values for controlled inputs
+        setFormData({
+            ...emptyActivity,
+            ...activity,
+            title: activity.title || '',
+            description: activity.description || '',
+            relatedTo: activity.relatedTo || undefined,
+            relatedId: activity.relatedId || '',
+            assignedTo: activity.assignedTo || '',
+            dueDate: activity.dueDate || '',
+            priority: activity.priority || 'medium',
+        });
         setEditingId(activity.id || null);
         setShowModal(true);
         fetchCompaniesAndContacts();
@@ -185,10 +220,18 @@ export const ActivitiesPage = () => {
     };
     const handleSubmit = async (event) => {
         event.preventDefault();
-        if (!token)
+        if (!token) {
+            console.error('No token available');
             return;
+        }
         setSubmitting(true);
         setError(null);
+        // Find assigned user email from users list
+        let assignedToEmail = undefined;
+        if (formData.assignedTo && users.length > 0) {
+            const assignedUser = users.find((u) => (u.id || u.userId) === formData.assignedTo);
+            assignedToEmail = assignedUser?.email;
+        }
         const payload = {
             type: formData.type,
             title: formData.title.trim(),
@@ -199,7 +242,9 @@ export const ActivitiesPage = () => {
             relatedTo: formData.relatedTo || undefined,
             relatedId: formData.relatedId || undefined,
             assignedTo: formData.assignedTo || undefined,
+            assignedToEmail: assignedToEmail,
         };
+        console.log('Submitting payload:', payload);
         if (!payload.title) {
             setError('Please enter activity title');
             setSubmitting(false);
@@ -207,7 +252,9 @@ export const ActivitiesPage = () => {
         }
         try {
             const isEdit = Boolean(editingId);
-            const response = await fetch(withBase(`/activities${isEdit ? `/${editingId}` : ''}`), {
+            const url = withBase(`/activities${isEdit ? `/${editingId}` : ''}`);
+            console.log(`${isEdit ? 'Updating' : 'Creating'} activity at:`, url);
+            const response = await fetch(url, {
                 method: isEdit ? 'PATCH' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -215,19 +262,25 @@ export const ActivitiesPage = () => {
                 },
                 body: JSON.stringify(payload),
             });
+            console.log('Response status:', response.status, response.statusText);
             if (response.status === 401) {
+                console.error('Unauthorized - session expired');
                 handleUnauthorized();
                 return;
             }
             if (!response.ok) {
                 const contentType = response.headers.get('content-type') || '';
                 const body = contentType.includes('application/json') ? await response.json() : await response.text();
+                console.error('Error response:', body);
                 throw new Error(typeof body === 'string' ? body : JSON.stringify(body));
             }
+            const result = await response.json();
+            console.log('Success! Created/Updated activity:', result);
             await fetchActivities();
             closeModal();
         }
         catch (err) {
+            console.error('Error submitting activity:', err);
             setError(err.message);
         }
         finally {
@@ -335,7 +388,16 @@ export const ActivitiesPage = () => {
                                                                             hour: '2-digit',
                                                                             minute: '2-digit',
                                                                         })
-                                                                        : '-' }), _jsx("td", { children: activity.assignedToEmail || '-' }), _jsx("td", { children: activity.createdAt
+                                                                        : '-' }), _jsx("td", { children: (() => {
+                                                                        if (activity.assignedToEmail) {
+                                                                            return activity.assignedToEmail;
+                                                                        }
+                                                                        if (activity.assignedTo && users.length > 0) {
+                                                                            const assignedUser = users.find((u) => (u.id || u.userId) === activity.assignedTo);
+                                                                            return assignedUser?.email || '-';
+                                                                        }
+                                                                        return '-';
+                                                                    })() }), _jsx("td", { children: activity.createdAt
                                                                         ? new Date(activity.createdAt).toLocaleDateString()
                                                                         : '-' }), _jsxs("td", { children: [_jsxs("div", { className: "btn-group", children: [_jsx("button", { className: "icon-btn view", "aria-label": "view", title: "View Details", onClick: () => handleViewActivity(activity), children: _jsx(FaEye, {}) }), canModify && (_jsxs(_Fragment, { children: [_jsx("button", { className: "icon-btn edit", "aria-label": "edit", title: "Edit", onClick: () => handleEdit(activity), children: _jsx(FaPen, {}) }), _jsx("button", { className: "icon-btn delete", "aria-label": "delete", title: "Delete", onClick: () => handleDelete(activity.id), children: _jsx(FaTrash, {}) })] }))] }), !canModify && (_jsx("span", { className: "badge bg-secondary ms-2", children: "No Permission" }))] })] }, activity.id));
                                                     }) })] }) }))] })] })] }), showModal && (_jsx("div", { className: "modal show d-block", style: { backgroundColor: 'rgba(0,0,0,0.5)' }, children: _jsx("div", { className: "modal-dialog modal-lg", children: _jsxs("div", { className: "modal-content", children: [_jsxs("div", { className: "modal-header", children: [_jsx("h5", { className: "modal-title", children: editingId ? 'Edit Activity' : 'Add New Activity' }), _jsx("button", { type: "button", className: "btn-close", onClick: closeModal })] }), _jsx("div", { className: "modal-body", children: _jsxs("form", { onSubmit: handleSubmit, children: [_jsxs("div", { className: "row", children: [_jsxs("div", { className: "col-md-6 mb-3", children: [_jsxs("label", { className: "form-label", children: ["Type ", _jsx("span", { className: "text-danger", children: "*" })] }), _jsxs("select", { className: "form-select", value: formData.type, onChange: (e) => handleChange('type', e.target.value), required: true, children: [_jsx("option", { value: "task", children: "Task" }), _jsx("option", { value: "call", children: "Call" }), _jsx("option", { value: "email", children: "Email" }), _jsx("option", { value: "meeting", children: "Meeting" }), _jsx("option", { value: "note", children: "Note" })] })] }), _jsxs("div", { className: "col-md-6 mb-3", children: [_jsxs("label", { className: "form-label", children: ["Status ", _jsx("span", { className: "text-danger", children: "*" })] }), _jsxs("select", { className: "form-select", value: formData.status, onChange: (e) => handleChange('status', e.target.value), required: true, children: [_jsx("option", { value: "pending", children: "Pending" }), _jsx("option", { value: "in_progress", children: "In Progress" }), _jsx("option", { value: "completed", children: "Completed" }), _jsx("option", { value: "cancelled", children: "Cancelled" })] })] }), _jsxs("div", { className: "col-md-12 mb-3", children: [_jsxs("label", { className: "form-label", children: ["Title ", _jsx("span", { className: "text-danger", children: "*" })] }), _jsx("input", { type: "text", className: "form-control", value: formData.title, onChange: (e) => handleChange('title', e.target.value), required: true })] }), _jsxs("div", { className: "col-md-12 mb-3", children: [_jsx("label", { className: "form-label", children: "Description" }), _jsx("textarea", { className: "form-control", value: formData.description || '', onChange: (e) => handleChange('description', e.target.value), rows: 3 })] }), _jsxs("div", { className: "col-md-4 mb-3", children: [_jsx("label", { className: "form-label", children: "Priority" }), _jsxs("select", { className: "form-select", value: formData.priority || 'medium', onChange: (e) => handleChange('priority', e.target.value), children: [_jsx("option", { value: "low", children: "Low" }), _jsx("option", { value: "medium", children: "Medium" }), _jsx("option", { value: "high", children: "High" })] })] }), _jsxs("div", { className: "col-md-4 mb-3", children: [_jsx("label", { className: "form-label", children: "Due Date & Time" }), _jsx("input", { type: "datetime-local", className: "form-control", value: formData.dueDate ? (() => {
@@ -383,7 +445,7 @@ export const ActivitiesPage = () => {
                                                             } })] }), _jsxs("div", { className: "col-md-4 mb-3", children: [_jsx("label", { className: "form-label", children: "Assigned To" }), _jsxs("select", { className: "form-select", value: formData.assignedTo || '', onChange: (e) => handleChange('assignedTo', e.target.value), children: [_jsx("option", { value: "", children: "-- Select User --" }), users.map((userItem) => (_jsxs("option", { value: userItem.id || userItem.userId, children: [userItem.email, " ", userItem.firstName || userItem.lastName ? `(${userItem.firstName || ''} ${userItem.lastName || ''})`.trim() : ''] }, userItem.id || userItem.userId)))] })] }), _jsxs("div", { className: "col-md-6 mb-3", children: [_jsx("label", { className: "form-label", children: "Related To" }), _jsxs("select", { className: "form-select", value: formData.relatedTo || '', onChange: (e) => {
                                                                 handleChange('relatedTo', e.target.value);
                                                                 handleChange('relatedId', ''); // Reset ID when changing type
-                                                            }, children: [_jsx("option", { value: "", children: "None" }), _jsx("option", { value: "company", children: "Company" }), _jsx("option", { value: "contact", children: "Contact" }), _jsx("option", { value: "deal", children: "Deal" })] })] }), formData.relatedTo === 'company' && (_jsxs("div", { className: "col-md-6 mb-3", children: [_jsx("label", { className: "form-label", children: "Select Company" }), _jsxs("select", { className: "form-select", value: formData.relatedId || '', onChange: (e) => handleChange('relatedId', e.target.value), children: [_jsx("option", { value: "", children: "-- Select Company --" }), companies.map((company) => (_jsxs("option", { value: company.id, children: [company.name, " ", company.type === 'individual' ? '(Individual)' : '(Company)'] }, company.id)))] })] })), formData.relatedTo === 'contact' && (_jsxs("div", { className: "col-md-6 mb-3", children: [_jsx("label", { className: "form-label", children: "Select Contact" }), _jsxs("select", { className: "form-select", value: formData.relatedId || '', onChange: (e) => handleChange('relatedId', e.target.value), children: [_jsx("option", { value: "", children: "-- Select Contact --" }), contacts.map((contact) => (_jsxs("option", { value: contact.id, children: [contact.firstName, " ", contact.lastName] }, contact.id)))] })] })), formData.relatedTo === 'deal' && (_jsxs("div", { className: "col-md-6 mb-3", children: [_jsx("label", { className: "form-label", children: "Related Deal ID" }), _jsx("input", { type: "text", className: "form-control", placeholder: "Enter Deal ID", value: formData.relatedId || '', onChange: (e) => handleChange('relatedId', e.target.value) }), _jsx("small", { className: "form-text text-muted", children: "Deal selection will be added in future update" })] }))] }), error && _jsx("div", { className: "alert alert-danger", children: error }), _jsxs("div", { className: "d-flex gap-2", children: [_jsx("button", { type: "submit", className: "btn btn-primary", disabled: submitting, children: submitting
+                                                            }, children: [_jsx("option", { value: "", children: "None" }), _jsx("option", { value: "company", children: "Company" }), _jsx("option", { value: "contact", children: "Contact" })] })] }), formData.relatedTo === 'company' && (_jsxs("div", { className: "col-md-6 mb-3", children: [_jsx("label", { className: "form-label", children: "Select Company" }), _jsxs("select", { className: "form-select", value: formData.relatedId || '', onChange: (e) => handleChange('relatedId', e.target.value), children: [_jsx("option", { value: "", children: "-- Select Company --" }), companies.map((company) => (_jsxs("option", { value: company.id, children: [company.name, " ", company.type === 'individual' ? '(Individual)' : '(Company)'] }, company.id)))] })] })), formData.relatedTo === 'contact' && (_jsxs("div", { className: "col-md-6 mb-3", children: [_jsx("label", { className: "form-label", children: "Select Contact" }), _jsxs("select", { className: "form-select", value: formData.relatedId || '', onChange: (e) => handleChange('relatedId', e.target.value), children: [_jsx("option", { value: "", children: "-- Select Contact --" }), contacts.map((contact) => (_jsxs("option", { value: contact.id, children: [contact.firstName, " ", contact.lastName] }, contact.id)))] })] })), formData.relatedTo === 'deal' && (_jsxs("div", { className: "col-md-6 mb-3", children: [_jsx("label", { className: "form-label", children: "Related Deal ID" }), _jsx("input", { type: "text", className: "form-control", placeholder: "Enter Deal ID", value: formData.relatedId || '', onChange: (e) => handleChange('relatedId', e.target.value) }), _jsx("small", { className: "form-text text-muted", children: "Deal selection will be added in future update" })] }))] }), error && _jsx("div", { className: "alert alert-danger", children: error }), _jsxs("div", { className: "d-flex gap-2", children: [_jsx("button", { type: "submit", className: "btn btn-primary", disabled: submitting, children: submitting
                                                         ? 'Saving...'
                                                         : editingId
                                                             ? 'Save Changes'

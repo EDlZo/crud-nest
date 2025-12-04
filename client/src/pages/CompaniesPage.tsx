@@ -23,6 +23,7 @@ type Company = {
   ownerUserId?: string;
   ownerEmail?: string;
   updatedByEmail?: string;
+  contacts?: string[];
 };
 
 const emptyCompany: Company = {
@@ -37,6 +38,7 @@ const emptyCompany: Company = {
   billingDate: '',
   notificationDate: '',
   billingCycle: 'monthly',
+  contacts: [],
 };
 
 const withBase = (path: string) => `${API_BASE_URL}${path}`;

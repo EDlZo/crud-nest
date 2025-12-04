@@ -205,7 +205,7 @@ const Sidebar = () => {
                             to="/companies"
                         >
                             <FaBuilding className="me-2" />
-                            <span>Companies</span>
+                            <span>Com</span>
                         </Link>
                     </div>
                 </li>
