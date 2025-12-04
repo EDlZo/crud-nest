@@ -130,6 +130,25 @@ export const ContactsPage = () => {
 
     console.log('Submitting payload:', { ...payload, photo: payload.photo ? `[base64 ${payload.photo.length} chars]` : 'empty' });
 
+    // If photo is present, check approximate size to avoid exceeding server body limits
+    if (payload.photo) {
+      // base64 string like 'data:image/jpeg;base64,/9j/...' -> estimate bytes from length
+      const base64data = payload.photo.split(',')[1] ?? payload.photo;
+      const approxBytes = Math.ceil((base64data.length * 3) / 4);
+      const approxKB = Math.round(approxBytes / 1024);
+      console.log(`Photo approx size: ${approxKB} KB`);
+      const MAX_KB = 300; // client-side limit to avoid large payloads
+      if (approxKB > MAX_KB) {
+        const proceed = window.confirm(
+          `The selected photo is large (~${approxKB} KB). Sending it may fail. Continue without photo? (OK = yes, Cancel = keep photo)`,
+        );
+        if (proceed) {
+          delete (payload as any).photo;
+          setPhotoPreview('');
+        }
+      }
+    }
+
     try {
       const isEdit = Boolean(editingId);
       const response = await fetch(
