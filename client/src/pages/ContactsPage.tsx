@@ -128,6 +128,8 @@ export const ContactsPage = () => {
       return;
     }
 
+    console.log('Submitting payload:', { ...payload, photo: payload.photo ? `[base64 ${payload.photo.length} chars]` : 'empty' });
+
     try {
       const isEdit = Boolean(editingId);
       const response = await fetch(
@@ -142,6 +144,8 @@ export const ContactsPage = () => {
         },
       );
 
+      console.log('Response status:', response.status);
+
       if (response.status === 401) {
         handleUnauthorized();
         return;
@@ -153,10 +157,12 @@ export const ContactsPage = () => {
       if (!response.ok) {
         const contentType = response.headers.get('content-type') || '';
         const body = contentType.includes('application/json') ? await response.json() : await response.text();
+        console.error('Error response:', body);
         throw new Error(typeof body === 'string' ? body : JSON.stringify(body));
       }
 
       const saved = (await response.json()) as Contact;
+      console.log('Saved contact:', saved);
 
       if (isEdit) {
         setContacts((prev) => prev.map((item) => (item.id === saved.id ? saved : item)));
@@ -166,6 +172,7 @@ export const ContactsPage = () => {
       resetForm();
       setShowModal(false);
     } catch (err) {
+      console.error('Submit error:', err);
       setError((err as Error).message);
     } finally {
       setSubmitting(false);
@@ -348,16 +355,54 @@ export const ContactsPage = () => {
                         />
                       </div>
                       <input
-                        type="url"
+                        type="file"
                         className="form-control"
-                        placeholder="Enter photo URL"
-                        value={formData.photo || ''}
+                        accept="image/*"
                         onChange={(e) => {
-                          handleChange('photo', e.target.value);
-                          setPhotoPreview(e.target.value);
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            // Compress and convert to base64
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const img = new Image();
+                              img.onload = () => {
+                                // Create canvas to resize image
+                                const canvas = document.createElement('canvas');
+                                const MAX_WIDTH = 400;
+                                const MAX_HEIGHT = 400;
+                                let width = img.width;
+                                let height = img.height;
+
+                                // Calculate new dimensions
+                                if (width > height) {
+                                  if (width > MAX_WIDTH) {
+                                    height *= MAX_WIDTH / width;
+                                    width = MAX_WIDTH;
+                                  }
+                                } else {
+                                  if (height > MAX_HEIGHT) {
+                                    width *= MAX_HEIGHT / height;
+                                    height = MAX_HEIGHT;
+                                  }
+                                }
+
+                                canvas.width = width;
+                                canvas.height = height;
+                                const ctx = canvas.getContext('2d');
+                                ctx?.drawImage(img, 0, 0, width, height);
+
+                                // Convert to base64 with compression
+                                const base64String = canvas.toDataURL('image/jpeg', 0.7);
+                                handleChange('photo', base64String);
+                                setPhotoPreview(base64String);
+                              };
+                              img.src = event.target?.result as string;
+                            };
+                            reader.readAsDataURL(file);
+                          }
                         }}
                       />
-                      <small className="text-muted">Enter a URL to a profile photo</small>
+                      <small className="text-muted">Upload a photo from your device (JPG, PNG, etc.)</small>
                     </div>
                     <div className="col-md-6 mb-3">
                       <label className="form-label">First Name</label>
