@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { FaPen, FaTrash } from 'react-icons/fa';
+import { FaPen, FaTrash, FaEye } from 'react-icons/fa';
 import { FaPlus } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -45,6 +46,7 @@ const withBase = (path: string) => `${API_BASE_URL}${path}`;
 
 export const CompaniesPage = () => {
   const { token, user, logout } = useAuth();
+  const navigate = useNavigate();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [formData, setFormData] = useState<Company>(emptyCompany);
   const [showModal, setShowModal] = useState(false);
@@ -403,6 +405,7 @@ export const CompaniesPage = () => {
                             <div>
                               {canModify ? (
                                 <>
+                                  <button className="icon-btn view me-2" onClick={() => navigate(`/companies/${company.id}`)} title="View Details"><FaEye /></button>
                                   <button className="icon-btn edit me-2" onClick={() => handleEdit(company)} title="Edit"><FaPen /></button>
                                   <button className="icon-btn delete" onClick={() => handleDelete(company.id)} title="Delete"><FaTrash /></button>
                                 </>
@@ -498,23 +501,23 @@ export const CompaniesPage = () => {
                     </div>
                     {formData.type === 'company' && (
                       <>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Branch Name</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={formData.branchName || ''}
-                        onChange={(e) => handleChange('branchName', e.target.value)}
-                      />
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Branch Number</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={formData.branchNumber || ''}
-                        onChange={(e) => handleChange('branchNumber', e.target.value)}
-                      />
+                        <div className="col-md-6 mb-3">
+                          <label className="form-label">Branch Name</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={formData.branchName || ''}
+                            onChange={(e) => handleChange('branchName', e.target.value)}
+                          />
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <label className="form-label">Branch Number</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={formData.branchNumber || ''}
+                            onChange={(e) => handleChange('branchNumber', e.target.value)}
+                          />
                         </div>
                       </>
                     )}
@@ -567,8 +570,8 @@ export const CompaniesPage = () => {
                       {submitting
                         ? 'Saving...'
                         : editingId
-                        ? 'Save Changes'
-                        : 'Add Company'}
+                          ? 'Save Changes'
+                          : 'Add Company'}
                     </button>
                     <button
                       type="button"

@@ -4,6 +4,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthPage } from './pages/AuthPage';
 import { ContactsPage } from './pages/ContactsPage';
 import { CompaniesPage } from './pages/CompaniesPage';
+import { CompanyDetailsPage } from './pages/CompanyDetailsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { VisibilityPage } from './pages/VisibilityPage';
@@ -46,6 +47,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <CompaniesPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/companies/:id"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <CompanyDetailsPage />
               </Layout>
             </ProtectedRoute>
           }
