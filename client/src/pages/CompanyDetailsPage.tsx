@@ -64,11 +64,15 @@ export const CompanyDetailsPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Edit Modal State
-    const [formData, setFormData] = useState<Company>(emptyCompany);
-    const [showModal, setShowModal] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    // Inline Editing State
+    const [editingField, setEditingField] = useState<string | null>(null);
+    const [editValue, setEditValue] = useState<string>('');
+    const [saving, setSaving] = useState(false);
+
+    // Contacts Modal State
+    const [allContacts, setAllContacts] = useState<Contact[]>([]);
+    const [showContactsModal, setShowContactsModal] = useState(false);
+    const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
 
     const fetchCompanyAndContacts = useCallback(async () => {
         if (!token || !id) return;
@@ -94,9 +98,10 @@ export const CompanyDetailsPage = () => {
             });
 
             if (contactsRes.ok) {
-                const allContacts = await contactsRes.json();
-                if (Array.isArray(allContacts) && Array.isArray(companyData.contacts)) {
-                    const companyContacts = allContacts.filter((c: Contact) =>
+                const allContactsData = await contactsRes.json();
+                setAllContacts(Array.isArray(allContactsData) ? allContactsData : []);
+                if (Array.isArray(allContactsData) && Array.isArray(companyData.contacts)) {
+                    const companyContacts = allContactsData.filter((c: Contact) =>
                         companyData.contacts.includes(c.id)
                     );
                     setContacts(companyContacts);
@@ -114,77 +119,30 @@ export const CompanyDetailsPage = () => {
         fetchCompanyAndContacts();
     }, [fetchCompanyAndContacts]);
 
-    const handleChange = (key: keyof Company, value: string) => {
-        setFormData((prev) => ({ ...prev, [key]: value }));
+    // Inline editing handlers
+    const startEditing = (field: string, currentValue: string) => {
+        setEditingField(field);
+        setEditValue(currentValue || '');
     };
 
-    const resetForm = () => {
-        setEditingId(null);
-        setFormData(emptyCompany);
+    const cancelEditing = () => {
+        setEditingField(null);
+        setEditValue('');
     };
 
-    const closeModal = () => {
-        setShowModal(false);
-        resetForm();
-    };
-
-    const handleEdit = () => {
-        if (!company) return;
-        setEditingId(company.id ?? null);
-        setFormData({
-            type: company.type || 'company',
-            name: company.name,
-            address: company.address || '',
-            phone: company.phone || '',
-            fax: company.fax || '',
-            taxId: company.taxId || '',
-            branchName: company.branchName || '',
-            branchNumber: company.branchNumber || '',
-            billingDate: company.billingDate || '',
-            notificationDate: company.notificationDate || '',
-            billingCycle: company.billingCycle || 'monthly',
-            id: company.id,
-        });
-        setShowModal(true);
-    };
-
-    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!token) return;
-        setSubmitting(true);
+    const saveField = async (field: keyof Company) => {
+        if (!token || !company?.id) return;
+        setSaving(true);
         setError(null);
 
-        const payload: any = {
-            type: formData.type,
-            name: formData.name.trim(),
-            address: formData.address?.trim() || undefined,
-            phone: formData.phone?.trim() || undefined,
-            fax: formData.fax?.trim() || undefined,
-            taxId: formData.taxId?.trim() || undefined,
-            billingDate: formData.billingDate?.trim() || undefined,
-            notificationDate: formData.notificationDate?.trim() || undefined,
-            billingCycle: formData.billingCycle || undefined,
-        };
-
-        if (formData.type === 'company') {
-            payload.branchName = formData.branchName?.trim() || undefined;
-            payload.branchNumber = formData.branchNumber?.trim() || undefined;
-        }
-
-        if (!payload.name) {
-            setError('Please enter company name');
-            setSubmitting(false);
-            return;
-        }
-
         try {
-            const response = await fetch(withBase(`/companies/${editingId}`), {
+            const response = await fetch(withBase(`/companies/${company.id}`), {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify(payload),
+                body: JSON.stringify({ [field]: editValue.trim() || undefined }),
             });
 
             if (!response.ok) {
@@ -193,11 +151,52 @@ export const CompanyDetailsPage = () => {
 
             const saved = await response.json();
             setCompany(saved);
-            closeModal();
+            cancelEditing();
         } catch (err) {
             setError((err as Error).message);
         } finally {
-            setSubmitting(false);
+            setSaving(false);
+        }
+    };
+
+    // Contacts modal handlers
+    const openContactsModal = () => {
+        setSelectedContactIds(Array.isArray(company?.contacts) ? company.contacts : []);
+        setShowContactsModal(true);
+    };
+
+    const closeContactsModal = () => {
+        setShowContactsModal(false);
+        setSelectedContactIds([]);
+    };
+
+    const toggleContactSelection = (contactId: string) => {
+        setSelectedContactIds((prev) => {
+            if (prev.includes(contactId)) return prev.filter((id) => id !== contactId);
+            return [...prev, contactId];
+        });
+    };
+
+    const saveCompanyContacts = async () => {
+        if (!company || !token) return;
+        try {
+            const res = await fetch(withBase(`/companies/${company.id}`), {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ contacts: selectedContactIds }),
+            });
+            if (!res.ok) {
+                throw new Error('Failed to update contacts');
+            }
+            const updated = await res.json();
+            setCompany(updated);
+            // Update contacts list
+            const updatedContacts = allContacts.filter((c) => selectedContactIds.includes(c.id));
+            setContacts(updatedContacts);
+            closeContactsModal();
+        } catch (err) {
+            console.error('Error saving company contacts:', err);
+            setError((err as Error).message);
         }
     };
 
@@ -240,7 +239,12 @@ export const CompanyDetailsPage = () => {
                                 <h6 className="m-0 font-weight-bold text-dark">
                                     <span className="me-2">Contacts</span>
                                 </h6>
-                                <span className="text-muted small">Total contacts: {contacts.length}</span>
+                                <div className="d-flex align-items-center gap-3">
+                                    <span className="text-muted small">Total contacts: {contacts.length}</span>
+                                    <button className="btn btn-link text-decoration-none p-0" onClick={openContactsModal}>
+                                        + Add new contact
+                                    </button>
+                                </div>
                             </div>
                             <div className="card-body p-0">
                                 <div className="table-responsive">
@@ -302,11 +306,6 @@ export const CompanyDetailsPage = () => {
                                     </table>
                                 </div>
                             </div>
-                            <div className="card-footer bg-white border-top-0 py-3">
-                                <button className="btn btn-link text-decoration-none p-0" onClick={() => {/* Add contact logic */ }}>
-                                    + Add new contact
-                                </button>
-                            </div>
                         </div>
                     </div>
 
@@ -317,261 +316,150 @@ export const CompanyDetailsPage = () => {
                                 <h6 className="m-0 font-weight-bold text-dark">Company info</h6>
                             </div>
                             <div className="list-group list-group-flush">
-                                {/* Type */}
-                                <div className="list-group-item d-flex justify-content-between align-items-start py-3">
-                                    <div>
-                                        <div className="text-muted small mb-1">Type</div>
-                                        <div className="fw-medium text-capitalize">{company.type}</div>
-                                    </div>
-                                    <button className="btn btn-sm btn-light" onClick={handleEdit}><FaPen size={12} /></button>
-                                </div>
+                                {/* Helper function to render editable field */}
+                                {(() => {
+                                    const renderEditableField = (
+                                        fieldKey: keyof Company,
+                                        label: string,
+                                        value: string | undefined,
+                                        inputType: 'text' | 'select' | 'number' = 'text',
+                                        options?: { value: string; label: string }[]
+                                    ) => {
+                                        const isEditing = editingField === fieldKey;
 
-                                {/* Tax ID */}
-                                <div className="list-group-item d-flex justify-content-between align-items-start py-3">
-                                    <div>
-                                        <div className="text-muted small mb-1">Tax ID</div>
-                                        <div className="fw-medium">{company.taxId || '-'}</div>
-                                    </div>
-                                    <button className="btn btn-sm btn-light" onClick={handleEdit}><FaPen size={12} /></button>
-                                </div>
-
-                                {/* Branch Info (if company) */}
-                                {company.type === 'company' && (
-                                    <>
-                                        <div className="list-group-item d-flex justify-content-between align-items-start py-3">
-                                            <div>
-                                                <div className="text-muted small mb-1">Branch Name</div>
-                                                <div className="fw-medium">{company.branchName || '-'}</div>
+                                        return (
+                                            <div className="list-group-item d-flex justify-content-between align-items-start py-3" key={fieldKey}>
+                                                <div className="flex-grow-1">
+                                                    <div className="text-muted small mb-1">{label}</div>
+                                                    {isEditing ? (
+                                                        <div className="d-flex align-items-center gap-2">
+                                                            {inputType === 'select' && options ? (
+                                                                <select
+                                                                    className="form-select form-select-sm"
+                                                                    value={editValue}
+                                                                    onChange={(e) => setEditValue(e.target.value)}
+                                                                    autoFocus
+                                                                >
+                                                                    {options.map(opt => (
+                                                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                                    ))}
+                                                                </select>
+                                                            ) : (
+                                                                <input
+                                                                    type={inputType}
+                                                                    className="form-control form-control-sm"
+                                                                    value={editValue}
+                                                                    onChange={(e) => setEditValue(e.target.value)}
+                                                                    autoFocus
+                                                                />
+                                                            )}
+                                                            <button
+                                                                className="btn btn-sm btn-secondary"
+                                                                onClick={cancelEditing}
+                                                                disabled={saving}
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-sm btn-primary"
+                                                                onClick={() => saveField(fieldKey)}
+                                                                disabled={saving}
+                                                            >
+                                                                {saving ? 'Saving...' : 'Save'}
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="fw-medium text-capitalize">{value || '-'}</div>
+                                                    )}
+                                                </div>
+                                                {!isEditing && (
+                                                    <button
+                                                        className="btn btn-sm btn-light"
+                                                        onClick={() => startEditing(fieldKey, value || '')}
+                                                    >
+                                                        <FaPen size={12} />
+                                                    </button>
+                                                )}
                                             </div>
-                                            <button className="btn btn-sm btn-light" onClick={handleEdit}><FaPen size={12} /></button>
-                                        </div>
-                                        <div className="list-group-item d-flex justify-content-between align-items-start py-3">
-                                            <div>
-                                                <div className="text-muted small mb-1">Branch Number</div>
-                                                <div className="fw-medium">{company.branchNumber || '-'}</div>
-                                            </div>
-                                            <button className="btn btn-sm btn-light" onClick={handleEdit}><FaPen size={12} /></button>
-                                        </div>
-                                    </>
-                                )}
+                                        );
+                                    };
 
-                                {/* Phone */}
-                                <div className="list-group-item d-flex justify-content-between align-items-start py-3">
-                                    <div>
-                                        <div className="text-muted small mb-1">Phone</div>
-                                        <div className="fw-medium">{company.phone || '-'}</div>
-                                    </div>
-                                    <button className="btn btn-sm btn-light" onClick={handleEdit}><FaPen size={12} /></button>
-                                </div>
+                                    return (
+                                        <>
+                                            {renderEditableField('type', 'Type', company.type, 'select', [
+                                                { value: 'company', label: 'Company (นิติบุคคล)' },
+                                                { value: 'individual', label: 'Individual (บุคคล)' }
+                                            ])}
+                                            {renderEditableField('taxId', 'Tax ID', company.taxId)}
 
-                                {/* Fax */}
-                                <div className="list-group-item d-flex justify-content-between align-items-start py-3">
-                                    <div>
-                                        <div className="text-muted small mb-1">Fax</div>
-                                        <div className="fw-medium">{company.fax || '-'}</div>
-                                    </div>
-                                    <button className="btn btn-sm btn-light" onClick={handleEdit}><FaPen size={12} /></button>
-                                </div>
+                                            {company.type === 'company' && (
+                                                <>
+                                                    {renderEditableField('branchName', 'Branch Name', company.branchName)}
+                                                    {renderEditableField('branchNumber', 'Branch Number', company.branchNumber)}
+                                                </>
+                                            )}
 
-                                {/* Billing Cycle */}
-                                <div className="list-group-item d-flex justify-content-between align-items-start py-3">
-                                    <div>
-                                        <div className="text-muted small mb-1">Billing Cycle</div>
-                                        <div className="fw-medium text-capitalize">{company.billingCycle || '-'}</div>
-                                    </div>
-                                    <button className="btn btn-sm btn-light" onClick={handleEdit}><FaPen size={12} /></button>
-                                </div>
-
-                                {/* Billing Date */}
-                                <div className="list-group-item d-flex justify-content-between align-items-start py-3">
-                                    <div>
-                                        <div className="text-muted small mb-1">Billing Date</div>
-                                        <div className="fw-medium">{company.billingDate ? `Day ${company.billingDate}` : '-'}</div>
-                                    </div>
-                                    <button className="btn btn-sm btn-light" onClick={handleEdit}><FaPen size={12} /></button>
-                                </div>
-
-                                {/* Notification Date */}
-                                <div className="list-group-item d-flex justify-content-between align-items-start py-3">
-                                    <div>
-                                        <div className="text-muted small mb-1">Notification Date</div>
-                                        <div className="fw-medium">{company.notificationDate ? `Day ${company.notificationDate}` : '-'}</div>
-                                    </div>
-                                    <button className="btn btn-sm btn-light" onClick={handleEdit}><FaPen size={12} /></button>
-                                </div>
-
-                                {/* Address */}
-                                <div className="list-group-item d-flex justify-content-between align-items-start py-3">
-                                    <div>
-                                        <div className="text-muted small mb-1">Address</div>
-                                        <div className="fw-medium">{company.address || '-'}</div>
-                                    </div>
-                                    <button className="btn btn-sm btn-light" onClick={handleEdit}><FaPen size={12} /></button>
-                                </div>
+                                            {renderEditableField('phone', 'Phone', company.phone)}
+                                            {renderEditableField('fax', 'Fax', company.fax)}
+                                            {renderEditableField('billingCycle', 'Billing Cycle', company.billingCycle, 'select', [
+                                                { value: 'monthly', label: 'Monthly' },
+                                                { value: 'quarterly', label: 'Quarterly' },
+                                                { value: 'yearly', label: 'Yearly' }
+                                            ])}
+                                            {renderEditableField('billingDate', 'Billing Date', company.billingDate ? `Day ${company.billingDate}` : '', 'number')}
+                                            {renderEditableField('notificationDate', 'Notification Date', company.notificationDate ? `Day ${company.notificationDate}` : '', 'number')}
+                                            {renderEditableField('address', 'Address', company.address)}
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            {/* Edit Modal */}
-            {
-                showModal && (
-                    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                        <div className="modal-dialog modal-lg">
-                            <div className="modal-content">
-                                <div className="modal-header">
-                                    <h5 className="modal-title">Edit Company</h5>
-                                    <button type="button" className="btn-close" onClick={closeModal}></button>
+            {/* Contacts Modal */}
+            {showContactsModal && (
+                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="modal-dialog modal-lg">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title">Add contacts to {company.name}</h5>
+                                <button type="button" className="btn-close" onClick={closeContactsModal}></button>
+                            </div>
+                            <div className="modal-body">
+                                <div className="mb-3">
+                                    <input className="form-control" placeholder="Search contacts" />
                                 </div>
-                                <div className="modal-body">
-                                    <form onSubmit={handleSubmit}>
-                                        <div className="row">
-                                            <div className="col-md-12 mb-3">
-                                                <label className="form-label">
-                                                    Type <span className="text-danger">*</span>
-                                                </label>
-                                                <select
-                                                    className="form-select"
-                                                    value={formData.type}
-                                                    onChange={(e) => handleChange('type', e.target.value as 'individual' | 'company')}
-                                                    required
-                                                >
-                                                    <option value="company">Company (นิติบุคคล)</option>
-                                                    <option value="individual">Individual (บุคคล)</option>
-                                                </select>
-                                            </div>
-                                            <div className="col-md-12 mb-3">
-                                                <label className="form-label">
-                                                    {formData.type === 'company' ? 'Company Name' : 'Name'} <span className="text-danger">*</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    className="form-control"
-                                                    value={formData.name}
-                                                    onChange={(e) => handleChange('name', e.target.value)}
-                                                    required
+                                <div style={{ maxHeight: 360, overflow: 'auto' }}>
+                                    {allContacts.map((c) => (
+                                        <div key={c.id} className="form-check d-flex align-items-center mb-2">
+                                            <input
+                                                className="form-check-input"
+                                                type="checkbox"
+                                                checked={selectedContactIds.includes(c.id)}
+                                                onChange={() => toggleContactSelection(c.id)}
+                                                id={`contact_${c.id}`}
+                                            />
+                                            <label className="form-check-label ms-2" htmlFor={`contact_${c.id}`}>
+                                                <img
+                                                    src={c.avatarUrl || c.photo || '/default-avatar.png'}
+                                                    alt={c.firstName || c.email}
+                                                    style={{ width: 28, height: 28, borderRadius: '50%', marginRight: 8 }}
                                                 />
-                                            </div>
-                                            <div className="col-md-12 mb-3">
-                                                <label className="form-label">Address</label>
-                                                <textarea
-                                                    className="form-control"
-                                                    value={formData.address || ''}
-                                                    onChange={(e) => handleChange('address', e.target.value)}
-                                                    rows={3}
-                                                />
-                                            </div>
-                                            <div className="col-md-6 mb-3">
-                                                <label className="form-label">Phone</label>
-                                                <input
-                                                    type="tel"
-                                                    className="form-control"
-                                                    value={formData.phone || ''}
-                                                    onChange={(e) => handleChange('phone', e.target.value)}
-                                                />
-                                            </div>
-                                            <div className="col-md-6 mb-3">
-                                                <label className="form-label">Fax</label>
-                                                <input
-                                                    type="tel"
-                                                    className="form-control"
-                                                    value={formData.fax || ''}
-                                                    onChange={(e) => handleChange('fax', e.target.value)}
-                                                />
-                                            </div>
-                                            <div className="col-md-6 mb-3">
-                                                <label className="form-label">Tax ID</label>
-                                                <input
-                                                    type="text"
-                                                    className="form-control"
-                                                    value={formData.taxId || ''}
-                                                    onChange={(e) => handleChange('taxId', e.target.value)}
-                                                />
-                                            </div>
-                                            {formData.type === 'company' && (
-                                                <>
-                                                    <div className="col-md-6 mb-3">
-                                                        <label className="form-label">Branch Name</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-control"
-                                                            value={formData.branchName || ''}
-                                                            onChange={(e) => handleChange('branchName', e.target.value)}
-                                                        />
-                                                    </div>
-                                                    <div className="col-md-6 mb-3">
-                                                        <label className="form-label">Branch Number</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-control"
-                                                            value={formData.branchNumber || ''}
-                                                            onChange={(e) => handleChange('branchNumber', e.target.value)}
-                                                        />
-                                                    </div>
-                                                </>
-                                            )}
-                                            <div className="col-md-12 mb-3">
-                                                <hr />
-                                                <h6 className="mb-3">Billing Information</h6>
-                                            </div>
-                                            <div className="col-md-4 mb-3">
-                                                <label className="form-label">Billing Cycle</label>
-                                                <select
-                                                    className="form-select"
-                                                    value={formData.billingCycle || 'monthly'}
-                                                    onChange={(e) => handleChange('billingCycle', e.target.value)}
-                                                >
-                                                    <option value="monthly">Monthly</option>
-                                                    <option value="quarterly">Quarterly</option>
-                                                    <option value="yearly">Yearly</option>
-                                                </select>
-                                            </div>
-                                            <div className="col-md-4 mb-3">
-                                                <label className="form-label">Billing Date (Day of month)</label>
-                                                <input
-                                                    type="number"
-                                                    className="form-control"
-                                                    min="1"
-                                                    max="31"
-                                                    placeholder="e.g., 5"
-                                                    value={formData.billingDate || ''}
-                                                    onChange={(e) => handleChange('billingDate', e.target.value)}
-                                                />
-                                            </div>
-                                            <div className="col-md-4 mb-3">
-                                                <label className="form-label">Notification Date (Day of month)</label>
-                                                <input
-                                                    type="number"
-                                                    className="form-control"
-                                                    min="1"
-                                                    max="31"
-                                                    placeholder="e.g., 1"
-                                                    value={formData.notificationDate || ''}
-                                                    onChange={(e) => handleChange('notificationDate', e.target.value)}
-                                                />
-                                            </div>
+                                                {c.firstName ? `${c.firstName} ${c.lastName || ''}` : c.email}
+                                            </label>
                                         </div>
-                                        {error && <div className="alert alert-danger">{error}</div>}
-                                        <div className="d-flex gap-2">
-                                            <button type="submit" className="btn btn-primary" disabled={submitting}>
-                                                {submitting ? 'Saving...' : 'Save Changes'}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="btn btn-secondary"
-                                                onClick={closeModal}
-                                                disabled={submitting}
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </form>
+                                    ))}
                                 </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button className="btn btn-primary" onClick={saveCompanyContacts}>Save</button>
+                                <button className="btn btn-secondary" onClick={closeContactsModal}>Cancel</button>
                             </div>
                         </div>
                     </div>
-                )
-            }
+                </div>
+            )}
         </>
     );
 };
