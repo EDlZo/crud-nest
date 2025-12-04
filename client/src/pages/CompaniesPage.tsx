@@ -405,7 +405,7 @@ export const CompaniesPage = () => {
                             </div>
                             <div>
                               {canModify ? (
-                                <Dropdown align="end">
+                                <Dropdown align="start">
                                   <Dropdown.Toggle variant="link" className="text-muted no-arrow p-0" id={`dropdown-${company.id}`}>
                                     <FaEllipsisV />
                                   </Dropdown.Toggle>
@@ -413,9 +413,6 @@ export const CompaniesPage = () => {
                                   <Dropdown.Menu>
                                     <Dropdown.Item onClick={() => navigate(`/companies/${company.id}`)}>
                                       <FaEye className="me-2 text-secondary" /> View Company
-                                    </Dropdown.Item>
-                                    <Dropdown.Item onClick={() => handleEdit(company)}>
-                                      <FaPen className="me-2 text-warning" /> Edit
                                     </Dropdown.Item>
                                     <Dropdown.Item onClick={() => handleDelete(company.id)} className="text-danger">
                                       <FaTrash className="me-2" /> Delete

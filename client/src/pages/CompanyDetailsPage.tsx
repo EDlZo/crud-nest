@@ -74,6 +74,10 @@ export const CompanyDetailsPage = () => {
     const [showContactsModal, setShowContactsModal] = useState(false);
     const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
 
+    // Custom Popup State
+    const [showPopup, setShowPopup] = useState(false);
+    const [popupContent, setPopupContent] = useState({ title: '', message: '' });
+
     const fetchCompanyAndContacts = useCallback(async () => {
         if (!token || !id) return;
         setLoading(true);
@@ -200,6 +204,16 @@ export const CompanyDetailsPage = () => {
         }
     };
 
+    // Popup handlers
+    const showCustomPopup = (title: string, message: string) => {
+        setPopupContent({ title, message });
+        setShowPopup(true);
+    };
+
+    const closePopup = () => {
+        setShowPopup(false);
+    };
+
     if (loading) return <div className="p-4">Loading...</div>;
     if (error) return <div className="p-4 text-danger">Error: {error}</div>;
     if (!company) return <div className="p-4">Company not found</div>;
@@ -239,12 +253,7 @@ export const CompanyDetailsPage = () => {
                                 <h6 className="m-0 font-weight-bold text-dark">
                                     <span className="me-2">Contacts</span>
                                 </h6>
-                                <div className="d-flex align-items-center gap-3">
-                                    <span className="text-muted small">Total contacts: {contacts.length}</span>
-                                    <button className="btn btn-link text-decoration-none p-0" onClick={openContactsModal}>
-                                        + Add new contact
-                                    </button>
-                                </div>
+                                <span className="text-muted small">Total contacts: {contacts.length}</span>
                             </div>
                             <div className="card-body p-0">
                                 <div className="table-responsive">
@@ -283,14 +292,14 @@ export const CompanyDetailsPage = () => {
                                                                 <button
                                                                     className="btn btn-sm btn-outline-secondary border-0"
                                                                     title="Email"
-                                                                    onClick={() => alert(`Email: ${contact.email || 'No email available'}`)}
+                                                                    onClick={() => showCustomPopup('Email', contact.email || 'No email available')}
                                                                 >
                                                                     <FaEnvelope />
                                                                 </button>
                                                                 <button
                                                                     className="btn btn-sm btn-outline-secondary border-0"
                                                                     title="Call"
-                                                                    onClick={() => alert(`Phone: ${contact.phone || 'No phone available'}`)}
+                                                                    onClick={() => showCustomPopup('Phone', contact.phone || 'No phone available')}
                                                                 >
                                                                     <FaPhone />
                                                                 </button>
@@ -305,6 +314,11 @@ export const CompanyDetailsPage = () => {
                                         </tbody>
                                     </table>
                                 </div>
+                            </div>
+                            <div className="card-footer bg-white border-top-0 py-3">
+                                <button className="btn btn-link text-decoration-none p-0" onClick={openContactsModal}>
+                                    + Add new contact
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -455,6 +469,38 @@ export const CompanyDetailsPage = () => {
                             <div className="modal-footer">
                                 <button className="btn btn-primary" onClick={saveCompanyContacts}>Save</button>
                                 <button className="btn btn-secondary" onClick={closeContactsModal}>Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Custom Popup Modal */}
+            {showPopup && (
+                <div
+                    className="modal show d-block"
+                    style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+                    onClick={closePopup}
+                >
+                    <div
+                        className="modal-dialog modal-dialog-centered"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="modal-content" style={{ borderRadius: '16px', border: 'none' }}>
+                            <div className="modal-body text-center p-4">
+                                <h5 className="mb-3" style={{ fontSize: '24px', fontWeight: '600' }}>
+                                    {popupContent.title}
+                                </h5>
+                                <p className="mb-4" style={{ fontSize: '16px', color: '#666' }}>
+                                    {popupContent.message}
+                                </p>
+                                <button
+                                    className="btn btn-primary px-4"
+                                    onClick={closePopup}
+                                    style={{ borderRadius: '8px', fontSize: '16px' }}
+                                >
+                                    OK
+                                </button>
                             </div>
                         </div>
                     </div>
