@@ -192,12 +192,10 @@ export const CompanyDetailsPage = () => {
             if (!res.ok) {
                 throw new Error('Failed to update contacts');
             }
-            const updated = await res.json();
-            setCompany(updated);
-            // Update contacts list
-            const updatedContacts = allContacts.filter((c) => selectedContactIds.includes(c.id));
-            setContacts(updatedContacts);
+            // Close modal first
             closeContactsModal();
+            // Refresh company and contacts data
+            await fetchCompanyAndContacts();
         } catch (err) {
             console.error('Error saving company contacts:', err);
             setError((err as Error).message);

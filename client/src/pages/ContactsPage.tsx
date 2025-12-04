@@ -11,6 +11,7 @@ type Contact = {
   email: string;
   phone: string;
   address: string;
+  photo?: string;
   createdAt?: string;
   updatedAt?: string;
   userId?: string;
@@ -24,6 +25,7 @@ const emptyContact: Contact = {
   email: '',
   phone: '',
   address: '',
+  photo: '',
 };
 
 const withBase = (path: string) => `${API_BASE_URL}${path}`;
@@ -38,6 +40,7 @@ export const ContactsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [photoPreview, setPhotoPreview] = useState<string>('');
 
   const performLogout = () => {
     setContacts([]);
@@ -91,6 +94,7 @@ export const ContactsPage = () => {
   const resetForm = () => {
     setEditingId(null);
     setFormData(emptyContact);
+    setPhotoPreview('');
   };
 
   const openAddModal = () => {
@@ -115,6 +119,7 @@ export const ContactsPage = () => {
       email: formData.email.trim(),
       phone: formData.phone.trim(),
       address: formData.address.trim(),
+      photo: formData.photo || '',
     };
 
     if (!payload.firstName || !payload.lastName || !payload.email || !payload.phone || !payload.address) {
@@ -175,8 +180,10 @@ export const ContactsPage = () => {
       email: contact.email,
       phone: contact.phone,
       address: contact.address,
+      photo: contact.photo,
       id: contact.id,
     });
+    setPhotoPreview(contact.photo || '');
     setShowModal(true);
   };
 
@@ -329,6 +336,29 @@ export const ContactsPage = () => {
               <div className="modal-body">
                 <form onSubmit={handleSubmit}>
                   <div className="row">
+                    {/* Photo Upload */}
+                    <div className="col-md-12 mb-4 text-center">
+                      <label className="form-label d-block">Profile Photo</label>
+                      <div className="mb-3">
+                        <img
+                          src={photoPreview || '/default-avatar.png'}
+                          alt="Preview"
+                          className="rounded-circle"
+                          style={{ width: 100, height: 100, objectFit: 'cover', border: '2px solid #ddd' }}
+                        />
+                      </div>
+                      <input
+                        type="url"
+                        className="form-control"
+                        placeholder="Enter photo URL"
+                        value={formData.photo || ''}
+                        onChange={(e) => {
+                          handleChange('photo', e.target.value);
+                          setPhotoPreview(e.target.value);
+                        }}
+                      />
+                      <small className="text-muted">Enter a URL to a profile photo</small>
+                    </div>
                     <div className="col-md-6 mb-3">
                       <label className="form-label">First Name</label>
                       <input

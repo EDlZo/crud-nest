@@ -405,7 +405,7 @@ export const CompaniesPage = () => {
                             </div>
                             <div>
                               {canModify ? (
-                                <Dropdown align="start">
+                                <Dropdown drop="start">
                                   <Dropdown.Toggle variant="link" className="text-muted no-arrow p-0" id={`dropdown-${company.id}`}>
                                     <FaEllipsisV />
                                   </Dropdown.Toggle>
