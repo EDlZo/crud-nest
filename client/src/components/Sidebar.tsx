@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt, FaChevronDown, FaChevronRight, FaCubes, FaTasks } from 'react-icons/fa';
+import { FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt, FaChevronRight, FaCubes, FaTasks, FaEllipsisV } from 'react-icons/fa';
 import { PiAddressBookFill } from 'react-icons/pi';
 import { Dropdown } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
@@ -328,7 +328,7 @@ const Sidebar = () => {
                                 </span>
                             </div>
                         </div>
-                        <FaChevronDown className="text-white-50 ms-2" size={12} />
+                        <FaEllipsisV className="text-white-50 ms-2" size={14} />
                     </Dropdown.Toggle>
 
                     <Dropdown.Menu className="shadow sidebar-dropdown-menu">

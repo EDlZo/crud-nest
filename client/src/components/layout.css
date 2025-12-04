@@ -144,6 +144,23 @@
   background-color: #fff5f5;
 }
 
+/* Make all dropdown items show icon and label on one line */
+.dropdown-menu .dropdown-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem;
+}
+.dropdown-menu .dropdown-item svg {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+}
+
+/* Remove default caret on dropdown toggles (we use our own icon) */
+.dropdown-toggle::after {
+  display: none !important;
+}
+
 .sidebar .nav-link.cursor-pointer {
   cursor: pointer;
 }
