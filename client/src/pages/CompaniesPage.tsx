@@ -1,7 +1,8 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { FaPen, FaTrash, FaEye } from 'react-icons/fa';
+import { FaPen, FaTrash, FaEye, FaEllipsisV } from 'react-icons/fa';
 import { FaPlus } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import { Dropdown } from 'react-bootstrap';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -404,11 +405,23 @@ export const CompaniesPage = () => {
                             </div>
                             <div>
                               {canModify ? (
-                                <>
-                                  <button className="icon-btn view me-2" onClick={() => navigate(`/companies/${company.id}`)} title="View Details"><FaEye /></button>
-                                  <button className="icon-btn edit me-2" onClick={() => handleEdit(company)} title="Edit"><FaPen /></button>
-                                  <button className="icon-btn delete" onClick={() => handleDelete(company.id)} title="Delete"><FaTrash /></button>
-                                </>
+                                <Dropdown align="end">
+                                  <Dropdown.Toggle variant="link" className="text-muted no-arrow p-0" id={`dropdown-${company.id}`}>
+                                    <FaEllipsisV />
+                                  </Dropdown.Toggle>
+
+                                  <Dropdown.Menu>
+                                    <Dropdown.Item onClick={() => navigate(`/companies/${company.id}`)}>
+                                      <FaEye className="me-2 text-secondary" /> View Company
+                                    </Dropdown.Item>
+                                    <Dropdown.Item onClick={() => handleEdit(company)}>
+                                      <FaPen className="me-2 text-warning" /> Edit
+                                    </Dropdown.Item>
+                                    <Dropdown.Item onClick={() => handleDelete(company.id)} className="text-danger">
+                                      <FaTrash className="me-2" /> Delete
+                                    </Dropdown.Item>
+                                  </Dropdown.Menu>
+                                </Dropdown>
                               ) : (
                                 <span className="badge bg-secondary">No Permission</span>
                               )}

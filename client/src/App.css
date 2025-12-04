@@ -602,3 +602,9 @@ table th:last-child .btn {
   }
 }
 
+
+/* Hide default dropdown arrow */
+.no-arrow::after {
+  display: none !important;
+}
+

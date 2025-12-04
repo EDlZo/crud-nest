@@ -208,63 +208,90 @@ export const CompanyDetailsPage = () => {
                             <h6 className="m-0 font-weight-bold text-dark">Company info</h6>
                         </div>
                         <div className="list-group list-group-flush">
-                            {/* Company Size */}
+                            {/* Type */}
                             <div className="list-group-item d-flex justify-content-between align-items-start py-3">
                                 <div>
-                                    <div className="text-muted small mb-1">Company size</div>
-                                    <div className="fw-medium">ENTERPRISE</div>
+                                    <div className="text-muted small mb-1">Type</div>
+                                    <div className="fw-medium text-capitalize">{company.type}</div>
                                 </div>
                                 <button className="btn btn-sm btn-light"><FaPen size={12} /></button>
                             </div>
 
-                            {/* Total Revenue */}
+                            {/* Tax ID */}
                             <div className="list-group-item d-flex justify-content-between align-items-start py-3">
                                 <div>
-                                    <div className="text-muted small mb-1">Total revenue</div>
-                                    <div className="fw-medium">$0.00</div>
+                                    <div className="text-muted small mb-1">Tax ID</div>
+                                    <div className="fw-medium">{company.taxId || '-'}</div>
                                 </div>
                                 <button className="btn btn-sm btn-light"><FaPen size={12} /></button>
                             </div>
 
-                            {/* Industry */}
-                            <div className="list-group-item d-flex justify-content-between align-items-start py-3">
-                                <div>
-                                    <div className="text-muted small mb-1">Industry</div>
-                                    <div className="fw-medium">RETAIL</div>
-                                </div>
-                                <button className="btn btn-sm btn-light"><FaPen size={12} /></button>
-                            </div>
-
-                            {/* Business Type */}
-                            <div className="list-group-item d-flex justify-content-between align-items-start py-3">
-                                <div>
-                                    <div className="text-muted small mb-1">Business type</div>
-                                    <div className="fw-medium">B2B</div>
-                                </div>
-                                <button className="btn btn-sm btn-light"><FaPen size={12} /></button>
-                            </div>
-
-                            {/* Country */}
-                            <div className="list-group-item d-flex justify-content-between align-items-start py-3">
-                                <div>
-                                    <div className="text-muted small mb-1">Country</div>
-                                    <div className="fw-medium">Thailand</div>
-                                </div>
-                                <button className="btn btn-sm btn-light"><FaPen size={12} /></button>
-                            </div>
-
-                            {/* Website */}
-                            <div className="list-group-item d-flex justify-content-between align-items-start py-3">
-                                <div>
-                                    <div className="text-muted small mb-1">Website</div>
-                                    <div className="fw-medium text-truncate" style={{ maxWidth: '200px' }}>
-                                        <a href="#" className="text-decoration-none text-dark">https://example.com</a>
+                            {/* Branch Info (if company) */}
+                            {company.type === 'company' && (
+                                <>
+                                    <div className="list-group-item d-flex justify-content-between align-items-start py-3">
+                                        <div>
+                                            <div className="text-muted small mb-1">Branch Name</div>
+                                            <div className="fw-medium">{company.branchName || '-'}</div>
+                                        </div>
+                                        <button className="btn btn-sm btn-light"><FaPen size={12} /></button>
                                     </div>
+                                    <div className="list-group-item d-flex justify-content-between align-items-start py-3">
+                                        <div>
+                                            <div className="text-muted small mb-1">Branch Number</div>
+                                            <div className="fw-medium">{company.branchNumber || '-'}</div>
+                                        </div>
+                                        <button className="btn btn-sm btn-light"><FaPen size={12} /></button>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Phone */}
+                            <div className="list-group-item d-flex justify-content-between align-items-start py-3">
+                                <div>
+                                    <div className="text-muted small mb-1">Phone</div>
+                                    <div className="fw-medium">{company.phone || '-'}</div>
                                 </div>
                                 <button className="btn btn-sm btn-light"><FaPen size={12} /></button>
                             </div>
 
-                            {/* Address (from our data) */}
+                            {/* Fax */}
+                            <div className="list-group-item d-flex justify-content-between align-items-start py-3">
+                                <div>
+                                    <div className="text-muted small mb-1">Fax</div>
+                                    <div className="fw-medium">{company.fax || '-'}</div>
+                                </div>
+                                <button className="btn btn-sm btn-light"><FaPen size={12} /></button>
+                            </div>
+
+                            {/* Billing Cycle */}
+                            <div className="list-group-item d-flex justify-content-between align-items-start py-3">
+                                <div>
+                                    <div className="text-muted small mb-1">Billing Cycle</div>
+                                    <div className="fw-medium text-capitalize">{company.billingCycle || '-'}</div>
+                                </div>
+                                <button className="btn btn-sm btn-light"><FaPen size={12} /></button>
+                            </div>
+
+                            {/* Billing Date */}
+                            <div className="list-group-item d-flex justify-content-between align-items-start py-3">
+                                <div>
+                                    <div className="text-muted small mb-1">Billing Date</div>
+                                    <div className="fw-medium">{company.billingDate ? `Day ${company.billingDate}` : '-'}</div>
+                                </div>
+                                <button className="btn btn-sm btn-light"><FaPen size={12} /></button>
+                            </div>
+
+                            {/* Notification Date */}
+                            <div className="list-group-item d-flex justify-content-between align-items-start py-3">
+                                <div>
+                                    <div className="text-muted small mb-1">Notification Date</div>
+                                    <div className="fw-medium">{company.notificationDate ? `Day ${company.notificationDate}` : '-'}</div>
+                                </div>
+                                <button className="btn btn-sm btn-light"><FaPen size={12} /></button>
+                            </div>
+
+                            {/* Address */}
                             <div className="list-group-item d-flex justify-content-between align-items-start py-3">
                                 <div>
                                     <div className="text-muted small mb-1">Address</div>
