@@ -266,8 +266,10 @@
 
 /* Ensure profile area stays above expanding accordion sections */
 .sidebar .sidebar-profile {
-  position: relative; /* keep existing behavior */
+  position: sticky; /* keep profile visible at bottom */
+  bottom: 0;
   z-index: 30;
+  background: transparent;
 }
 
 /* Keep accordion cards under profile */

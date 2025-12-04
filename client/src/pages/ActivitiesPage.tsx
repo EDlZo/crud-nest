@@ -27,6 +27,10 @@ const emptyActivity: Activity = {
   description: '',
   status: 'pending',
   priority: 'medium',
+  relatedTo: undefined,
+  relatedId: '',
+  assignedTo: '',
+  dueDate: '',
 };
 
 const withBase = (path: string) => `${API_BASE_URL}${path}`;
@@ -65,11 +69,15 @@ export const ActivitiesPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(withBase('/activities'), {
+      const url = withBase('/activities');
+      console.log('Fetching activities from:', url);
+      const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+      console.log('Response status:', response.status, response.statusText);
+      
       if (response.status === 401) {
         handleUnauthorized();
         return;
@@ -78,20 +86,26 @@ export const ActivitiesPage = () => {
         const contentType = response.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
           const body = await response.json();
+          console.error('Error response:', body);
           throw new Error(typeof body === 'string' ? body : JSON.stringify(body));
         } else {
           const text = await response.text();
+          console.error('Error text:', text);
           throw new Error(`Server error: ${response.status} ${response.statusText}`);
         }
       }
       
       const contentType = response.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Non-JSON response:', text);
         throw new Error('Server returned non-JSON response. Please check if backend is running.');
       }
       
       const data = await response.json();
+      console.log('Fetched activities data:', data);
       let filteredData = Array.isArray(data) ? data : [];
+      console.log('Filtered data (before filters):', filteredData.length, 'items');
       
       // Filter by type
       if (filterType !== 'all') {
@@ -103,8 +117,10 @@ export const ActivitiesPage = () => {
         filteredData = filteredData.filter((activity: Activity) => activity.status === filterStatus);
       }
       
+      console.log('Final filtered data:', filteredData.length, 'items');
       setActivities(filteredData);
     } catch (err) {
+      console.error('Error fetching activities:', err);
       setError((err as Error).message);
     } finally {
       setLoading(false);
@@ -113,7 +129,17 @@ export const ActivitiesPage = () => {
 
   useEffect(() => {
     fetchActivities();
-  }, [fetchActivities]);
+    // Fetch users list on mount to display assignedTo emails
+    if (token) {
+      fetch(withBase('/auth/users/list'), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.ok && res.json())
+        .then((data) => Array.isArray(data) && setUsers(data))
+        .catch((err) => console.error('Error fetching users:', err));
+    }
+  }, [fetchActivities, token]);
 
   const handleChange = (key: keyof Activity, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -171,8 +197,18 @@ export const ActivitiesPage = () => {
   };
 
   const handleEdit = (activity: Activity) => {
-    // Keep dueDate as is - the input will handle the conversion
-    setFormData(activity);
+    // Normalize all fields to ensure no undefined values for controlled inputs
+    setFormData({
+      ...emptyActivity,
+      ...activity,
+      title: activity.title || '',
+      description: activity.description || '',
+      relatedTo: activity.relatedTo || undefined,
+      relatedId: activity.relatedId || '',
+      assignedTo: activity.assignedTo || '',
+      dueDate: activity.dueDate || '',
+      priority: activity.priority || 'medium',
+    });
     setEditingId(activity.id || null);
     setShowModal(true);
     fetchCompaniesAndContacts();
@@ -216,9 +252,21 @@ export const ActivitiesPage = () => {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!token) return;
+    if (!token) {
+      console.error('No token available');
+      return;
+    }
     setSubmitting(true);
     setError(null);
+
+    // Find assigned user email from users list
+    let assignedToEmail: string | undefined = undefined;
+    if (formData.assignedTo && users.length > 0) {
+      const assignedUser = users.find(
+        (u) => (u.id || u.userId) === formData.assignedTo
+      );
+      assignedToEmail = assignedUser?.email;
+    }
 
     const payload: any = {
       type: formData.type,
@@ -230,7 +278,10 @@ export const ActivitiesPage = () => {
       relatedTo: formData.relatedTo || undefined,
       relatedId: formData.relatedId || undefined,
       assignedTo: formData.assignedTo || undefined,
+      assignedToEmail: assignedToEmail,
     };
+
+    console.log('Submitting payload:', payload);
 
     if (!payload.title) {
       setError('Please enter activity title');
@@ -240,31 +291,39 @@ export const ActivitiesPage = () => {
 
     try {
       const isEdit = Boolean(editingId);
-      const response = await fetch(
-        withBase(`/activities${isEdit ? `/${editingId}` : ''}`),
-        {
+      const url = withBase(`/activities${isEdit ? `/${editingId}` : ''}`);
+      console.log(`${isEdit ? 'Updating' : 'Creating'} activity at:`, url);
+      
+      const response = await fetch(url, {
           method: isEdit ? 'PATCH' : 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(payload),
-        },
-      );
+      });
+
+      console.log('Response status:', response.status, response.statusText);
 
       if (response.status === 401) {
+        console.error('Unauthorized - session expired');
         handleUnauthorized();
         return;
       }
       if (!response.ok) {
         const contentType = response.headers.get('content-type') || '';
         const body = contentType.includes('application/json') ? await response.json() : await response.text();
+        console.error('Error response:', body);
         throw new Error(typeof body === 'string' ? body : JSON.stringify(body));
       }
+
+      const result = await response.json();
+      console.log('Success! Created/Updated activity:', result);
 
       await fetchActivities();
       closeModal();
     } catch (err) {
+      console.error('Error submitting activity:', err);
       setError((err as Error).message);
     } finally {
       setSubmitting(false);
@@ -494,7 +553,20 @@ export const ActivitiesPage = () => {
                                 })
                               : '-'}
                           </td>
-                          <td>{activity.assignedToEmail || '-'}</td>
+                          <td>
+                            {(() => {
+                              if (activity.assignedToEmail) {
+                                return activity.assignedToEmail;
+                              }
+                              if (activity.assignedTo && users.length > 0) {
+                                const assignedUser = users.find(
+                                  (u) => (u.id || u.userId) === activity.assignedTo
+                                );
+                                return assignedUser?.email || '-';
+                              }
+                              return '-';
+                            })()}
+                          </td>
                           <td>
                             {activity.createdAt
                               ? new Date(activity.createdAt).toLocaleDateString()
@@ -703,7 +775,7 @@ export const ActivitiesPage = () => {
                         <option value="">None</option>
                         <option value="company">Company</option>
                         <option value="contact">Contact</option>
-                        <option value="deal">Deal</option>
+                        {/* <option value="deal">Deal</option> */}
                       </select>
                     </div>
                     {formData.relatedTo === 'company' && (

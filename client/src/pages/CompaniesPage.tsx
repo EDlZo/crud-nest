@@ -1,5 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { FaPen, FaTrash } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -51,6 +52,10 @@ export const CompaniesPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [showContactsModal, setShowContactsModal] = useState(false);
+  const [activeCompany, setActiveCompany] = useState<Company | null>(null);
+  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
 
   const performLogout = () => {
     setCompanies([]);
@@ -96,6 +101,24 @@ export const CompaniesPage = () => {
   useEffect(() => {
     fetchCompanies();
   }, [fetchCompanies]);
+
+  // fetch contacts list for use in adding contacts to a company
+  const fetchContacts = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(withBase('/cruds'), { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setContacts(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error('Error fetching contacts:', err);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    fetchContacts();
+  }, [fetchContacts]);
 
   const handleChange = (key: keyof Company, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -239,6 +262,46 @@ export const CompaniesPage = () => {
     }
   };
 
+  // Contacts modal handlers
+  const closeContactsModal = () => {
+    setShowContactsModal(false);
+    setActiveCompany(null);
+    setSelectedContactIds([]);
+  };
+
+  const toggleContactSelection = (contactId: string) => {
+    setSelectedContactIds((prev) => {
+      if (prev.includes(contactId)) return prev.filter((id) => id !== contactId);
+      return [...prev, contactId];
+    });
+  };
+
+  const saveCompanyContacts = async () => {
+    if (!activeCompany || !token) return;
+    try {
+      const res = await fetch(withBase(`/companies/${activeCompany.id}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ contacts: selectedContactIds }),
+      });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+      if (!res.ok) {
+        const contentType = res.headers.get('content-type') || '';
+        const body = contentType.includes('application/json') ? await res.json() : await res.text();
+        throw new Error(typeof body === 'string' ? body : JSON.stringify(body));
+      }
+      const updated = await res.json();
+      setCompanies((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      closeContactsModal();
+    } catch (err) {
+      console.error('Error saving company contacts:', err);
+      setError((err as Error).message);
+    }
+  };
+
   return (
     <>
       <div className="container-fluid">
@@ -269,114 +332,87 @@ export const CompaniesPage = () => {
             {companies.length === 0 && !loading ? (
               <p className="text-center">There is no company information yet. Try adding new information.</p>
             ) : (
-              <div className="table-responsive">
-                <table className="table table-bordered" width="100%" cellSpacing={0}>
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th>Name</th>
-                      <th>Address</th>
-                      <th>Phone</th>
-                      <th>Tax ID</th>
-                      <th>Branch</th>
-                      <th>Billing Cycle</th>
-                      <th>Billing Date</th>
-                      <th>Notification Date</th>
-                      <th>Created By</th>
-                      <th>Last Updated</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {companies
-                      .filter((company) => {
-                        // Search filter
-                        if (searchTerm) {
-                          const searchLower = searchTerm.toLowerCase();
-                          const matchesSearch = 
-                            company.name?.toLowerCase().includes(searchLower) ||
-                            company.address?.toLowerCase().includes(searchLower) ||
-                            company.phone?.toLowerCase().includes(searchLower) ||
-                            company.taxId?.toLowerCase().includes(searchLower);
-                          if (!matchesSearch) return false;
-                        }
-                        // Type filter
-                        if (filterType !== 'all' && company.type !== filterType) {
-                          return false;
-                        }
-                        return true;
-                      })
-                      .map((company) => {
-                      const canModify =
-                        user?.role === 'admin' ||
-                        user?.role === 'superadmin' ||
-                        company.ownerUserId === user?.userId;
-                      const getBillingCycleLabel = (cycle?: string) => {
-                        switch (cycle) {
-                          case 'monthly': return 'Monthly';
-                          case 'yearly': return 'Yearly';
-                          case 'quarterly': return 'Quarterly';
-                          default: return '-';
-                        }
-                      };
+              <div className="row gx-3 gy-4">
+                {companies
+                  .filter((company) => {
+                    if (searchTerm) {
+                      const searchLower = searchTerm.toLowerCase();
+                      const matchesSearch =
+                        company.name?.toLowerCase().includes(searchLower) ||
+                        company.address?.toLowerCase().includes(searchLower);
+                      if (!matchesSearch) return false;
+                    }
+                    if (filterType !== 'all' && company.type !== filterType) return false;
+                    return true;
+                  })
+                  .map((company) => {
+                    const canModify =
+                      user?.role === 'admin' ||
+                      user?.role === 'superadmin' ||
+                      company.ownerUserId === user?.userId;
 
-                      return (
-                        <tr key={company.id}>
-                          <td>
-                            <span className={`badge ${company.type === 'company' ? 'bg-primary' : 'bg-info'}`}>
-                              {company.type === 'company' ? 'Company' : 'Individual'}
-                            </span>
-                          </td>
-                          <td>
-                            <strong>{company.name}</strong>
-                          </td>
-                          <td>{company.address || '-'}</td>
-                          <td>{company.phone || '-'}</td>
-                          <td>{company.taxId || '-'}</td>
-                          <td>
-                            {company.type === 'company' 
-                              ? `${company.branchName || '-'}${company.branchNumber ? ` (${company.branchNumber})` : ''}`
-                              : '-'
-                            }
-                          </td>
-                          <td>{getBillingCycleLabel(company.billingCycle)}</td>
-                          <td>{company.billingDate ? `Day ${company.billingDate}` : '-'}</td>
-                          <td>{company.notificationDate ? `Day ${company.notificationDate}` : '-'}</td>
-                          <td>{company.ownerEmail || '-'}</td>
-                          <td>
-                            {company.updatedAt
-                              ? new Date(company.updatedAt).toLocaleString('th-TH')
-                              : '-'}
-                          </td>
-                          <td>
-                            {canModify ? (
-                              <div className="btn-group">
-                                <button
-                                  className="icon-btn edit"
-                                  aria-label="edit"
-                                  title="Edit"
-                                  onClick={() => handleEdit(company)}
-                                >
-                                  <FaPen />
-                                </button>
-                                <button
-                                  className="icon-btn delete"
-                                  aria-label="delete"
-                                  title="Delete"
-                                  onClick={() => handleDelete(company.id)}
-                                >
-                                  <FaTrash />
-                                </button>
+                    const relatedContacts = Array.isArray(company.contacts) ? company.contacts : [];
+
+                    return (
+                      <div key={company.id} className="col-sm-6 col-md-4 col-lg-3">
+                        <div className="card h-100 shadow-sm">
+                          <div className="card-body d-flex flex-column">
+                            <div className="d-flex justify-content-between align-items-start mb-3">
+                              <div>
+                                <h6 className="card-title mb-1">{company.name}</h6>
+                                <div className="text-muted small">Open deals amount</div>
+                                <div className="h5 mt-1">$0.00</div>
                               </div>
-                            ) : (
-                              <span className="badge bg-secondary">No Permission</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                              <div>
+                                {/* placeholder avatar or logo */}
+                                <div style={{ width: 48, height: 48, borderRadius: 8, background: '#f4f6f8' }} />
+                              </div>
+                            </div>
+
+                            <div className="mt-auto d-flex justify-content-between align-items-center">
+                              <div className="d-flex align-items-center">
+                                <div style={{ display: 'flex', gap: -8 }}>
+                                  {relatedContacts.slice(0, 4).map((cid: string, idx: number) => {
+                                    const c = contacts.find((x) => x.id === cid);
+                                    return (
+                                      <img
+                                        key={cid}
+                                        src={c?.avatarUrl || c?.photo || '/default-avatar.png'}
+                                        alt={c?.firstName || c?.email || 'contact'}
+                                        style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid #fff', marginLeft: idx === 0 ? 0 : -8 }}
+                                      />
+                                    );
+                                  })}
+                                  {relatedContacts.length > 4 && (
+                                    <div className="badge bg-secondary ms-2">+{relatedContacts.length - 4}</div>
+                                  )}
+                                </div>
+                                <div className="small ms-2 text-muted">Related contacts</div>
+                              </div>
+                              <div className="small text-muted">Sales owner</div>
+                            </div>
+                          </div>
+                          <div className="card-footer d-flex justify-content-between">
+                            <div>
+                              <button className="btn btn-sm btn-outline-primary" onClick={() => { setActiveCompany(company); setSelectedContactIds(Array.isArray(company.contacts) ? company.contacts : []); setShowContactsModal(true); }}>
+                                <FaPlus /> Add contacts
+                              </button>
+                            </div>
+                            <div>
+                              {canModify ? (
+                                <>
+                                  <button className="icon-btn edit me-2" onClick={() => handleEdit(company)} title="Edit"><FaPen /></button>
+                                  <button className="icon-btn delete" onClick={() => handleDelete(company.id)} title="Delete"><FaTrash /></button>
+                                </>
+                              ) : (
+                                <span className="badge bg-secondary">No Permission</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>
@@ -542,6 +578,45 @@ export const CompaniesPage = () => {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal for adding contacts to a company */}
+      {showContactsModal && activeCompany && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Add contacts to {activeCompany.name}</h5>
+                <button type="button" className="btn-close" onClick={closeContactsModal}></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <input className="form-control" placeholder="Search contacts" onChange={(e) => { /* optional: implement search */ }} />
+                </div>
+                <div style={{ maxHeight: 360, overflow: 'auto' }}>
+                  {contacts.map((c) => (
+                    <div key={c.id} className="form-check d-flex align-items-center mb-2">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        checked={selectedContactIds.includes(c.id)}
+                        onChange={() => toggleContactSelection(c.id)}
+                        id={`contact_${c.id}`}
+                      />
+                      <label className="form-check-label ms-2" htmlFor={`contact_${c.id}`}>
+                        <img src={c.avatarUrl || c.photo || '/default-avatar.png'} alt={c.firstName || c.email} style={{ width: 28, height: 28, borderRadius: '50%', marginRight: 8 }} />
+                        {c.firstName ? `${c.firstName} ${c.lastName || ''}` : c.email}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-primary" onClick={saveCompanyContacts}>Save</button>
+                <button className="btn btn-secondary" onClick={closeContactsModal}>Cancel</button>
               </div>
             </div>
           </div>

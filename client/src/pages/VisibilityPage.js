@@ -34,6 +34,8 @@ export const VisibilityPage = () => {
     const pageKeys = [
         { key: 'dashboard', label: 'Manage Data' },
         { key: 'companies', label: 'Companies' },
+        { key: 'activities', label: 'Activities & Tasks' },
+        // { key: 'deals', label: 'Deals Pipeline' }, // Hidden temporarily
         { key: 'admin_users', label: 'Manage Users' },
         { key: 'visibility', label: 'Visibility Settings' },
     ];

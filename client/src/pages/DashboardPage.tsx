@@ -144,7 +144,7 @@ export const DashboardPage = () => {
 
       {/* Stats Cards */}
       <div className="row">
-        <div className="col-xl-3 col-md-6 mb-4">
+        <div className="col-xl-4 col-md-6 mb-4">
           <div className="card border-left-primary shadow h-100 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
@@ -164,7 +164,7 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        <div className="col-xl-3 col-md-6 mb-4">
+        <div className="col-xl-4 col-md-6 mb-4">
           <div className="card border-left-success shadow h-100 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
@@ -184,7 +184,7 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        <div className="col-xl-3 col-md-6 mb-4">
+        <div className="col-xl-4 col-md-6 mb-4">
           <div className="card border-left-info shadow h-100 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
@@ -204,7 +204,8 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        <div className="col-xl-3 col-md-6 mb-4">
+        {/* Pipeline Value - Hidden temporarily */}
+        {/* <div className="col-xl-3 col-md-6 mb-4">
           <div className="card border-left-warning shadow h-100 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
@@ -222,7 +223,7 @@ export const DashboardPage = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Charts and Lists */}
@@ -320,30 +321,31 @@ export const DashboardPage = () => {
             </div>
             <div className="card-body">
               <div className="row">
-                <div className="col-md-3 mb-3">
+                <div className="col-md-4 mb-3">
                   <Link to="/companies" className="btn btn-primary w-100">
                     <FaBuilding className="me-2" />
                     Manage Companies
                   </Link>
                 </div>
-                <div className="col-md-3 mb-3">
+                <div className="col-md-4 mb-3">
                   <Link to="/contacts" className="btn btn-success w-100">
                     <FaUsers className="me-2" />
                     Manage Contacts
                   </Link>
                 </div>
-                <div className="col-md-3 mb-3">
+                <div className="col-md-4 mb-3">
                   <Link to="/activities" className="btn btn-info w-100">
                     <FaTasks className="me-2" />
                     View Activities
                   </Link>
                 </div>
-                <div className="col-md-3 mb-3">
+                {/* Deals Pipeline - Hidden temporarily */}
+                {/* <div className="col-md-4 mb-3">
                   <Link to="/deals" className="btn btn-warning w-100">
                     <FaChartLine className="me-2" />
                     View Deals
                   </Link>
-                </div>
+                </div> */}
               </div>
             </div>
           </div>

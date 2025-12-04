@@ -10,6 +10,7 @@ export const VisibilityPage = () => {
   const [visibility, setVisibility] = useState<VisibilityMap | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -22,6 +23,13 @@ export const VisibilityPage = () => {
     setError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/auth/visibility`, { method: 'GET', headers: { Authorization: `Bearer ${token}` } });
+      if (res.status === 403) {
+        // forbidden to view visibility settings
+        setForbidden(true);
+        const text = await res.text();
+        setError(text || 'Forbidden');
+        return;
+      }
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setVisibility(data || {});
@@ -35,6 +43,8 @@ export const VisibilityPage = () => {
   const pageKeys: { key: string; label: string }[] = [
     { key: 'dashboard', label: 'Manage Data' },
     { key: 'companies', label: 'Companies' },
+    { key: 'activities', label: 'Activities & Tasks' },
+    // { key: 'deals', label: 'Deals Pipeline' }, // Hidden temporarily
     { key: 'admin_users', label: 'Manage Users' },
     { key: 'visibility', label: 'Visibility Settings' },
   ];
@@ -85,11 +95,13 @@ export const VisibilityPage = () => {
         <div className="card-body">
           {error && <div className="alert alert-danger">{error}</div>}
           {loading && <div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div>}
+          {forbidden && <div className="alert alert-danger">คุณไม่มีสิทธิ์เข้าถึงหน้า Visibility</div>}
           {!canManageVisibility && (
             <div className="alert alert-warning">You can view these settings, but only Superadmin can edit them</div>
           )}
 
-          <div className="row">
+          {!forbidden && (
+            <div className="row">
             {roles.map((role) => (
               <div key={role} className="col-md-4 mb-4">
                 <div className="card border-left-primary shadow h-100 py-2">
@@ -117,7 +129,8 @@ export const VisibilityPage = () => {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          )}
 
           <div className="mt-3">
             <button className="btn btn-primary me-2" onClick={save} disabled={!canManageVisibility || loading}>

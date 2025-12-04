@@ -9,7 +9,7 @@ import { AdminUsersPage } from './pages/AdminUsersPage';
 import { VisibilityPage } from './pages/VisibilityPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ActivitiesPage } from './pages/ActivitiesPage';
-import { DealsPage } from './pages/DealsPage';
+// import { DealsPage } from './pages/DealsPage'; // Hidden temporarily
 import Layout from './components/Layout';
 
 function App() {
@@ -92,7 +92,8 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
+        {/* Deals Pipeline - Hidden temporarily */}
+        {/* <Route
           path="/deals"
           element={
             <ProtectedRoute>
@@ -101,7 +102,7 @@ function App() {
               </Layout>
             </ProtectedRoute>
           }
-        />
+        /> */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt, FaChevronDown, FaChevronRight, FaCubes, FaTasks, FaDollarSign } from 'react-icons/fa';
+import { FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt, FaChevronDown, FaChevronRight, FaCubes, FaTasks } from 'react-icons/fa';
 import { PiAddressBookFill } from 'react-icons/pi';
 import { Dropdown } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
@@ -212,7 +212,7 @@ const Sidebar = () => {
             )}
 
             {/* Activities */}
-            {isPageVisible('dashboard') && (
+            {isPageVisible('activities') && (
                 <li className="nav-item accordion-section">
                     <div className="accordion-card">
                         <Link 
@@ -226,8 +226,8 @@ const Sidebar = () => {
                 </li>
             )}
 
-            {/* Deals */}
-            {isPageVisible('dashboard') && (
+            {/* Deals - Hidden temporarily */}
+            {/* {isPageVisible('deals') && (
                 <li className="nav-item accordion-section">
                     <div className="accordion-card">
                         <Link 
@@ -239,7 +239,7 @@ const Sidebar = () => {
                         </Link>
                     </div>
                 </li>
-            )}
+            )} */}
 
             {/* Manage Section */}
             {(isPageVisible('admin_users') || isPageVisible('visibility')) && (
@@ -298,7 +298,7 @@ const Sidebar = () => {
                 User Profile
             </div>
 
-            <li className="nav-item sidebar-profile" style={{ position: 'relative' }}>
+            <li className="nav-item sidebar-profile" style={{ position: 'sticky', bottom: 0, zIndex: 20 }}>
                 <Dropdown show={showProfileDropdown} onToggle={setShowProfileDropdown} align="end">
                     <Dropdown.Toggle 
                         as="div" 
