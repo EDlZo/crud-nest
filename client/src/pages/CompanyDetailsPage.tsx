@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaEnvelope, FaPhone, FaExternalLinkAlt, FaPen } from 'react-icons/fa';
+import { FaArrowLeft, FaEnvelope, FaPhone, FaPen } from 'react-icons/fa';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -320,9 +320,6 @@ export const CompanyDetailsPage = () => {
                                                                     onClick={() => showCustomPopup('Phone', contact.phone || 'No phone available')}
                                                                 >
                                                                     <FaPhone />
-                                                                </button>
-                                                                <button className="btn btn-sm btn-outline-secondary border-0" title="View">
-                                                                    <FaExternalLinkAlt />
                                                                 </button>
                                                             </div>
                                                         </td>
