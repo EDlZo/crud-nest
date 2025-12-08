@@ -190,7 +190,7 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
         <p className="auth-toggle">
           {mode === 'login' ? (
             <>
-              Don't have an account? <Link to="/register">Register</Link>
+              Don'tff have an account? <Link to="/register">Register</Link>
             </>
           ) : (
             <>
