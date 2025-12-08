@@ -285,7 +285,7 @@ export const CompanyDetailsPage = () => {
                                                                     />
                                                                 ) : (
                                                                     <div
-                                                                        className="rounded d-flex align-items-center justify-content-center me-3 text-white fw-bold"
+                                                                        className="rounded-circle d-flex align-items-center justify-content-center me-3 text-white fw-bold"
                                                                         style={{ width: 32, height: 32, backgroundColor: '#dc3545', fontSize: 14 }}
                                                                     >
                                                                         {contact.firstName?.charAt(0).toUpperCase() || 'C'}

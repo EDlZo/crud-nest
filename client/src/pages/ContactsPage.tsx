@@ -292,7 +292,7 @@ export const ContactsPage = () => {
                       <th>Name</th>
                       <th>Phone</th>
                       <th>Address</th>
-                      <th>Created By (email)</th>
+                      <th>Email</th>
                       <th>Last Updated By (email)</th>
                       <th>Last Updated</th>
                       <th>Actions</th>
@@ -325,7 +325,7 @@ export const ContactsPage = () => {
                                   />
                                 ) : (
                                   <div
-                                    className="rounded d-flex align-items-center justify-content-center me-2 text-white fw-bold"
+                                    className="rounded-circle d-flex align-items-center justify-content-center me-2 text-white fw-bold"
                                     style={{
                                       width: 36,
                                       height: 36,
@@ -343,7 +343,7 @@ export const ContactsPage = () => {
                             </td>
                             <td>{contact.phone}</td>
                             <td>{contact.address}</td>
-                            <td>{contact.userEmail ?? '-'}</td>
+                            <td>{contact.email ?? '-'}</td>
                             <td>{contact.updatedByEmail ?? '-'}</td>
                             <td>
                               {contact.updatedAt ? new Date(contact.updatedAt).toLocaleString() : '-'}

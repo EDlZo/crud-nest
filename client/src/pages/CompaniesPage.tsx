@@ -26,6 +26,7 @@ type Company = {
   ownerEmail?: string;
   updatedByEmail?: string;
   contacts?: string[];
+  avatarUrl?: string;
 };
 
 const emptyCompany: Company = {
@@ -41,6 +42,7 @@ const emptyCompany: Company = {
   notificationDate: '',
   billingCycle: 'monthly',
   contacts: [],
+  avatarUrl: '',
 };
 
 const withBase = (path: string) => `${API_BASE_URL}${path}`;
@@ -61,6 +63,7 @@ export const CompaniesPage = () => {
   const [showContactsModal, setShowContactsModal] = useState(false);
   const [activeCompany, setActiveCompany] = useState<Company | null>(null);
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
+  const [photoPreview, setPhotoPreview] = useState<string>('');
 
   const performLogout = () => {
     setCompanies([]);
@@ -132,6 +135,7 @@ export const CompaniesPage = () => {
   const resetForm = () => {
     setEditingId(null);
     setFormData(emptyCompany);
+    setPhotoPreview('');
   };
 
   const openAddModal = () => {
@@ -160,6 +164,7 @@ export const CompaniesPage = () => {
       billingDate: formData.billingDate?.trim() || undefined,
       notificationDate: formData.notificationDate?.trim() || undefined,
       billingCycle: formData.billingCycle || undefined,
+      avatarUrl: formData.avatarUrl || undefined,
     };
 
     // เพิ่ม branch fields เฉพาะเมื่อเป็น company
@@ -229,8 +234,10 @@ export const CompaniesPage = () => {
       taxId: company.taxId || '',
       branchName: company.branchName || '',
       branchNumber: company.branchNumber || '',
+      avatarUrl: company.avatarUrl || '',
       id: company.id,
     });
+    setPhotoPreview(company.avatarUrl || '');
     setShowModal(true);
   };
 
@@ -369,8 +376,21 @@ export const CompaniesPage = () => {
                                 <div className="h5 mt-1">$0.00</div>
                               </div>
                               <div>
-                                {/* placeholder avatar or logo */}
-                                <div style={{ width: 48, height: 48, borderRadius: 8, background: '#f4f6f8' }} />
+                                {/* Company avatar or letter */}
+                                {company.avatarUrl ? (
+                                  <img
+                                    src={company.avatarUrl}
+                                    alt={company.name}
+                                    style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }}
+                                  />
+                                ) : (
+                                  <div
+                                    className="d-flex align-items-center justify-content-center text-white fw-bold"
+                                    style={{ width: 48, height: 48, borderRadius: 8, backgroundColor: '#dc3545', fontSize: 20 }}
+                                  >
+                                    {company.name?.charAt(0).toUpperCase() || 'C'}
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -465,6 +485,67 @@ export const CompaniesPage = () => {
               <div className="modal-body">
                 <form onSubmit={handleSubmit}>
                   <div className="row">
+                    {/* Company Logo Upload */}
+                    <div className="col-md-12 mb-4 text-center">
+                      <label className="form-label d-block">Company Logo</label>
+                      <div className="mb-3">
+                        {photoPreview ? (
+                          <img
+                            src={photoPreview}
+                            alt="Preview"
+                            style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, border: '2px solid #ddd' }}
+                          />
+                        ) : (
+                          <div
+                            className="d-flex align-items-center justify-content-center mx-auto text-white fw-bold"
+                            style={{ width: 80, height: 80, borderRadius: 8, backgroundColor: '#dc3545', fontSize: 32 }}
+                          >
+                            {formData.name?.charAt(0).toUpperCase() || 'C'}
+                          </div>
+                        )}
+                      </div>
+                      <input
+                        type="file"
+                        className="form-control"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const img = new Image();
+                              img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const MAX_SIZE = 400;
+                                let width = img.width;
+                                let height = img.height;
+                                if (width > height) {
+                                  if (width > MAX_SIZE) {
+                                    height *= MAX_SIZE / width;
+                                    width = MAX_SIZE;
+                                  }
+                                } else {
+                                  if (height > MAX_SIZE) {
+                                    width *= MAX_SIZE / height;
+                                    height = MAX_SIZE;
+                                  }
+                                }
+                                canvas.width = width;
+                                canvas.height = height;
+                                const ctx = canvas.getContext('2d');
+                                ctx?.drawImage(img, 0, 0, width, height);
+                                const base64String = canvas.toDataURL('image/jpeg', 0.7);
+                                handleChange('avatarUrl', base64String);
+                                setPhotoPreview(base64String);
+                              };
+                              img.src = event.target?.result as string;
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                      <small className="text-muted">Upload a company logo (JPG, PNG)</small>
+                    </div>
                     <div className="col-md-12 mb-3">
                       <label className="form-label">
                         Type <span className="text-danger">*</span>
