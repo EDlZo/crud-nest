@@ -467,8 +467,9 @@ export const CompaniesPage = () => {
                                 <Dropdown drop="start">
                                   <Dropdown.Toggle 
                                     as="span" 
+                                    bsPrefix="custom-dropdown-toggle"
                                     id={`dropdown-${company.id}`}
-                                    style={{ cursor: 'pointer' }}
+                                    style={{ cursor: 'pointer', display: 'inline-block' }}
                                   >
                                     <FaEllipsisV className="text-muted" />
                                   </Dropdown.Toggle>
