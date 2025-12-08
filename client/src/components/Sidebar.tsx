@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt, FaChevronDown, FaChevronRight, FaCubes, FaTasks, FaEllipsisV } from 'react-icons/fa';
+import { FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt, FaChevronDown, FaChevronRight, FaCubes, FaTasks, FaEllipsisV, FaBell } from 'react-icons/fa';
 import { PiAddressBookFill } from 'react-icons/pi';
 import { Dropdown } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
@@ -277,6 +277,12 @@ const Sidebar = () => {
                                 <Link className={`accordion-item ${isActive('/admin/visibility') ? 'active' : ''}`} to="/admin/visibility">
                                     <FaCog className="me-2" />
                                     <span>Visibility</span>
+                                </Link>
+                            )}
+                            {(isPageVisible('admin_users') || isPageVisible('visibility')) && (
+                                <Link className={`accordion-item ${isActive('/admin/notifications') ? 'active' : ''}`} to="/admin/notifications">
+                                    <FaBell className="me-2" />
+                                    <span>Notifications</span>
                                 </Link>
                             )}
                         </div>

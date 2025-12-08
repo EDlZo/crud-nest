@@ -10,6 +10,7 @@ import { AdminUsersPage } from './pages/AdminUsersPage';
 import { VisibilityPage } from './pages/VisibilityPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ActivitiesPage } from './pages/ActivitiesPage';
+import { NotificationSettingsPage } from './pages/NotificationSettingsPage';
 // import { DealsPage } from './pages/DealsPage'; // Hidden temporarily
 import Layout from './components/Layout';
 
@@ -89,6 +90,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <VisibilityPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/notifications"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <NotificationSettingsPage />
               </Layout>
             </ProtectedRoute>
           }
