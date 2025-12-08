@@ -396,30 +396,34 @@ export const CompaniesPage = () => {
 
                             <div className="mt-auto d-flex justify-content-between align-items-center">
                               <div className="d-flex align-items-center">
-                                <div style={{ display: 'flex', gap: -8 }}>
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
                                   {relatedContacts.slice(0, 4).map((cid: string, idx: number) => {
                                     const c = contacts.find((x) => x.id === cid);
                                     const hasPhoto = c?.avatarUrl || c?.photo;
                                     const firstLetter = c?.firstName?.charAt(0).toUpperCase() || 'C';
+                                    const avatarStyle = {
+                                      width: 28,
+                                      height: 28,
+                                      borderRadius: '50%',
+                                      border: '2px solid #fff',
+                                      marginLeft: idx === 0 ? 0 : -8,
+                                      flexShrink: 0,
+                                    };
                                     return hasPhoto ? (
                                       <img
                                         key={cid}
                                         src={c?.avatarUrl || c?.photo}
                                         alt={c?.firstName || c?.email || 'contact'}
-                                        style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid #fff', marginLeft: idx === 0 ? 0 : -8 }}
+                                        style={{ ...avatarStyle, objectFit: 'cover' as const }}
                                       />
                                     ) : (
                                       <div
                                         key={cid}
                                         className="d-flex align-items-center justify-content-center text-white fw-bold"
                                         style={{
-                                          width: 28,
-                                          height: 28,
-                                          borderRadius: '50%',
+                                          ...avatarStyle,
                                           backgroundColor: '#dc3545',
-                                          border: '2px solid #fff',
-                                          marginLeft: idx === 0 ? 0 : -8,
-                                          fontSize: 12,
+                                          fontSize: 11,
                                         }}
                                       >
                                         {firstLetter}
@@ -427,7 +431,21 @@ export const CompaniesPage = () => {
                                     );
                                   })}
                                   {relatedContacts.length > 4 && (
-                                    <div className="badge bg-secondary ms-2">+{relatedContacts.length - 4}</div>
+                                    <div
+                                      className="d-flex align-items-center justify-content-center text-white fw-bold"
+                                      style={{
+                                        width: 28,
+                                        height: 28,
+                                        borderRadius: '50%',
+                                        backgroundColor: '#6c757d',
+                                        border: '2px solid #fff',
+                                        marginLeft: -8,
+                                        fontSize: 10,
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      +{relatedContacts.length - 4}
+                                    </div>
                                   )}
                                 </div>
                                 <div className="small ms-2 text-muted">Related contacts</div>
@@ -493,6 +511,7 @@ export const CompaniesPage = () => {
                           <img
                             src={photoPreview}
                             alt="Preview"
+                            className="d-block mx-auto"
                             style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, border: '2px solid #ddd' }}
                           />
                         ) : (
