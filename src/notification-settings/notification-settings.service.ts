@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { getFirestore } from 'firebase-admin/firestore';
+import { db } from '../firebase.config';
 import { NotificationSettingsDto } from './dto/notification-settings.dto';
 
 const SETTINGS_DOC_ID = 'notification-settings';
@@ -7,11 +7,11 @@ const SETTINGS_DOC_ID = 'notification-settings';
 @Injectable()
 export class NotificationSettingsService {
     private readonly logger = new Logger(NotificationSettingsService.name);
-    private db = getFirestore();
 
     async getSettings(): Promise<NotificationSettingsDto | null> {
         try {
-            const doc = await this.db.collection('settings').doc(SETTINGS_DOC_ID).get();
+            this.logger.log('Fetching notification settings from Firestore');
+            const doc = await db.collection('settings').doc(SETTINGS_DOC_ID).get();
             if (!doc.exists) {
                 this.logger.log('No notification settings found, returning defaults');
                 return this.getDefaultSettings();
@@ -27,12 +27,13 @@ export class NotificationSettingsService {
 
     async updateSettings(settings: NotificationSettingsDto): Promise<NotificationSettingsDto> {
         try {
+            this.logger.log('Updating notification settings');
             // Ensure recipients is always an array
             const safeSettings = {
                 ...settings,
                 recipients: Array.isArray(settings.recipients) ? settings.recipients : [],
             };
-            await this.db.collection('settings').doc(SETTINGS_DOC_ID).set(safeSettings, { merge: true });
+            await db.collection('settings').doc(SETTINGS_DOC_ID).set(safeSettings, { merge: true });
             this.logger.log('Notification settings updated successfully');
             return safeSettings;
         } catch (error) {
@@ -52,7 +53,7 @@ export class NotificationSettingsService {
     // ดึงอีเมลของ Admin และ Superadmin ทั้งหมดในระบบ
     async getAdminEmails(): Promise<string[]> {
         try {
-            const usersCollection = this.db.collection(process.env.FIREBASE_USERS_COLLECTION ?? 'users');
+            const usersCollection = db.collection(process.env.FIREBASE_USERS_COLLECTION ?? 'users');
             const snapshot = await usersCollection
                 .where('role', 'in', ['admin', 'superadmin'])
                 .get();
