@@ -187,29 +187,28 @@
   padding-left: 2.5rem !important;
 }
 
-/* Accordion Card Styles - match regular nav items */
+/* Accordion Card Styles */
 .sidebar .accordion-section {
-  margin: 0;
-  padding: 0;
+  margin: 0.5rem 1rem;
 }
 
 .sidebar .accordion-card {
-  background: transparent;
-  border-radius: 0;
+  background: #ffffff;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar .accordion-card:hover {
-  box-shadow: none;
-  transform: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
 }
 
 .sidebar .accordion-header {
-  background: transparent !important;
-  color: rgba(255,255,255,0.95) !important;
-  border-radius: 0;
+  background: #ffffff !important;
+  color: #333 !important;
+  border-radius: 8px;
   margin: 0;
   padding: 0.75rem 1rem !important;
   font-weight: 600;
@@ -218,22 +217,22 @@
 }
 
 .sidebar .accordion-header:hover {
-  background: rgba(255,255,255,0.08) !important;
+  background: #f8f9fa !important;
 }
 
 .sidebar .accordion-header.active {
-  background: rgba(255,255,255,0.08) !important;
-  color: rgba(255,255,255,0.95) !important;
+  background: #e3f2fd !important;
+  color: #1976d2 !important;
 }
 
 .sidebar .accordion-header.active .me-2 {
-  color: rgba(255,255,255,0.95) !important;
+  color: #1976d2 !important;
 }
 
 .sidebar .accordion-content {
-  background: transparent;
+  background: #ffffff;
   padding: 0.25rem 0;
-  border-radius: 0;
+  border-radius: 0 0 8px 8px;
   overflow: hidden;
 }
 
@@ -242,38 +241,44 @@
   align-items: center;
   padding: 0.75rem 1rem;
   padding-left: 2.5rem;
-  color: rgba(255,255,255,0.8);
+  color: #333;
   text-decoration: none;
   font-size: 0.9rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 4px;
+  border-radius: 0;
   gap: 0.6rem;
   position: relative;
-  margin: 0 0.5rem;
 }
 
 .sidebar .accordion-item::before {
-  display: none;
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: background 0.3s ease;
 }
 
 .sidebar .accordion-item:hover {
-  background-color: rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.95);
+  background-color: #f8f9fa;
+  color: #333;
 }
 
 .sidebar .accordion-item:hover::before {
-  display: none;
+  background: #3663a0;
 }
 
 .sidebar .accordion-item.active {
-  background-color: rgba(255,255,255,0.15);
-  color: rgba(255,255,255,1);
+  background-color: #e3f2fd;
+  color: #1976d2;
   font-weight: 600;
-  padding-left: 2.5rem;
+  padding-left: 2.75rem;
 }
 
 .sidebar .accordion-item.active::before {
-  display: none;
+  background: #1976d2;
 }
 
 /* Ensure profile area stays above expanding accordion sections */

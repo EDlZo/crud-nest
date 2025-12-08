@@ -649,29 +649,12 @@ table th:last-child .btn {
 }
 
 
-/* Hide ALL dropdown arrows globally - FORCE */
-.dropdown-toggle::after,
-.dropdown-toggle::before,
-[class*="dropdown"]::after,
-.custom-dropdown-toggle::after,
-span.dropdown-toggle::after,
-span[class*="dropdown"]::after {
+/* Hide ALL dropdown arrows globally */
+.dropdown-toggle::after {
   display: none !important;
   content: none !important;
   border: none !important;
-  border-width: 0 !important;
   width: 0 !important;
   height: 0 !important;
   margin: 0 !important;
-  padding: 0 !important;
-  visibility: hidden !important;
-}
-
-/* Custom dropdown toggle - no caret */
-.custom-dropdown-toggle {
-  cursor: pointer;
-}
-
-.custom-dropdown-toggle::after {
-  display: none !important;
 }
