@@ -242,14 +242,43 @@ export const CompanyDetailsPage = () => {
                             </div>
                         )}
                         <div>
-                            <h1 className="h3 mb-1 text-gray-800">{company.name}</h1>
-                            {/* Hidden temporarily: Sales Owner section
-                            <div className="d-flex align-items-center text-muted">
-                                <span className="me-2">Sales Owner:</span>
-                                <div className="rounded-circle bg-secondary me-2" style={{ width: 24, height: 24 }}></div>
-                                <span>{company.ownerEmail || 'Unknown'}</span>
-                            </div>
-                            */}
+                            {editingField === 'name' ? (
+                                <div className="d-flex align-items-center gap-2">
+                                    <input
+                                        type="text"
+                                        className="form-control form-control-lg"
+                                        value={editValue}
+                                        onChange={(e) => setEditValue(e.target.value)}
+                                        autoFocus
+                                        style={{ maxWidth: 300 }}
+                                    />
+                                    <button
+                                        className="btn btn-sm btn-secondary"
+                                        onClick={cancelEditing}
+                                        disabled={saving}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        className="btn btn-sm btn-primary"
+                                        onClick={() => saveField('name')}
+                                        disabled={saving}
+                                    >
+                                        {saving ? 'Saving...' : 'Save'}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="d-flex align-items-center">
+                                    <h1 className="h3 mb-1 text-gray-800 me-2">{company.name}</h1>
+                                    <button
+                                        className="btn btn-sm btn-light"
+                                        onClick={() => startEditing('name', company.name)}
+                                        title="Edit name"
+                                    >
+                                        <FaPen size={12} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
