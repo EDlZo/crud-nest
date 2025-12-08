@@ -394,7 +394,7 @@ export const CompaniesPage = () => {
                                 </div>
                                 <div className="small ms-2 text-muted">Related contacts</div>
                               </div>
-                              <div className="small text-muted">Sales owner</div>
+                              {/* Hidden temporarily: <div className="small text-muted">Sales owner</div> */}
                             </div>
                           </div>
                           <div className="card-footer d-flex justify-content-between">

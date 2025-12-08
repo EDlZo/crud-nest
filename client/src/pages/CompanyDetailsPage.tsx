@@ -233,12 +233,13 @@ export const CompanyDetailsPage = () => {
                         </div>
                         <div>
                             <h1 className="h3 mb-1 text-gray-800">{company.name}</h1>
+                            {/* Hidden temporarily: Sales Owner section
                             <div className="d-flex align-items-center text-muted">
                                 <span className="me-2">Sales Owner:</span>
-                                {/* Placeholder for Sales Owner Avatar */}
                                 <div className="rounded-circle bg-secondary me-2" style={{ width: 24, height: 24 }}></div>
                                 <span>{company.ownerEmail || 'Unknown'}</span>
                             </div>
+                            */}
                         </div>
                     </div>
                 </div>
