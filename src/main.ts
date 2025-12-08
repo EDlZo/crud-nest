@@ -35,14 +35,16 @@ async function bootstrap() {
     // ถ้า route ไม่ตรง API ให้ React handle SPA routing
     // Use an Express-compatible middleware so TypeScript typings stay happy
     app.use((req, res, next) => {
-      // skip API routes - check for /api prefix or known API endpoints like /cruds
+      // skip API routes - check for /api prefix or known API endpoints
       if (
         req.path.startsWith('/api') ||
         req.path.startsWith('/cruds') ||
         req.path.startsWith('/auth') ||
         req.path.startsWith('/companies') ||
         req.path.startsWith('/activities') ||
-        req.path.startsWith('/deals')
+        req.path.startsWith('/deals') ||
+        req.path.startsWith('/notification-settings') ||
+        req.path.startsWith('/email')
       ) {
         return next();
       }
