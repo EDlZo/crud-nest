@@ -438,8 +438,8 @@ export const CompanyDetailsPage = () => {
                                                 { value: 'quarterly', label: 'Quarterly' },
                                                 { value: 'yearly', label: 'Yearly' }
                                             ])}
-                                            {renderEditableField('billingDate', 'Billing Date', company.billingDate ? `Day ${company.billingDate}` : '', 'number')}
-                                            {renderEditableField('notificationDate', 'Notification Date', company.notificationDate ? `Day ${company.notificationDate}` : '', 'number')}
+                                            {renderEditableField('billingDate', 'Billing Date', company.billingDate || '', 'number')}
+                                            {renderEditableField('notificationDate', 'Notification Date', company.notificationDate || '', 'number')}
                                             {renderEditableField('address', 'Address', company.address)}
                                         </>
                                     );
