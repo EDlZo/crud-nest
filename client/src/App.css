@@ -663,3 +663,17 @@ span.dropdown-toggle::after,
   margin: 0 !important;
   visibility: hidden !important;
 }
+
+/* Custom dropdown toggle without caret */
+.dropdown-toggle-no-caret::after,
+.no-caret::after {
+  display: none !important;
+  content: none !important;
+  border: none !important;
+}
+
+.dropdown-toggle-no-caret {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+}
