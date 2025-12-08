@@ -1,5 +1,5 @@
 :root {
-  font-family: 'TorsilpKanittha', 'Kanit','Noto Sans Thai', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'TorsilpKanittha', 'Kanit', 'Noto Sans Thai', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.5;
   color: #0f172a;
   background-color: #f8fafc;
@@ -160,7 +160,8 @@ th {
 table th:last-child {
   text-align: center;
   white-space: nowrap;
-  width: 64px; /* slightly narrower fixed column width for actions */
+  width: 64px;
+  /* slightly narrower fixed column width for actions */
   padding: 0 0.4rem;
 }
 
@@ -254,15 +255,32 @@ table th:last-child .btn {
   cursor: pointer;
 }
 
-.icon-btn:hover { opacity: 0.9; transform: none; }
+.icon-btn:hover {
+  opacity: 0.9;
+  transform: none;
+}
 
-.icon-btn.edit { color: #f59e0b; } /* yellow for edit */
-.icon-btn.delete { color: #dc2626; } /* red for delete */
+.icon-btn.edit {
+  color: #f59e0b;
+}
 
-.icon-btn svg { width: 18px; height: 18px; display: block; }
+/* yellow for edit */
+.icon-btn.delete {
+  color: #dc2626;
+}
+
+/* red for delete */
+
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
 
 /* avoid added line-height/vertical gaps from button text metrics */
-.icon-btn { line-height: 0; }
+.icon-btn {
+  line-height: 0;
+}
 
 /* Ensure delete-only cells (single icon) don't inherit extra gap from btn-group */
 .btn-group:only-child,
@@ -273,8 +291,13 @@ table th:last-child .btn {
 }
 
 /* View (eye) icon color - centralized so it's easy to change */
-.icon-btn.view { color: var(--eye-color); }
-.icon-btn.view:hover { color: var(--eye-hover-color); }
+.icon-btn.view {
+  color: var(--eye-color);
+}
+
+.icon-btn.view:hover {
+  color: var(--eye-hover-color);
+}
 
 .muted-text {
   color: #94a3b8;
@@ -294,13 +317,20 @@ table th:last-child .btn {
 .auth-background-decoration {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 10% 20%, rgba(54,98,160,0.03) 0%, transparent 25%), radial-gradient(circle at 90% 80%, rgba(54,98,160,0.02) 0%, transparent 30%);
+  background: radial-gradient(circle at 10% 20%, rgba(54, 98, 160, 0.03) 0%, transparent 25%), radial-gradient(circle at 90% 80%, rgba(54, 98, 160, 0.02) 0%, transparent 30%);
   pointer-events: none;
 }
 
 @keyframes backgroundShift {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.8; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
 }
 
 .auth-card {
@@ -318,6 +348,7 @@ table th:last-child .btn {
     opacity: 0;
     transform: translateY(30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -343,10 +374,13 @@ table th:last-child .btn {
 }
 
 @keyframes iconPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     box-shadow: 0 8px 24px rgba(54, 99, 160, 0.3);
   }
+
   50% {
     transform: scale(1.05);
     box-shadow: 0 12px 32px rgba(54, 99, 160, 0.4);
@@ -430,7 +464,7 @@ table th:last-child .btn {
 .auth-card .form input:focus {
   outline: none;
   border-color: #3663a0;
-  box-shadow: 
+  box-shadow:
     0 0 0 4px rgba(54, 99, 160, 0.1),
     0 4px 12px rgba(54, 99, 160, 0.15);
   transform: translateY(-2px);
@@ -450,9 +484,19 @@ table th:last-child .btn {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-8px); }
-  75% { transform: translateX(8px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-8px);
+  }
+
+  75% {
+    transform: translateX(8px);
+  }
 }
 
 .error-icon {
@@ -505,7 +549,9 @@ table th:last-child .btn {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .auth-divider {
@@ -604,7 +650,9 @@ table th:last-child .btn {
 
 
 /* Hide default dropdown arrow */
-.no-arrow::after {
+.no-arrow::after,
+.no-arrow.dropdown-toggle::after,
+.dropdown-toggle.no-arrow::after {
   display: none !important;
+  content: none !important;
 }
-

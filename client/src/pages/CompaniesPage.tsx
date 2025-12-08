@@ -455,8 +455,8 @@ export const CompaniesPage = () => {
                           </div>
                           <div className="card-footer d-flex justify-content-between">
                             <div>
-                              <button className="btn btn-sm btn-outline-primary" onClick={() => { setActiveCompany(company); setSelectedContactIds(Array.isArray(company.contacts) ? company.contacts : []); setShowContactsModal(true); }}>
-                                <FaPlus /> Add contacts
+                              <button className="btn btn-sm btn-outline-primary d-flex align-items-center text-nowrap" onClick={() => { setActiveCompany(company); setSelectedContactIds(Array.isArray(company.contacts) ? company.contacts : []); setShowContactsModal(true); }}>
+                                <FaPlus className="me-1" /> Add contacts
                               </button>
                             </div>
                             <div>
