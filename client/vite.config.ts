@@ -6,6 +6,7 @@ export default defineConfig({
   resolve: {
     extensions: ['.tsx', '.ts', '.jsx', '.js', '.json']
   },
+  appType: 'spa',
   server: {
     port: 5173,
     hmr: {
@@ -15,6 +16,12 @@ export default defineConfig({
       usePolling: true,
     },
     proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
       '/cruds': {
         target: 'http://localhost:3000',
         changeOrigin: true,
@@ -25,22 +32,7 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      '/companies': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
-      },
       '/users': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/admin': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/activities': {
         target: 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
@@ -55,10 +47,17 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/notification-settings': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/email': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 });
-
-// In development, proxy API requests to the Nest backend running on localhost:3000
-// so the client can use relative paths (e.g. fetch('/cruds')) and avoid CORS.
 

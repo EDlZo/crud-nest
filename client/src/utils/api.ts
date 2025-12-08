@@ -10,7 +10,7 @@ function getApiBase() {
   const envBase = import.meta.env.VITE_API_BASE_URL?.trim();
   if (envBase) return envBase.replace(/\/$/, '');
 
-  if (import.meta.env.DEV) return '';
+  if (import.meta.env.DEV) return '/api';
 
   // fallback to current origin in production (may be misconfigured)
   if (typeof window !== 'undefined') return window.location.origin.replace(/\/$/, '');
