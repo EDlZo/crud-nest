@@ -30,4 +30,8 @@ export class NotificationSettingsDto {
     @IsOptional()
     @IsString()
     emailTemplate?: string;
+
+    @IsOptional()
+    @IsBoolean()
+    sendToAdmins?: boolean; // ส่งอีเมลไปยัง Admin/Superadmin ทั้งหมดอัตโนมัติ
 }

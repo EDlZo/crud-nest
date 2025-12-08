@@ -25,11 +25,14 @@ export class BillingSchedulerService {
             return;
         }
 
-        const recipients = await this.settingsService.getActiveRecipients();
+        // ใช้ getAllRecipients เพื่อรวมทั้ง manual recipients และ admin emails (ถ้าเปิด sendToAdmins)
+        const recipients = await this.settingsService.getAllRecipients();
         if (recipients.length === 0) {
             this.logger.warn('No active recipients for notifications');
             return;
         }
+
+        this.logger.log(`Sending notifications to ${recipients.length} recipients: ${recipients.join(', ')}`);
 
         const today = new Date();
         const currentDay = today.getDate();

@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { FaBell, FaEnvelope, FaPlus, FaTrash, FaPaperPlane, FaSave } from 'react-icons/fa';
+import { FaBell, FaEnvelope, FaPlus, FaTrash, FaPaperPlane, FaSave, FaUserShield } from 'react-icons/fa';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
 import '../App.css';
@@ -16,6 +16,7 @@ interface NotificationSettings {
     onBillingDate: boolean;
     notificationTime: string;
     emailTemplate: string;
+    sendToAdmins: boolean;
 }
 
 const defaultSettings: NotificationSettings = {
@@ -25,6 +26,7 @@ const defaultSettings: NotificationSettings = {
     onBillingDate: true,
     notificationTime: '09:00',
     emailTemplate: '',
+    sendToAdmins: false,
 };
 
 const withBase = (path: string) => `${API_BASE_URL}${path}`;
@@ -229,6 +231,31 @@ export const NotificationSettingsPage = () => {
                                     <FaPlus className="me-1" /> Add
                                 </button>
                             </form>
+
+                            {/* Send to Admins Toggle */}
+                            <div className="mt-4 pt-3 border-top">
+                                <div className="form-check form-switch">
+                                    <input
+                                        className="form-check-input"
+                                        type="checkbox"
+                                        role="switch"
+                                        checked={settings.sendToAdmins}
+                                        onChange={(e) =>
+                                            setSettings((prev) => ({ ...prev, sendToAdmins: e.target.checked }))
+                                        }
+                                        id="sendToAdmins"
+                                    />
+                                    <label className="form-check-label d-flex align-items-center" htmlFor="sendToAdmins">
+                                        <FaUserShield className="me-2 text-success" />
+                                        <span>
+                                            <strong>ส่งอีเมลไปยัง Admin/Superadmin ทั้งหมด</strong>
+                                            <small className="d-block text-muted">
+                                                ดึงอีเมลของ Admin และ Superadmin จากระบบอัตโนมัติ
+                                            </small>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -29,6 +29,22 @@ export class CreateCompanyDto {
   branchNumber?: string;
 
   @IsOptional()
+  @IsString()
+  billingDate?: string;
+
+  @IsOptional()
+  @IsString()
+  notificationDate?: string;
+
+  @IsOptional()
+  @IsString()
+  billingCycle?: 'monthly' | 'yearly' | 'quarterly';
+
+  @IsOptional()
+  @IsString()
+  type?: 'individual' | 'company';
+
+  @IsOptional()
   @IsObject()
   socials?: Record<string, string>;
 

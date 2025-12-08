@@ -41,6 +41,47 @@ export class NotificationSettingsService {
             .map((r) => r.email);
     }
 
+    // ดึงอีเมลของ Admin และ Superadmin ทั้งหมดในระบบ
+    async getAdminEmails(): Promise<string[]> {
+        try {
+            const usersCollection = this.db.collection(process.env.FIREBASE_USERS_COLLECTION ?? 'users');
+            const snapshot = await usersCollection
+                .where('role', 'in', ['admin', 'superadmin'])
+                .get();
+            
+            const emails = snapshot.docs
+                .map((doc) => doc.data()?.email)
+                .filter((email): email is string => typeof email === 'string' && email.length > 0);
+            
+            this.logger.log(`Found ${emails.length} admin/superadmin emails`);
+            return emails;
+        } catch (error) {
+            this.logger.error('Error fetching admin emails', error);
+            return [];
+        }
+    }
+
+    // ดึงผู้รับอีเมลทั้งหมด (รวม recipients ที่ตั้งไว้ + admin emails ถ้าเปิด sendToAdmins)
+    async getAllRecipients(): Promise<string[]> {
+        const settings = await this.getSettings();
+        if (!settings) return [];
+
+        const recipients = new Set<string>();
+
+        // เพิ่ม active recipients ที่ตั้งไว้ด้วยตัวเอง
+        settings.recipients
+            .filter((r) => r.active)
+            .forEach((r) => recipients.add(r.email));
+
+        // ถ้าเปิด sendToAdmins ให้ดึง admin emails เพิ่มเข้ามา
+        if (settings.sendToAdmins) {
+            const adminEmails = await this.getAdminEmails();
+            adminEmails.forEach((email) => recipients.add(email));
+        }
+
+        return Array.from(recipients);
+    }
+
     private getDefaultSettings(): NotificationSettingsDto {
         return {
             recipients: [],
@@ -49,6 +90,7 @@ export class NotificationSettingsService {
             onBillingDate: true,
             notificationTime: '09:00',
             emailTemplate: '',
+            sendToAdmins: false,
         };
     }
 }
