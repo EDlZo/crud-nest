@@ -1,31 +1,57 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 @Injectable()
 export class EmailService {
     private readonly logger = new Logger(EmailService.name);
-    private transporter: nodemailer.Transporter;
+    private resend: Resend | null = null;
+    private fromEmail: string = 'onboarding@resend.dev'; // Default Resend email
 
     constructor() {
-        this.transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.GMAIL_USER,
-                pass: process.env.GMAIL_APP_PASSWORD,
-            },
-        });
+        this.initResend();
+    }
+
+    private initResend() {
+        const apiKey = process.env.RESEND_API_KEY;
+        const fromEmail = process.env.RESEND_FROM_EMAIL;
+
+        this.logger.log(`Initializing Resend with API key: ${apiKey ? apiKey.substring(0, 8) + '***' : 'NOT SET'}`);
+
+        if (!apiKey) {
+            this.logger.warn('RESEND_API_KEY not configured. Email sending will not work.');
+            return;
+        }
+
+        this.resend = new Resend(apiKey);
+        if (fromEmail) {
+            this.fromEmail = fromEmail;
+        }
+        this.logger.log(`Resend initialized. From email: ${this.fromEmail}`);
     }
 
     async sendEmail(to: string | string[], subject: string, html: string): Promise<boolean> {
+        if (!this.resend) {
+            this.logger.error('Resend not initialized. Check RESEND_API_KEY environment variable.');
+            return false;
+        }
+
         try {
-            const recipients = Array.isArray(to) ? to.join(', ') : to;
-            await this.transporter.sendMail({
-                from: process.env.GMAIL_USER,
+            const recipients = Array.isArray(to) ? to : [to];
+            this.logger.log(`Attempting to send email to: ${recipients.join(', ')}`);
+
+            const { data, error } = await this.resend.emails.send({
+                from: this.fromEmail,
                 to: recipients,
                 subject,
                 html,
             });
-            this.logger.log(`Email sent successfully to ${recipients}`);
+
+            if (error) {
+                this.logger.error('Resend error:', error);
+                return false;
+            }
+
+            this.logger.log(`Email sent successfully. ID: ${data?.id}`);
             return true;
         } catch (error) {
             this.logger.error('Failed to send email', error);
@@ -99,10 +125,10 @@ export class EmailService {
 
         const html = customTemplate
             ? customTemplate
-                .replace('{{companyName}}', companyName)
-                .replace('{{billingDate}}', billingDate)
-                .replace('{{billingCycle}}', billingCycle)
-                .replace('{{daysUntilBilling}}', String(daysUntilBilling))
+                .replace(/\{\{companyName\}\}/g, companyName)
+                .replace(/\{\{billingDate\}\}/g, billingDate)
+                .replace(/\{\{billingCycle\}\}/g, billingCycle)
+                .replace(/\{\{daysUntilBilling\}\}/g, String(daysUntilBilling))
             : defaultHtml;
 
         return this.sendEmail(to, subject, html);
