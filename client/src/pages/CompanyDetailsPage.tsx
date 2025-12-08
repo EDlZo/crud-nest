@@ -276,12 +276,21 @@ export const CompanyDetailsPage = () => {
                                                     <tr key={contact.id}>
                                                         <td className="ps-4">
                                                             <div className="d-flex align-items-center">
-                                                                <img
-                                                                    src={contact.avatarUrl || contact.photo || '/default-avatar.png'}
-                                                                    alt=""
-                                                                    className="rounded-circle me-3"
-                                                                    style={{ width: 32, height: 32, objectFit: 'cover' }}
-                                                                />
+                                                                {(contact.avatarUrl || contact.photo) ? (
+                                                                    <img
+                                                                        src={contact.avatarUrl || contact.photo}
+                                                                        alt=""
+                                                                        className="rounded-circle me-3"
+                                                                        style={{ width: 32, height: 32, objectFit: 'cover' }}
+                                                                    />
+                                                                ) : (
+                                                                    <div
+                                                                        className="rounded d-flex align-items-center justify-content-center me-3 text-white fw-bold"
+                                                                        style={{ width: 32, height: 32, backgroundColor: '#dc3545', fontSize: 14 }}
+                                                                    >
+                                                                        {contact.firstName?.charAt(0).toUpperCase() || 'C'}
+                                                                    </div>
+                                                                )}
                                                                 <span className="fw-medium">{contact.firstName} {contact.lastName}</span>
                                                             </div>
                                                         </td>
@@ -453,12 +462,21 @@ export const CompanyDetailsPage = () => {
                                                 onChange={() => toggleContactSelection(c.id)}
                                                 id={`contact_${c.id}`}
                                             />
-                                            <label className="form-check-label ms-2" htmlFor={`contact_${c.id}`}>
-                                                <img
-                                                    src={c.avatarUrl || c.photo || '/default-avatar.png'}
-                                                    alt={c.firstName || c.email}
-                                                    style={{ width: 28, height: 28, borderRadius: '50%', marginRight: 8 }}
-                                                />
+                                            <label className="form-check-label ms-2 d-flex align-items-center" htmlFor={`contact_${c.id}`}>
+                                                {(c.avatarUrl || c.photo) ? (
+                                                    <img
+                                                        src={c.avatarUrl || c.photo}
+                                                        alt={c.firstName || c.email}
+                                                        style={{ width: 28, height: 28, borderRadius: '50%', marginRight: 8 }}
+                                                    />
+                                                ) : (
+                                                    <div
+                                                        className="d-flex align-items-center justify-content-center text-white fw-bold"
+                                                        style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#dc3545', marginRight: 8, fontSize: 12 }}
+                                                    >
+                                                        {c.firstName?.charAt(0).toUpperCase() || 'C'}
+                                                    </div>
+                                                )}
                                                 {c.firstName ? `${c.firstName} ${c.lastName || ''}` : c.email}
                                             </label>
                                         </div>

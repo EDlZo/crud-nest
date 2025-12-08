@@ -316,12 +316,26 @@ export const ContactsPage = () => {
                           <tr key={contact.id}>
                             <td>
                               <div className="d-flex align-items-center">
-                                <img
-                                  src={contact.photo || '/default-avatar.png'}
-                                  alt={`${contact.firstName} ${contact.lastName}`}
-                                  className="rounded-circle me-2"
-                                  style={{ width: 36, height: 36, objectFit: 'cover' }}
-                                />
+                                {contact.photo ? (
+                                  <img
+                                    src={contact.photo}
+                                    alt={`${contact.firstName} ${contact.lastName}`}
+                                    className="rounded-circle me-2"
+                                    style={{ width: 36, height: 36, objectFit: 'cover' }}
+                                  />
+                                ) : (
+                                  <div
+                                    className="rounded d-flex align-items-center justify-content-center me-2 text-white fw-bold"
+                                    style={{
+                                      width: 36,
+                                      height: 36,
+                                      backgroundColor: '#dc3545',
+                                      fontSize: 16,
+                                    }}
+                                  >
+                                    {contact.firstName?.charAt(0).toUpperCase() || 'C'}
+                                  </div>
+                                )}
                                 <strong>
                                   {contact.firstName} {contact.lastName}
                                 </strong>

@@ -379,13 +379,31 @@ export const CompaniesPage = () => {
                                 <div style={{ display: 'flex', gap: -8 }}>
                                   {relatedContacts.slice(0, 4).map((cid: string, idx: number) => {
                                     const c = contacts.find((x) => x.id === cid);
-                                    return (
+                                    const hasPhoto = c?.avatarUrl || c?.photo;
+                                    const firstLetter = c?.firstName?.charAt(0).toUpperCase() || 'C';
+                                    return hasPhoto ? (
                                       <img
                                         key={cid}
-                                        src={c?.avatarUrl || c?.photo || '/default-avatar.png'}
+                                        src={c?.avatarUrl || c?.photo}
                                         alt={c?.firstName || c?.email || 'contact'}
                                         style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid #fff', marginLeft: idx === 0 ? 0 : -8 }}
                                       />
+                                    ) : (
+                                      <div
+                                        key={cid}
+                                        className="d-flex align-items-center justify-content-center text-white fw-bold"
+                                        style={{
+                                          width: 28,
+                                          height: 28,
+                                          borderRadius: '50%',
+                                          backgroundColor: '#dc3545',
+                                          border: '2px solid #fff',
+                                          marginLeft: idx === 0 ? 0 : -8,
+                                          fontSize: 12,
+                                        }}
+                                      >
+                                        {firstLetter}
+                                      </div>
                                     );
                                   })}
                                   {relatedContacts.length > 4 && (
@@ -621,8 +639,17 @@ export const CompaniesPage = () => {
                         onChange={() => toggleContactSelection(c.id)}
                         id={`contact_${c.id}`}
                       />
-                      <label className="form-check-label ms-2" htmlFor={`contact_${c.id}`}>
-                        <img src={c.avatarUrl || c.photo || '/default-avatar.png'} alt={c.firstName || c.email} style={{ width: 28, height: 28, borderRadius: '50%', marginRight: 8 }} />
+                      <label className="form-check-label ms-2 d-flex align-items-center" htmlFor={`contact_${c.id}`}>
+                        {(c.avatarUrl || c.photo) ? (
+                          <img src={c.avatarUrl || c.photo} alt={c.firstName || c.email} style={{ width: 28, height: 28, borderRadius: '50%', marginRight: 8 }} />
+                        ) : (
+                          <div
+                            className="d-flex align-items-center justify-content-center text-white fw-bold"
+                            style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#dc3545', marginRight: 8, fontSize: 12 }}
+                          >
+                            {c.firstName?.charAt(0).toUpperCase() || 'C'}
+                          </div>
+                        )}
                         {c.firstName ? `${c.firstName} ${c.lastName || ''}` : c.email}
                       </label>
                     </div>
