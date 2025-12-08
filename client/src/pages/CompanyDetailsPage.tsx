@@ -24,6 +24,7 @@ type Company = {
     ownerEmail?: string;
     updatedByEmail?: string;
     contacts?: string[];
+    avatarUrl?: string;
 };
 
 type Contact = {
@@ -225,12 +226,21 @@ export const CompanyDetailsPage = () => {
                         <FaArrowLeft size={20} />
                     </button>
                     <div className="d-flex align-items-center">
-                        <div
-                            className="d-flex align-items-center justify-content-center bg-danger text-white rounded me-3"
-                            style={{ width: 64, height: 64, fontSize: 32, fontWeight: 'bold' }}
-                        >
-                            {company.name.charAt(0).toUpperCase()}
-                        </div>
+                        {company.avatarUrl ? (
+                            <img
+                                src={company.avatarUrl}
+                                alt={company.name}
+                                className="rounded me-3"
+                                style={{ width: 64, height: 64, objectFit: 'cover' }}
+                            />
+                        ) : (
+                            <div
+                                className="d-flex align-items-center justify-content-center bg-danger text-white rounded me-3"
+                                style={{ width: 64, height: 64, fontSize: 32, fontWeight: 'bold' }}
+                            >
+                                {company.name.charAt(0).toUpperCase()}
+                            </div>
+                        )}
                         <div>
                             <h1 className="h3 mb-1 text-gray-800">{company.name}</h1>
                             {/* Hidden temporarily: Sales Owner section
