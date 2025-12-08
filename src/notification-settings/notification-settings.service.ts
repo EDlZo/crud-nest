@@ -13,9 +13,12 @@ export class NotificationSettingsService {
         try {
             const doc = await this.db.collection('settings').doc(SETTINGS_DOC_ID).get();
             if (!doc.exists) {
+                this.logger.log('No notification settings found, returning defaults');
                 return this.getDefaultSettings();
             }
-            return doc.data() as NotificationSettingsDto;
+            const data = doc.data() as NotificationSettingsDto;
+            // Merge with defaults to ensure all fields exist
+            return { ...this.getDefaultSettings(), ...data };
         } catch (error) {
             this.logger.error('Error fetching notification settings', error);
             return this.getDefaultSettings();
@@ -24,9 +27,14 @@ export class NotificationSettingsService {
 
     async updateSettings(settings: NotificationSettingsDto): Promise<NotificationSettingsDto> {
         try {
-            await this.db.collection('settings').doc(SETTINGS_DOC_ID).set(settings, { merge: true });
-            this.logger.log('Notification settings updated');
-            return settings;
+            // Ensure recipients is always an array
+            const safeSettings = {
+                ...settings,
+                recipients: Array.isArray(settings.recipients) ? settings.recipients : [],
+            };
+            await this.db.collection('settings').doc(SETTINGS_DOC_ID).set(safeSettings, { merge: true });
+            this.logger.log('Notification settings updated successfully');
+            return safeSettings;
         } catch (error) {
             this.logger.error('Error updating notification settings', error);
             throw error;
@@ -35,7 +43,7 @@ export class NotificationSettingsService {
 
     async getActiveRecipients(): Promise<string[]> {
         const settings = await this.getSettings();
-        if (!settings) return [];
+        if (!settings || !Array.isArray(settings.recipients)) return [];
         return settings.recipients
             .filter((r) => r.active)
             .map((r) => r.email);
@@ -69,9 +77,11 @@ export class NotificationSettingsService {
         const recipients = new Set<string>();
 
         // เพิ่ม active recipients ที่ตั้งไว้ด้วยตัวเอง
-        settings.recipients
-            .filter((r) => r.active)
-            .forEach((r) => recipients.add(r.email));
+        if (Array.isArray(settings.recipients)) {
+            settings.recipients
+                .filter((r) => r && r.active)
+                .forEach((r) => recipients.add(r.email));
+        }
 
         // ถ้าเปิด sendToAdmins ให้ดึง admin emails เพิ่มเข้ามา
         if (settings.sendToAdmins) {
