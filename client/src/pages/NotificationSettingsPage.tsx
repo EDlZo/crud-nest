@@ -37,6 +37,7 @@ export const NotificationSettingsPage = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [sendingTest, setSendingTest] = useState(false);
+    const [sendingBillingTest, setSendingBillingTest] = useState(false);
     const [newEmail, setNewEmail] = useState('');
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -145,6 +146,36 @@ export const NotificationSettingsPage = () => {
             setMessage({ type: 'error', text: 'Error sending test email' });
         } finally {
             setSendingTest(false);
+        }
+    };
+
+    // ทดสอบส่ง billing notification ไปยังผู้รับทั้งหมด
+    const handleSendBillingTest = async () => {
+        if (!token) return;
+        setSendingBillingTest(true);
+        setMessage(null);
+        try {
+            const response = await fetch(withBase('/email/test-billing'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ companyName: 'Test Company' }),
+            });
+            const data = await response.json();
+            if (data.success) {
+                setMessage({ 
+                    type: 'success', 
+                    text: `Billing test sent to: ${data.recipients.join(', ')}` 
+                });
+            } else {
+                setMessage({ type: 'error', text: data.message || 'Failed to send billing test' });
+            }
+        } catch (error) {
+            setMessage({ type: 'error', text: 'Error sending billing test email' });
+        } finally {
+            setSendingBillingTest(false);
         }
     };
 
@@ -367,6 +398,22 @@ export const NotificationSettingsPage = () => {
                                 ) : (
                                     <>
                                         <FaPaperPlane className="me-1" /> Send Test Email
+                                    </>
+                                )}
+                            </button>
+                            <button
+                                className="btn btn-outline-success"
+                                onClick={handleSendBillingTest}
+                                disabled={sendingBillingTest}
+                            >
+                                {sendingBillingTest ? (
+                                    <>
+                                        <span className="spinner-border spinner-border-sm me-1" />
+                                        Sending...
+                                    </>
+                                ) : (
+                                    <>
+                                        <FaBell className="me-1" /> Test Billing Notification
                                     </>
                                 )}
                             </button>
