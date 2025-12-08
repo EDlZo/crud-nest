@@ -155,14 +155,14 @@ export const CompaniesPage = () => {
     setError(null);
 
     const payload: any = {
-      type: formData.type,
+      type: formData.type || undefined,
       name: formData.name.trim(),
       address: formData.address?.trim() || undefined,
       phone: formData.phone?.trim() || undefined,
       fax: formData.fax?.trim() || undefined,
       taxId: formData.taxId?.trim() || undefined,
-      billingDate: formData.billingDate?.trim() || undefined,
-      notificationDate: formData.notificationDate?.trim() || undefined,
+      billingDate: formData.billingDate || undefined,
+      notificationDate: formData.notificationDate || undefined,
       billingCycle: formData.billingCycle || undefined,
       avatarUrl: formData.avatarUrl || undefined,
     };
@@ -172,6 +172,9 @@ export const CompaniesPage = () => {
       payload.branchName = formData.branchName?.trim() || undefined;
       payload.branchNumber = formData.branchNumber?.trim() || undefined;
     }
+
+    // Debug log
+    console.log('Submitting payload:', payload);
 
     if (!payload.name) {
       setError('Please enter company name');
@@ -666,30 +669,32 @@ export const CompaniesPage = () => {
                       </select>
                     </div>
                     <div className="col-md-4 mb-3">
-                      <label className="form-label">Billing Date (Day of month)</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        min="1"
-                        max="31"
-                        placeholder="e.g., 5"
+                      <label className="form-label">Billing Date</label>
+                      <select
+                        className="form-select"
                         value={formData.billingDate || ''}
                         onChange={(e) => handleChange('billingDate', e.target.value)}
-                      />
-                      <small className="form-text text-muted">Day of month to bill (1-31)</small>
+                      >
+                        <option value="">Select day...</option>
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                          <option key={day} value={String(day)}>{day}</option>
+                        ))}
+                      </select>
+                      <small className="form-text text-muted">วันที่เรียกเก็บเงินในแต่ละรอบ</small>
                     </div>
                     <div className="col-md-4 mb-3">
-                      <label className="form-label">Notification Date (Day of month)</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        min="1"
-                        max="31"
-                        placeholder="e.g., 1"
+                      <label className="form-label">Notification Date</label>
+                      <select
+                        className="form-select"
                         value={formData.notificationDate || ''}
                         onChange={(e) => handleChange('notificationDate', e.target.value)}
-                      />
-                      <small className="form-text text-muted">Day to send notification (1-31)</small>
+                      >
+                        <option value="">Select day...</option>
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                          <option key={day} value={String(day)}>{day}</option>
+                        ))}
+                      </select>
+                      <small className="form-text text-muted">วันที่แจ้งเตือนก่อนถึงกำหนด</small>
                     </div>
                   </div>
                   {error && <div className="alert alert-danger">{error}</div>}
