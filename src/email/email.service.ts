@@ -1,37 +1,37 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Resend } from 'resend';
+import * as postmark from 'postmark';
 
 @Injectable()
 export class EmailService {
     private readonly logger = new Logger(EmailService.name);
-    private resend: Resend | null = null;
-    private fromEmail: string = 'onboarding@resend.dev'; // Default Resend email
+    private client: postmark.ServerClient | null = null;
+    private fromEmail: string = 'purin.k@rmutsvmail.com';
 
     constructor() {
-        this.initResend();
+        this.initPostmark();
     }
 
-    private initResend() {
-        const apiKey = process.env.RESEND_API_KEY;
-        const fromEmail = process.env.RESEND_FROM_EMAIL;
+    private initPostmark() {
+        const apiToken = process.env.POSTMARK_API_TOKEN;
+        const fromEmail = process.env.POSTMARK_FROM_EMAIL;
 
-        this.logger.log(`Initializing Resend with API key: ${apiKey ? apiKey.substring(0, 8) + '***' : 'NOT SET'}`);
+        this.logger.log(`Initializing Postmark with API token: ${apiToken ? apiToken.substring(0, 8) + '***' : 'NOT SET'}`);
 
-        if (!apiKey) {
-            this.logger.warn('RESEND_API_KEY not configured. Email sending will not work.');
+        if (!apiToken) {
+            this.logger.warn('POSTMARK_API_TOKEN not configured. Email sending will not work.');
             return;
         }
 
-        this.resend = new Resend(apiKey);
+        this.client = new postmark.ServerClient(apiToken);
         if (fromEmail) {
             this.fromEmail = fromEmail;
         }
-        this.logger.log(`Resend initialized. From email: ${this.fromEmail}`);
+        this.logger.log(`Postmark initialized. From email: ${this.fromEmail}`);
     }
 
     async sendEmail(to: string | string[], subject: string, html: string): Promise<boolean> {
-        if (!this.resend) {
-            this.logger.error('Resend not initialized. Check RESEND_API_KEY environment variable.');
+        if (!this.client) {
+            this.logger.error('Postmark not initialized. Check POSTMARK_API_TOKEN environment variable.');
             return false;
         }
 
@@ -39,22 +39,20 @@ export class EmailService {
             const recipients = Array.isArray(to) ? to : [to];
             this.logger.log(`Attempting to send email to: ${recipients.join(', ')}`);
 
-            const { data, error } = await this.resend.emails.send({
-                from: this.fromEmail,
-                to: recipients,
-                subject,
-                html,
-            });
-
-            if (error) {
-                this.logger.error('Resend error:', error);
-                return false;
+            // Postmark sends to each recipient separately
+            for (const recipient of recipients) {
+                const result = await this.client.sendEmail({
+                    From: this.fromEmail,
+                    To: recipient,
+                    Subject: subject,
+                    HtmlBody: html,
+                });
+                this.logger.log(`Email sent successfully to ${recipient}. MessageID: ${result.MessageID}`);
             }
 
-            this.logger.log(`Email sent successfully. ID: ${data?.id}`);
             return true;
         } catch (error) {
-            this.logger.error('Failed to send email', error);
+            this.logger.error('Failed to send email:', error);
             return false;
         }
     }
