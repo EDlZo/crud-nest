@@ -462,7 +462,7 @@ export const CompaniesPage = () => {
                             <div>
                               {canModify ? (
                                 <Dropdown drop="start">
-                                  <Dropdown.Toggle variant="link" className="text-muted no-arrow p-0" id={`dropdown-${company.id}`}>
+                                  <Dropdown.Toggle as="button" className="btn btn-link text-muted p-0 no-arrow" style={{ border: 'none', background: 'none' }} id={`dropdown-${company.id}`}>
                                     <FaEllipsisV />
                                   </Dropdown.Toggle>
 

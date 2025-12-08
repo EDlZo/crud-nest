@@ -652,7 +652,10 @@ table th:last-child .btn {
 /* Hide default dropdown arrow */
 .no-arrow::after,
 .no-arrow.dropdown-toggle::after,
-.dropdown-toggle.no-arrow::after {
+.dropdown-toggle.no-arrow::after,
+.btn.no-arrow::after,
+.btn.dropdown-toggle.no-arrow::after {
   display: none !important;
   content: none !important;
+  border: none !important;
 }
