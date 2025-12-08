@@ -650,11 +650,16 @@ table th:last-child .btn {
 
 
 /* Hide ALL dropdown arrows globally */
-.dropdown-toggle::after {
+.dropdown-toggle::after,
+span.dropdown-toggle::after,
+[class*="dropdown-toggle"]::after,
+.dropdown > .dropdown-toggle::after,
+.dropdown .dropdown-toggle::after {
   display: none !important;
   content: none !important;
   border: none !important;
   width: 0 !important;
   height: 0 !important;
   margin: 0 !important;
+  visibility: hidden !important;
 }
