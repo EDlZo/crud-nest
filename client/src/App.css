@@ -649,13 +649,23 @@ table th:last-child .btn {
 }
 
 
-/* Hide default dropdown arrow */
+/* Hide default dropdown arrow - force override Bootstrap */
 .no-arrow::after,
 .no-arrow.dropdown-toggle::after,
 .dropdown-toggle.no-arrow::after,
 .btn.no-arrow::after,
-.btn.dropdown-toggle.no-arrow::after {
+.btn.dropdown-toggle.no-arrow::after,
+button.no-arrow::after,
+button.dropdown-toggle::after {
   display: none !important;
   content: none !important;
   border: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+}
+
+/* Extra specific for card footer dropdown */
+.card-footer .dropdown-toggle::after {
+  display: none !important;
 }
