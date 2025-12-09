@@ -1,5 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { FaPen, FaTrash, FaCheck, FaClock, FaExclamationTriangle, FaEye } from 'react-icons/fa';
+import { FaCheck, FaClock, FaExclamationTriangle, FaEye } from 'react-icons/fa';
+import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -590,7 +591,7 @@ export const ActivitiesPage = () => {
                                     title="Edit"
                                     onClick={() => handleEdit(activity)}
                                   >
-                                    <FaPen />
+                                    <FiEdit2 />
                                   </button>
                                   <button
                                     className="icon-btn delete"
@@ -598,7 +599,7 @@ export const ActivitiesPage = () => {
                                     title="Delete"
                                     onClick={() => handleDelete(activity.id)}
                                   >
-                                    <FaTrash />
+                                    <FiTrash2 />
                                   </button>
                                 </>
                               )}
@@ -1185,7 +1186,7 @@ export const ActivitiesPage = () => {
                       justifyContent: 'center'
                     }}
                   >
-                    <FaPen className="me-2" />
+                    <FiEdit2 className="me-2" />
                     Edit
                   </button>
                 )}

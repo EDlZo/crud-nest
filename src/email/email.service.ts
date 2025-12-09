@@ -5,7 +5,7 @@ import * as postmark from 'postmark';
 export class EmailService {
     private readonly logger = new Logger(EmailService.name);
     private client: postmark.ServerClient | null = null;
-    private fromEmail: string = 'purin.k@rmutsvmail.com';
+    private fromEmail: string = 'notifications@schoolsync.ai';
 
     constructor() {
         this.initPostmark();

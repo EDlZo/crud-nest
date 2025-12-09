@@ -253,20 +253,35 @@ table th:last-child .btn {
   background: transparent;
   box-shadow: none;
   cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
 }
 
 .icon-btn:hover {
-  opacity: 0.9;
+  background-color: rgba(0, 0, 0, 0.05);
   transform: none;
+}
+
+.icon-btn:focus {
+  outline: none;
+  box-shadow: none;
 }
 
 .icon-btn.edit {
   color: #f59e0b;
 }
 
+.icon-btn.edit:hover {
+  background-color: rgba(245, 158, 11, 0.1);
+}
+
 /* yellow for edit */
 .icon-btn.delete {
   color: #dc2626;
+}
+
+.icon-btn.delete:hover {
+  background-color: rgba(220, 38, 38, 0.1);
 }
 
 /* red for delete */
@@ -292,11 +307,12 @@ table th:last-child .btn {
 
 /* View (eye) icon color - centralized so it's easy to change */
 .icon-btn.view {
-  color: var(--eye-color);
+  color: #6b7280;
 }
 
 .icon-btn.view:hover {
-  color: var(--eye-hover-color);
+  color: #374151;
+  background-color: rgba(107, 114, 128, 0.1);
 }
 
 .muted-text {

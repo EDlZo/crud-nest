@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { FaPen, FaTrash } from 'react-icons/fa';
+import { FiEdit2, FiTrash2, FiFilter, FiEye } from 'react-icons/fi';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -30,6 +30,13 @@ const emptyContact: Contact = {
 
 const withBase = (path: string) => `${API_BASE_URL}${path}`;
 
+type FilterState = {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+};
+
 export const ContactsPage = () => {
   const { token, user, logout } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -41,6 +48,10 @@ export const ContactsPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
+  const [filters, setFilters] = useState<FilterState>({ name: '', email: '', phone: '', address: '' });
+  const [activeFilter, setActiveFilter] = useState<keyof FilterState | null>(null);
 
   const performLogout = () => {
     setContacts([]);
@@ -246,116 +257,316 @@ export const ContactsPage = () => {
     }
   };
 
+  // Filter contacts based on search and column filters
+  const filteredContacts = contacts.filter((contact) => {
+    const fullName = `${contact.firstName} ${contact.lastName}`.toLowerCase();
+    
+    // Column filters
+    if (filters.name && !fullName.includes(filters.name.toLowerCase())) return false;
+    if (filters.email && !contact.email?.toLowerCase().includes(filters.email.toLowerCase())) return false;
+    if (filters.phone && !contact.phone?.toLowerCase().includes(filters.phone.toLowerCase())) return false;
+    if (filters.address && !contact.address?.toLowerCase().includes(filters.address.toLowerCase())) return false;
+    
+    // Global search
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        fullName.includes(searchLower) ||
+        contact.phone?.toLowerCase().includes(searchLower) ||
+        contact.address?.toLowerCase().includes(searchLower) ||
+        contact.email?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    return true;
+  });
+
+  const handleFilterChange = (field: keyof FilterState, value: string) => {
+    setFilters(prev => ({ ...prev, [field]: value }));
+    setCurrentPage(1);
+  };
+
+  const clearFilter = (field: keyof FilterState) => {
+    setFilters(prev => ({ ...prev, [field]: '' }));
+    setActiveFilter(null);
+    setCurrentPage(1);
+  };
+
+  const clearAllFilters = () => {
+    setFilters({ name: '', email: '', phone: '', address: '' });
+    setActiveFilter(null);
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters = Object.values(filters).some(v => v !== '');
+
+  const renderFilterDropdown = (field: keyof FilterState, label: string) => {
+    const isActive = activeFilter === field;
+    const hasValue = filters[field] !== '';
+    
+    return (
+      <div className="position-relative d-inline-block">
+        <div 
+          className="d-flex align-items-center gap-2" 
+          style={{ cursor: 'pointer' }}
+          onClick={() => setActiveFilter(isActive ? null : field)}
+        >
+          {label}
+          <FiFilter 
+            size={14} 
+            className={hasValue ? 'text-primary' : 'text-muted'} 
+            style={{ cursor: 'pointer' }} 
+          />
+        </div>
+        {isActive && (
+          <div 
+            className="position-fixed bg-white shadow-lg rounded p-3"
+            style={{ 
+              zIndex: 9999, 
+              minWidth: '220px',
+              border: '1px solid #e5e7eb',
+              marginTop: '8px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-2">
+              <input
+                type="text"
+                className="form-control form-control-sm"
+                placeholder={`Filter by ${label.toLowerCase()}...`}
+                value={filters[field]}
+                onChange={(e) => handleFilterChange(field, e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="d-flex justify-content-between">
+              <button 
+                className="btn btn-sm btn-outline-secondary"
+                onClick={() => clearFilter(field)}
+              >
+                Clear
+              </button>
+              <button 
+                className="btn btn-sm btn-primary"
+                onClick={() => setActiveFilter(null)}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Pagination
+  const totalPages = Math.ceil(filteredContacts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedContacts = filteredContacts.slice(startIndex, startIndex + itemsPerPage);
+
+  const renderPagination = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    return (
+      <div className="d-flex justify-content-between align-items-center mt-4">
+        <div className="text-muted">
+          {filteredContacts.length} contacts in total
+        </div>
+        <div className="d-flex align-items-center gap-2">
+          <button 
+            className="btn btn-sm btn-outline-secondary"
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+          >
+            &lt;
+          </button>
+          {startPage > 1 && (
+            <>
+              <button className="btn btn-sm btn-outline-secondary" onClick={() => setCurrentPage(1)}>1</button>
+              {startPage > 2 && <span className="px-2">...</span>}
+            </>
+          )}
+          {pages.map(page => (
+            <button
+              key={page}
+              className={`btn btn-sm ${currentPage === page ? 'btn-primary' : 'btn-outline-secondary'}`}
+              onClick={() => setCurrentPage(page)}
+            >
+              {page}
+            </button>
+          ))}
+          {endPage < totalPages && (
+            <>
+              {endPage < totalPages - 1 && <span className="px-2">...</span>}
+              <button className="btn btn-sm btn-outline-secondary" onClick={() => setCurrentPage(totalPages)}>{totalPages}</button>
+            </>
+          )}
+          <button 
+            className="btn btn-sm btn-outline-secondary"
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+          >
+            &gt;
+          </button>
+          <select 
+            className="form-select form-select-sm" 
+            style={{ width: 'auto' }}
+            value={itemsPerPage}
+            onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+          >
+            <option value={10}>10 / page</option>
+            <option value={12}>12 / page</option>
+            <option value={25}>25 / page</option>
+            <option value={50}>50 / page</option>
+          </select>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="container-fluid">
         {/* Page Heading */}
         <div className="d-sm-flex align-items-center justify-content-between mb-4">
           <h1 className="h3 mb-0 text-gray-800">Contacts</h1>
-
+          <div>
+            <button className="btn btn-add me-2" onClick={openAddModal}>+ Add New Contact</button>
+            <button className="btn btn-outline-secondary" onClick={fetchContacts} disabled={loading}>
+              {loading ? 'Loading...' : 'Refresh'}
+            </button>
+          </div>
         </div>
 
-        {/* Add/Edit form is moved into a modal. Use the Add button to open it. */}
+        {error && <div className="alert alert-danger">{error}</div>}
 
-        <div className="card shadow mb-4">
-          <div className="card-header py-3 d-flex justify-content-between align-items-center">
-            <h6 className="m-0 font-weight-bold text-primary">Contact List</h6>
-            <div>
-              <button className="btn btn-sm btn-add me-2" onClick={openAddModal}>Add New Contect</button>
-              <button style={{ color: '#ffff' }} className="btn btn-sm btn-info shadow-sm" onClick={fetchContacts} disabled={loading}>
-                {loading ? 'Loading...' : 'Refresh'}
-              </button>
-            </div>
+        {/* Active Filters Display */}
+        {hasActiveFilters && (
+          <div className="mb-3 d-flex align-items-center gap-2 flex-wrap">
+            <span className="text-muted">Filters:</span>
+            {Object.entries(filters).map(([key, value]) => 
+              value && (
+                <span key={key} className="badge bg-primary d-flex align-items-center gap-1" style={{ fontSize: '0.85rem', padding: '0.5rem 0.75rem' }}>
+                  {key}: {value}
+                  <button 
+                    className="btn-close btn-close-white" 
+                    style={{ fontSize: '0.6rem', marginLeft: '0.25rem' }}
+                    onClick={() => clearFilter(key as keyof FilterState)}
+                  />
+                </span>
+              )
+            )}
+            <button className="btn btn-sm btn-outline-secondary" onClick={clearAllFilters}>
+              Clear All
+            </button>
           </div>
-          <div className="card-body">
-            {/* Search */}
-            <div className="row mb-3">
-              <div className="col-md-6">
-                <label className="form-label">Search</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Search by name, phone, address..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
+        )}
 
+        {/* Contact Table */}
+        <div className="card shadow-sm border-0">
+          <div className="card-body p-0">
             {contacts.length === 0 && !loading ? (
-              <p className="text-center">No contacts yet. Try adding a new one.</p>
+              <p className="text-center py-5">No contacts yet. Try adding a new one.</p>
             ) : (
-              <div className="table-responsive">
-                <table className="table table-bordered" width="100%" cellSpacing={0}>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Phone</th>
-                      <th>Address</th>
-                      <th>Email</th>
-                      <th>Last Updated By (email)</th>
-                      <th>Last Updated</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {contacts
-                      .filter((contact) => {
-                        if (!searchTerm) return true;
-                        const searchLower = searchTerm.toLowerCase();
-                        return (
-                          `${contact.firstName} ${contact.lastName}`.toLowerCase().includes(searchLower) ||
-                          contact.phone?.toLowerCase().includes(searchLower) ||
-                          contact.address?.toLowerCase().includes(searchLower)
-                        );
-                      })
-                      .map((contact) => {
+              <>
+                <div className="table-responsive">
+                  <table className="table table-hover align-middle mb-0" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#fafafa' }}>
+                        <th className="border-0 py-3 px-4" style={{ fontWeight: 500, color: '#374151' }}>
+                          {renderFilterDropdown('name', 'Name')}
+                        </th>
+                        <th className="border-0 py-3 px-4" style={{ fontWeight: 500, color: '#374151' }}>
+                          {renderFilterDropdown('email', 'Email')}
+                        </th>
+                        <th className="border-0 py-3 px-4" style={{ fontWeight: 500, color: '#374151' }}>
+                          {renderFilterDropdown('phone', 'Phone')}
+                        </th>
+                        <th className="border-0 py-3 px-4" style={{ fontWeight: 500, color: '#374151' }}>
+                          {renderFilterDropdown('address', 'Address')}
+                        </th>
+                        <th className="border-0 py-3 px-4" style={{ fontWeight: 500, color: '#374151' }}>
+                          Last Updated
+                        </th>
+                        <th className="border-0 py-3 px-4 text-center" style={{ fontWeight: 500, color: '#374151' }}>
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedContacts.map((contact) => {
                         const canModify =
                           user?.role === 'admin' || user?.role === 'superadmin' || contact.userId === user?.userId;
+                        
+                        // Generate random pastel color based on name
+                        const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#22d3d8', '#60a5fa', '#a78bfa', '#f472b6'];
+                        const colorIndex = (contact.firstName?.charCodeAt(0) || 0) % colors.length;
+                        const avatarColor = colors[colorIndex];
+                        
                         return (
-                          <tr key={contact.id}>
-                            <td>
+                          <tr key={contact.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                            <td className="py-3 px-4 border-0">
                               <div className="d-flex align-items-center">
                                 {contact.photo ? (
                                   <img
                                     src={contact.photo}
                                     alt={`${contact.firstName} ${contact.lastName}`}
-                                    className="rounded-circle me-2"
-                                    style={{ width: 36, height: 36, objectFit: 'cover' }}
+                                    className="rounded-circle me-3"
+                                    style={{ width: 40, height: 40, objectFit: 'cover' }}
                                   />
                                 ) : (
                                   <div
-                                    className="rounded-circle d-flex align-items-center justify-content-center me-2 text-white fw-bold"
+                                    className="rounded-circle d-flex align-items-center justify-content-center me-3 text-white fw-semibold"
                                     style={{
-                                      width: 36,
-                                      height: 36,
-                                      backgroundColor: '#dc3545',
+                                      width: 40,
+                                      height: 40,
+                                      backgroundColor: avatarColor,
                                       fontSize: 16,
                                     }}
                                   >
                                     {contact.firstName?.charAt(0).toUpperCase() || 'C'}
                                   </div>
                                 )}
-                                <strong>
+                                <span style={{ fontWeight: 500, color: '#111827' }}>
                                   {contact.firstName} {contact.lastName}
-                                </strong>
+                                </span>
                               </div>
                             </td>
-                            <td>{contact.phone}</td>
-                            <td>{contact.address}</td>
-                            <td>{contact.email ?? '-'}</td>
-                            <td>{contact.updatedByEmail ?? '-'}</td>
-                            <td>
-                              {contact.updatedAt ? new Date(contact.updatedAt).toLocaleString() : '-'}
+                            <td className="py-3 px-4 border-0" style={{ color: '#6b7280' }}>
+                              {contact.email ?? '-'}
                             </td>
-                            <td>
+                            <td className="py-3 px-4 border-0" style={{ color: '#6b7280' }}>
+                              {contact.phone ?? '-'}
+                            </td>
+                            <td className="py-3 px-4 border-0" style={{ color: '#6b7280' }}>
+                              {contact.address ?? '-'}
+                            </td>
+                            <td className="py-3 px-4 border-0" style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                              {contact.updatedAt ? new Date(contact.updatedAt).toLocaleDateString() : '-'}
+                            </td>
+                            <td className="py-3 px-4 border-0 text-center">
                               {canModify ? (
-                                <div className="btn-group">
+                                <div className="d-flex justify-content-center gap-1">
+                                  <button className="icon-btn view" aria-label="view" title="View">
+                                    <FiEye />
+                                  </button>
                                   <button className="icon-btn edit" aria-label="edit" title="Edit" onClick={() => handleEdit(contact)}>
-                                    <FaPen />
+                                    <FiEdit2 />
                                   </button>
                                   <button className="icon-btn delete" aria-label="delete" title="Delete" onClick={() => handleDelete(contact.id)}>
-                                    <FaTrash />
+                                    <FiTrash2 />
                                   </button>
                                 </div>
                               ) : (
@@ -365,9 +576,11 @@ export const ContactsPage = () => {
                           </tr>
                         );
                       })}
-                  </tbody>
-                </table>
-              </div>
+                    </tbody>
+                  </table>
+                </div>
+                {renderPagination()}
+              </>
             )}
           </div>
         </div>

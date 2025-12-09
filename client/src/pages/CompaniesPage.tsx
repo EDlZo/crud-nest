@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { FaPen, FaTrash, FaEye, FaEllipsisV } from 'react-icons/fa';
-import { FaPlus } from 'react-icons/fa';
+import { FaEye, FaEllipsisV, FaPlus } from 'react-icons/fa';
+import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { Dropdown } from 'react-bootstrap';
 import '../App.css';
@@ -456,20 +456,20 @@ export const CompaniesPage = () => {
                               {/* Hidden temporarily: <div className="small text-muted">Sales owner</div> */}
                             </div>
                           </div>
-                          <div className="card-footer d-flex justify-content-between">
+                          <div className="card-footer d-flex justify-content-between align-items-center">
                             <div>
                               <button className="btn btn-sm btn-outline-primary d-flex align-items-center text-nowrap" onClick={() => { setActiveCompany(company); setSelectedContactIds(Array.isArray(company.contacts) ? company.contacts : []); setShowContactsModal(true); }}>
                                 <FaPlus className="me-1" /> Add contacts
                               </button>
                             </div>
-                            <div>
+                            <div className="d-flex align-items-center">
                               {canModify ? (
                                 <Dropdown drop="start">
                                   <Dropdown.Toggle 
                                     as="span" 
                                     id={`dropdown-${company.id}`}
                                     className="no-caret"
-                                    style={{ cursor: 'pointer' }}
+                                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                                     bsPrefix="dropdown-toggle-no-caret"
                                   >
                                     <FaEllipsisV className="text-muted" />
@@ -480,7 +480,7 @@ export const CompaniesPage = () => {
                                       <FaEye className="me-2 text-secondary" /> View Company
                                     </Dropdown.Item>
                                     <Dropdown.Item onClick={() => handleDelete(company.id)} className="text-danger">
-                                      <FaTrash className="me-2" /> Delete
+                                      <FiTrash2 className="me-2" /> Delete
                                     </Dropdown.Item>
                                   </Dropdown.Menu>
                                 </Dropdown>

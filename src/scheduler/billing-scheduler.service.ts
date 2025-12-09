@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { getFirestore } from 'firebase-admin/firestore';
 import { EmailService } from '../email/email.service';
 import { NotificationSettingsService } from '../notification-settings/notification-settings.service';
@@ -8,14 +8,34 @@ import { NotificationSettingsService } from '../notification-settings/notificati
 export class BillingSchedulerService {
     private readonly logger = new Logger(BillingSchedulerService.name);
     private db = getFirestore();
+    private lastRunDate: string | null = null; // ป้องกันส่งซ้ำในวันเดียวกัน
 
     constructor(
+        @Inject(forwardRef(() => EmailService))
         private readonly emailService: EmailService,
         private readonly settingsService: NotificationSettingsService,
     ) { }
 
-    // Run every day at 9:00 AM
-    @Cron(CronExpression.EVERY_DAY_AT_9AM)
+    // เช็คทุกนาทีว่าถึงเวลาที่ตั้งไว้หรือยัง
+    @Cron('0 * * * * *') // ทุกนาทีที่วินาทีที่ 0
+    async checkScheduledTime() {
+        const settings = await this.settingsService.getSettings();
+        if (!settings || !settings.notificationTime) {
+            return;
+        }
+
+        const now = new Date();
+        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        const todayDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+
+        // เช็คว่าถึงเวลาที่ตั้งไว้หรือยัง และยังไม่เคยรันในวันนี้
+        if (currentTime === settings.notificationTime && this.lastRunDate !== todayDate) {
+            this.logger.log(`Scheduled time ${settings.notificationTime} reached! Running billing notifications...`);
+            this.lastRunDate = todayDate;
+            await this.handleBillingNotifications();
+        }
+    }
+
     async handleBillingNotifications() {
         this.logger.log('Running billing notification check...');
 

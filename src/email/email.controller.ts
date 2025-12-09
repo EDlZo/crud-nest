@@ -1,9 +1,10 @@
-import { Controller, Post, Body, UseGuards, Logger } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Logger, Inject, forwardRef } from '@nestjs/common';
 import { EmailService } from './email.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { NotificationSettingsService } from '../notification-settings/notification-settings.service';
+import { BillingSchedulerService } from '../scheduler/billing-scheduler.service';
 
 @Controller('email')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -13,6 +14,8 @@ export class EmailController {
     constructor(
         private readonly emailService: EmailService,
         private readonly settingsService: NotificationSettingsService,
+        @Inject(forwardRef(() => BillingSchedulerService))
+        private readonly schedulerService: BillingSchedulerService,
     ) { }
 
     @Post('test')
@@ -73,6 +76,27 @@ export class EmailController {
         } catch (error) {
             this.logger.error('testBillingNotification error:', error);
             return { success: false, message: `Error: ${error.message || 'Unknown error'}`, recipients: [] };
+        }
+    }
+
+    // ทดสอบ run scheduler ด้วยมือ - จะเช็คบริษัททั้งหมดและส่ง email แบบเดียวกับ cron job
+    @Post('trigger-scheduler')
+    @Roles('admin', 'superadmin')
+    async triggerScheduler() {
+        this.logger.log('Manual trigger of billing scheduler requested');
+        try {
+            await this.schedulerService.handleBillingNotifications();
+            return { 
+                success: true, 
+                message: 'Scheduler triggered successfully. Check logs for details.',
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            this.logger.error('triggerScheduler error:', error);
+            return { 
+                success: false, 
+                message: `Error: ${error.message || 'Unknown error'}` 
+            };
         }
     }
 }

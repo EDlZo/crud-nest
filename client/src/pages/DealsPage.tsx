@@ -1,5 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { FaPen, FaTrash, FaDollarSign, FaEye, FaClock } from 'react-icons/fa';
+import { FaDollarSign, FaEye, FaClock } from 'react-icons/fa';
+import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -500,7 +501,7 @@ export const DealsPage = () => {
                                   title="Edit"
                                   onClick={() => handleEdit(deal)}
                                 >
-                                  <FaPen />
+                                  <FiEdit2 />
                                 </button>
                                 <button
                                   className="icon-btn delete"
@@ -508,7 +509,7 @@ export const DealsPage = () => {
                                   title="Delete"
                                   onClick={() => handleDelete(deal.id)}
                                 >
-                                  <FaTrash />
+                                  <FiTrash2 />
                                 </button>
                               </div>
                             ) : (
@@ -854,7 +855,7 @@ export const DealsPage = () => {
                     onClick={() => { setViewingDeal(null); handleEdit(viewingDeal); }}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
                   >
-                    <FaPen />
+                    <FiEdit2 />
                     Edit
                   </button>
                 )}

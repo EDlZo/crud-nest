@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaTrash, FaUserCircle } from 'react-icons/fa';
+import { FaUserCircle } from 'react-icons/fa';
+import { FiTrash2 } from 'react-icons/fi';
 import '../App.css';
 
 type User = {
@@ -397,7 +398,7 @@ export const AdminUsersPage = () => {
                             onClick={() => openDeleteConfirm(u.userId, u.email)}
                             disabled={loading || !canManageRoles}
                           >
-                            <FaTrash size={18} />
+                            <FiTrash2 size={18} />
                           </button>
                         </div>
                       </td>

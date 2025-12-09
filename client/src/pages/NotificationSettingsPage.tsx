@@ -1,5 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { FaBell, FaEnvelope, FaPlus, FaTrash, FaPaperPlane, FaSave, FaUserShield } from 'react-icons/fa';
+import { FaBell, FaEnvelope, FaPlus, FaPaperPlane, FaSave, FaUserShield } from 'react-icons/fa';
+import { FiTrash2 } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
 import '../App.css';
@@ -244,7 +245,7 @@ export const NotificationSettingsPage = () => {
                                                 className="btn btn-sm btn-outline-danger"
                                                 onClick={() => handleRemoveRecipient(recipient.email)}
                                             >
-                                                <FaTrash />
+                                                <FiTrash2 />
                                             </button>
                                         </div>
                                     ))
@@ -396,9 +397,9 @@ export const NotificationSettingsPage = () => {
                                         Sending...
                                     </>
                                 ) : (
-                                    <>
+                                    <span className="d-flex align-items-center">
                                         <FaPaperPlane className="me-1" /> Send Test Email
-                                    </>
+                                    </span>
                                 )}
                             </button>
                             <button
@@ -412,9 +413,9 @@ export const NotificationSettingsPage = () => {
                                         Sending...
                                     </>
                                 ) : (
-                                    <>
+                                    <span className="d-flex align-items-center">
                                         <FaBell className="me-1" /> Test Billing Notification
-                                    </>
+                                    </span>
                                 )}
                             </button>
                         </div>
@@ -426,14 +427,14 @@ export const NotificationSettingsPage = () => {
             <div className="d-flex justify-content-end">
                 <button className="btn btn-primary btn-lg" onClick={handleSave} disabled={saving}>
                     {saving ? (
-                        <>
+                        <span className="d-flex align-items-center">
                             <span className="spinner-border spinner-border-sm me-1" />
                             Saving...
-                        </>
+                        </span>
                     ) : (
-                        <>
+                        <span className="d-flex align-items-center">
                             <FaSave className="me-1" /> Save Settings
-                        </>
+                        </span>
                     )}
                 </button>
             </div>
