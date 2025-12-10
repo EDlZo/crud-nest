@@ -4,6 +4,7 @@ import { FaEnvelope, FaLock, FaUser, FaUserCircle } from 'react-icons/fa';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
+import { fetchProfile } from '../utils/fetchProfile';
 
 type AuthMode = 'login' | 'register';
 
@@ -11,7 +12,7 @@ const withBase = (path: string) => `${API_BASE_URL}${path}`;
 
 export const AuthPage = ({ mode }: { mode: AuthMode }) => {
   const navigate = useNavigate();
-  const { login, token } = useAuth();
+  const { login, token, setUser } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -72,6 +73,9 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
         throw new Error('No token received from server');
       }
       login(data.token);
+      // Fetch profile and set avatarUrl in context
+      const profile = await fetchProfile(data.token);
+      if (profile) setUser(profile);
       navigate('/');
     } catch (err) {
       setError((err as Error).message);

@@ -6,11 +6,13 @@ import {
   ReactNode,
   useEffect,
 } from 'react';
+import { fetchProfile } from '../utils/fetchProfile';
 
-type AuthUser = {
+export type AuthUser = {
   userId: string;
   email: string;
   role?: 'admin' | 'superadmin';
+  avatarUrl?: string;
 };
 
 type AuthContextValue = {
@@ -18,6 +20,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   login: (token: string) => void;
   logout: () => void;
+  setUser: (user: AuthUser | null) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -42,21 +45,31 @@ const decodeToken = (jwt: string | null): AuthUser | null => {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
-  const [user, setUser] = useState<AuthUser | null>(() => decodeToken(localStorage.getItem(TOKEN_KEY)));
+  const [user, setUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
-    if (token) {
-      localStorage.setItem(TOKEN_KEY, token);
-    } else {
-      localStorage.removeItem(TOKEN_KEY);
-    }
-    setUser(decodeToken(token));
+    let isMounted = true;
+    const updateUser = async () => {
+      if (token) {
+        localStorage.setItem(TOKEN_KEY, token);
+        // fetch profile from API for avatarUrl
+        const profile = await fetchProfile(token);
+        if (isMounted) {
+          setUser(profile || decodeToken(token));
+        }
+      } else {
+        localStorage.removeItem(TOKEN_KEY);
+        setUser(null);
+      }
+    };
+    updateUser();
+    return () => { isMounted = false; };
   }, [token]);
 
   const login = (nextToken: string) => setToken(nextToken);
   const logout = () => setToken(null);
 
-  const value = useMemo(() => ({ token, user, login, logout }), [token, user]);
+  const value = useMemo(() => ({ token, user, login, logout, setUser }), [token, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

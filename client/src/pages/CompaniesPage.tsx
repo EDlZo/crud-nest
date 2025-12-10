@@ -19,6 +19,7 @@ type Company = {
   branchNumber?: string;
   billingDate?: string; // วันที่เรียกเก็บเงิน (1-31)
   notificationDate?: string; // วันที่แจ้งเตือนล่วงหน้า (1-31)
+  amountDue?: number;
   billingCycle?: 'monthly' | 'yearly' | 'quarterly';
   createdAt?: string;
   updatedAt?: string;
@@ -27,6 +28,7 @@ type Company = {
   updatedByEmail?: string;
   contacts?: string[];
   avatarUrl?: string;
+  openDealsAmount?: number;
 };
 
 const emptyCompany: Company = {
@@ -48,6 +50,42 @@ const emptyCompany: Company = {
 const withBase = (path: string) => `${API_BASE_URL}${path}`;
 
 export const CompaniesPage = () => {
+  // Inline edit state for amountDue, billingDate, notificationDate
+  const [editField, setEditField] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
+
+  const startInlineEdit = (company: Company, field: string) => {
+    setEditingId(company.id ?? null);
+    setEditField(field);
+    setEditValue(field === 'amountDue' ? (company.amountDue?.toString() ?? '') : (company[field as keyof Company]?.toString() ?? ''));
+  };
+
+  const cancelInlineEdit = () => {
+    setEditingId(null);
+    setEditField(null);
+    setEditValue('');
+  };
+
+  const saveInlineField = async (company: Company, field: string) => {
+    if (!company.id || !token) return;
+    let value: any = editValue;
+    if (field === 'amountDue') value = parseFloat(editValue);
+    if ((field === 'billingDate' || field === 'notificationDate') && (parseInt(editValue) < 1 || parseInt(editValue) > 31)) return;
+    try {
+      const res = await fetch(withBase(`/companies/${company.id}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ [field]: value }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setCompanies((prev) => prev.map((c) => (c.id === company.id ? updated : c)));
+        cancelInlineEdit();
+      }
+    } catch (err) {
+      // handle error
+    }
+  };
   const { token, user, logout } = useAuth();
   const navigate = useNavigate();
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -59,6 +97,7 @@ export const CompaniesPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
+  const [filterBillingDue, setFilterBillingDue] = useState<string>('all');
   const [contacts, setContacts] = useState<any[]>([]);
   const [showContactsModal, setShowContactsModal] = useState(false);
   const [activeCompany, setActiveCompany] = useState<Company | null>(null);
@@ -319,186 +358,189 @@ export const CompaniesPage = () => {
 
   return (
     <>
-      <div className="container-fluid">
-        {/* Page Heading */}
-        <div className="d-sm-flex align-items-center justify-content-between mb-4">
-          <h1 className="h3 mb-0 text-gray-800">Companies</h1>
-        </div>
+      <div className="flex flex-col gap-6 px-8 py-6 bg-gray-50 min-h-screen">
+        <div className="flex items-center justify-between mb-6">
+          <button
+            className="px-4 py-2 rounded-lg bg-[#3869a9] text-white font-medium shadow"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 17 }}
+            onClick={openAddModal}
+          >
 
-        <div className="card shadow mb-4">
-          <div className="card-header py-3 d-flex justify-content-between align-items-center">
-            <h6 className="m-0 font-weight-bold text-primary">Companies List</h6>
-            <div>
-              <button className="btn btn-sm btn-add me-2" onClick={openAddModal}>
-                Add New Company
-              </button>
-              <button
-                style={{ color: '#ffff' }}
-                className="btn btn-sm btn-info shadow-sm"
-                onClick={fetchCompanies}
-                disabled={loading}
-              >
-                {loading ? 'Loading...' : 'Refresh'}
-              </button>
-            </div>
+            + Add New Company
+          </button>
+          <div className="flex items-center gap-2">
+            <select
+              className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring focus:border-blue-400 bg-white"
+              value={filterBillingDue}
+              onChange={(e) => setFilterBillingDue(e.target.value)}
+              style={{ minWidth: 150 }}
+            >
+              <option value="all">All Billing Dates</option>
+              <option value="today">Due Today</option>
+              <option value="week">Due This Week</option>
+            </select>
+            <input
+              type="text"
+              className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring focus:border-blue-400"
+              placeholder="Search by name"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              style={{ minWidth: 220 }}
+            />
           </div>
-          <div className="card-body">
-            {error && <div className="alert alert-danger">{error}</div>}
-            {companies.length === 0 && !loading ? (
-              <p className="text-center">There is no company information yet. Try adding new information.</p>
-            ) : (
-              <div className="row gx-3 gy-4">
-                {companies
-                  .filter((company) => {
-                    if (searchTerm) {
-                      const searchLower = searchTerm.toLowerCase();
-                      const matchesSearch =
-                        company.name?.toLowerCase().includes(searchLower) ||
-                        company.address?.toLowerCase().includes(searchLower);
-                      if (!matchesSearch) return false;
+        </div>
+        {error && <div className="bg-red-100 text-red-700 px-4 py-2 rounded mb-4">{error}</div>}
+        {companies.length === 0 && !loading ? (
+          <p className="text-center text-gray-500">There is no company information yet. Try adding new information.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {companies
+              .filter((company) => {
+                if (searchTerm) {
+                  const searchLower = searchTerm.toLowerCase();
+                  const matchesSearch = company.name?.toLowerCase().includes(searchLower);
+                  if (!matchesSearch) return false;
+                }
+                if (filterType !== 'all' && company.type !== filterType) return false;
+
+                // Billing Due Filter
+                if (filterBillingDue !== 'all') {
+                  const billingDay = parseInt(company.billingDate || '0');
+                  if (!billingDay) return false;
+
+                  const today = new Date();
+
+                  if (filterBillingDue === 'today') {
+                    if (billingDay !== today.getDate()) return false;
+                  } else if (filterBillingDue === 'week') {
+                    // Calculate days in current week (Sunday to Saturday)
+                    const currentDay = today.getDay(); // 0 (Sun) - 6 (Sat)
+                    const startOfWeek = new Date(today);
+                    startOfWeek.setDate(today.getDate() - currentDay);
+
+                    const daysInWeek: number[] = [];
+                    for (let i = 0; i < 7; i++) {
+                      const d = new Date(startOfWeek);
+                      d.setDate(startOfWeek.getDate() + i);
+                      daysInWeek.push(d.getDate());
                     }
-                    if (filterType !== 'all' && company.type !== filterType) return false;
-                    return true;
-                  })
-                  .map((company) => {
-                    const canModify =
-                      user?.role === 'admin' ||
-                      user?.role === 'superadmin' ||
-                      company.ownerUserId === user?.userId;
 
-                    const relatedContacts = Array.isArray(company.contacts) ? company.contacts : [];
+                    if (!daysInWeek.includes(billingDay)) return false;
+                  }
+                }
 
-                    return (
-                      <div key={company.id} className="col-sm-6 col-md-4 col-lg-3">
-                        <div className="card h-100 shadow-sm">
-                          <div className="card-body d-flex flex-column">
-                            <div className="d-flex justify-content-between align-items-start mb-3">
-                              <div>
-                                <h6 className="card-title mb-1">{company.name}</h6>
-                                <div className="text-muted small">Open deals amount</div>
-                                <div className="h5 mt-1">$0.00</div>
-                              </div>
-                              <div>
-                                {/* Company avatar or letter */}
-                                {company.avatarUrl ? (
-                                  <img
-                                    src={company.avatarUrl}
-                                    alt={company.name}
-                                    style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }}
-                                  />
-                                ) : (
-                                  <div
-                                    className="d-flex align-items-center justify-content-center text-white fw-bold"
-                                    style={{ width: 48, height: 48, borderRadius: 8, backgroundColor: '#dc3545', fontSize: 20 }}
-                                  >
-                                    {company.name?.charAt(0).toUpperCase() || 'C'}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+                return true;
+              })
+              .map((company) => {
+                const canModify = user?.role === 'admin' || user?.role === 'superadmin' || company.ownerUserId === user?.userId;
+                const relatedContacts = Array.isArray(company.contacts) ? company.contacts : [];
+                // กำหนดสี pastel สำหรับ avatar เหมือนหน้า ContactsPage/Topbar
+                const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#22d3d8', '#60a5fa', '#a78bfa', '#f472b6'];
+                const colorIndex = (company.name?.charCodeAt(0) || 0) % colors.length;
+                const avatarColor = colors[colorIndex];
+                return (
+                  <div key={company.id} className="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
+                    <div className="flex items-center gap-4">
+                      {company.avatarUrl ? (
+                        <img src={company.avatarUrl} alt={company.name} className="w-12 h-12 rounded-lg object-cover" />
+                      ) : (
+                        <div
+                          className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl"
+                          style={{ backgroundColor: avatarColor }}
+                        >
+                          {company.name?.charAt(0).toUpperCase() || 'C'}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-semibold text-lg">{company.name}</div>
+                        <div className="text-gray-500 text-sm">{company.type === 'company' ? 'Company' : 'Individual'}</div>
+                      </div>
+                    </div>
 
-                            <div className="mt-auto d-flex justify-content-between align-items-center">
-                              <div className="d-flex align-items-center">
-                                <div style={{ display: 'flex', alignItems: 'center' }}>
-                                  {relatedContacts.slice(0, 4).map((cid: string, idx: number) => {
-                                    const c = contacts.find((x) => x.id === cid);
-                                    const hasPhoto = c?.avatarUrl || c?.photo;
-                                    const firstLetter = c?.firstName?.charAt(0).toUpperCase() || 'C';
-                                    const avatarStyle = {
-                                      width: 28,
-                                      height: 28,
-                                      borderRadius: '50%',
-                                      border: '2px solid #fff',
-                                      marginLeft: idx === 0 ? 0 : -8,
-                                      flexShrink: 0,
-                                    };
-                                    return hasPhoto ? (
-                                      <img
-                                        key={cid}
-                                        src={c?.avatarUrl || c?.photo}
-                                        alt={c?.firstName || c?.email || 'contact'}
-                                        style={{ ...avatarStyle, objectFit: 'cover' as const }}
-                                      />
-                                    ) : (
-                                      <div
-                                        key={cid}
-                                        className="d-flex align-items-center justify-content-center text-white fw-bold"
-                                        style={{
-                                          ...avatarStyle,
-                                          backgroundColor: '#dc3545',
-                                          fontSize: 11,
-                                        }}
-                                      >
-                                        {firstLetter}
-                                      </div>
-                                    );
-                                  })}
-                                  {relatedContacts.length > 4 && (
-                                    <div
-                                      className="d-flex align-items-center justify-content-center text-white fw-bold"
-                                      style={{
-                                        width: 28,
-                                        height: 28,
-                                        borderRadius: '50%',
-                                        backgroundColor: '#6c757d',
-                                        border: '2px solid #fff',
-                                        marginLeft: -8,
-                                        fontSize: 10,
-                                        flexShrink: 0,
-                                      }}
-                                    >
-                                      +{relatedContacts.length - 4}
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="small ms-2 text-muted">Related contacts</div>
-                              </div>
-                              {/* Hidden temporarily: <div className="small text-muted">Sales owner</div> */}
-                            </div>
-                          </div>
-                          <div className="card-footer d-flex justify-content-between align-items-center">
-                            <div>
-                              <button className="btn btn-sm btn-outline-primary d-flex align-items-center text-nowrap" onClick={() => { setActiveCompany(company); setSelectedContactIds(Array.isArray(company.contacts) ? company.contacts : []); setShowContactsModal(true); }}>
-                                <FaPlus className="me-1" /> Add contacts
-                              </button>
-                            </div>
-                            <div className="d-flex align-items-center">
-                              {canModify ? (
-                                <Dropdown drop="start">
-                                  <Dropdown.Toggle 
-                                    as="span" 
-                                    id={`dropdown-${company.id}`}
-                                    className="no-caret"
-                                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                    bsPrefix="dropdown-toggle-no-caret"
-                                  >
-                                    <FaEllipsisV className="text-muted" />
-                                  </Dropdown.Toggle>
-
-                                  <Dropdown.Menu>
-                                    <Dropdown.Item onClick={() => navigate(`/companies/${company.id}`)}>
-                                      <FaEye className="me-2 text-secondary" /> View Company
-                                    </Dropdown.Item>
-                                    <Dropdown.Item onClick={() => handleDelete(company.id)} className="text-danger">
-                                      <FiTrash2 className="me-2" /> Delete
-                                    </Dropdown.Item>
-                                  </Dropdown.Menu>
-                                </Dropdown>
-                              ) : (
-                                <span className="badge bg-secondary">No Permission</span>
-                              )}
-                            </div>
-                          </div>
+                    <div className="flex justify-between items-center bg-gray-50 rounded-lg p-3 border border-gray-100">
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase tracking-wider font-medium mb-1">Billing Date</div>
+                        <div className="font-bold text-gray-800 flex items-center gap-1">
+                          <span className="text-lg">{company.billingDate ? company.billingDate : '-'}</span>
+                          {company.billingDate && <span className="text-xs text-gray-500 font-normal">of month</span>}
                         </div>
                       </div>
-                    );
-                  })}
-              </div>
-            )}
+                      <div className="text-right">
+                        <div className="text-gray-500 text-xs uppercase tracking-wider font-medium mb-1">Amount Due</div>
+                        <div className="font-bold text-lg text-primary">
+                          ฿{typeof company.amountDue === 'number' && !isNaN(company.amountDue)
+                            ? company.amountDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            : '0.00'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <div className="text-gray-500 text-sm">Related contacts</div>
+                      <div className="flex items-center ml-2">
+                        {relatedContacts.slice(0, 4).map((cid: string, idx: number) => {
+                          const c = contacts.find((x) => x.id === cid);
+                          const hasPhoto = c?.avatarUrl || c?.photo;
+                          const firstLetter = c?.firstName?.charAt(0).toUpperCase() || 'C';
+                          // ใช้ชุดสี pastel และ logic เดียวกับ ContactsPage
+                          const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#22d3d8', '#60a5fa', '#a78bfa', '#f472b6'];
+                          const colorIndex = (c?.firstName?.charCodeAt(0) || 0) % colors.length;
+                          const avatarColor = colors[colorIndex];
+                          return hasPhoto ? (
+                            <img
+                              key={cid}
+                              src={c?.avatarUrl || c?.photo}
+                              alt={c?.firstName || c?.email || 'contact'}
+                              className="w-7 h-7 rounded-full border-2 border-white -ml-2 first:ml-0 object-cover"
+                            />
+                          ) : (
+                            <div
+                              key={cid}
+                              className="w-7 h-7 rounded-full text-white flex items-center justify-center font-bold border-2 border-white -ml-2 first:ml-0 text-xs"
+                              style={{ backgroundColor: avatarColor }}
+                            >
+                              {firstLetter}
+                            </div>
+                          );
+                        })}
+                        {relatedContacts.length > 4 && (
+                          <div className="w-7 h-7 rounded-full bg-gray-400 text-white flex items-center justify-center font-bold border-2 border-white -ml-2 text-xs">
+                            +{relatedContacts.length - 4}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center mt-auto">
+                      <button className="btn btn-sm btn-outline-primary d-flex align-items-center text-nowrap" onClick={() => { setActiveCompany(company); setSelectedContactIds(Array.isArray(company.contacts) ? company.contacts : []); setShowContactsModal(true); }}>
+                        <FaPlus className="me-1" /> Add contacts
+                      </button>
+                      {canModify && (
+                        <Dropdown drop="start">
+                          <Dropdown.Toggle
+                            as="span"
+                            id={`dropdown-${company.id}`}
+                            className="no-caret"
+                            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                            bsPrefix="dropdown-toggle-no-caret"
+                          >
+                            <FaEllipsisV className="text-muted" />
+                          </Dropdown.Toggle>
+                          <Dropdown.Menu>
+                            <Dropdown.Item onClick={() => navigate(`/companies/${company.id}`)}>
+                              <FaEye className="me-2 text-secondary" /> View Company
+                            </Dropdown.Item>
+                            <Dropdown.Item onClick={() => handleDelete(company.id)} className="text-danger">
+                              <FiTrash2 className="me-2" /> Delete
+                            </Dropdown.Item>
+                          </Dropdown.Menu>
+                        </Dropdown>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
           </div>
-        </div>
+        )}
       </div>
-      {/* Modal for Add/Edit company */}
       {showModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-lg">
@@ -659,21 +701,10 @@ export const CompaniesPage = () => {
                       </>
                     )}
                     <div className="col-md-12 mb-3">
-                      <hr />
+                      <hr /> <br />
                       <h6 className="mb-3">Billing Information</h6>
                     </div>
-                    <div className="col-md-4 mb-3">
-                      <label className="form-label">Billing Cycle</label>
-                      <select
-                        className="form-select"
-                        value={formData.billingCycle || 'monthly'}
-                        onChange={(e) => handleChange('billingCycle', e.target.value)}
-                      >
-                        <option value="monthly">Monthly</option>
-                        <option value="quarterly">Quarterly</option>
-                        <option value="yearly">Yearly</option>
-                      </select>
-                    </div>
+
                     <div className="col-md-4 mb-3">
                       <label className="form-label">Billing Date</label>
                       <select

@@ -2,8 +2,8 @@
   font-family: 'TorsilpKanittha', 'Kanit', 'Noto Sans Thai', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.5;
   color: #0f172a;
-  background-color: #f8fafc;
-  /* Eye icon color variables (Activities & Deals) */
+  background-color: #f8fafc;  
+/* Eye icon color variables (Activities & Deals) */
   --eye-color: #7d7d7d;
   --eye-hover-color: #979797;
   /* Auth palette (muted, clean) */
@@ -14,18 +14,15 @@
   --auth-input-border: #e6eef8;
 }
 
+/* removed duplicate body selector and fixed syntax error */
 body {
   margin: 0;
-  background-color: #f8fafc;
-}
-
-.app {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2.5rem 1.5rem 4rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: rgb(249, 250, 251);
 }
 
 .app__header {
@@ -189,8 +186,8 @@ table th:nth-last-child(2) {
 /* Force padding on previous column to avoid large left-padding pushing Actions off-center */
 table td:nth-last-child(2),
 table th:nth-last-child(2) {
-  padding-left: 0.5rem !important;
-  padding-right: 0.5rem !important;
+  padding-left: 0.25rem !important;
+  padding-right: 0.25rem !important;
 }
 
 /* Normalize any button inside the action cell so the icon is perfectly centered */

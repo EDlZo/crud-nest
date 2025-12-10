@@ -296,60 +296,7 @@ const Sidebar = () => {
             {/* Spacer to push User Profile to bottom */}
             <div style={{ flex: 1 }}></div>
 
-            {/* Divider */}
-            <hr className="sidebar-divider d-none d-md-block" />
 
-            {/* User Profile & Logout - Moved to bottom */}
-            <div className="sidebar-heading">
-                User Profile
-            </div>
-
-            <li className="nav-item sidebar-profile" style={{ position: 'sticky', bottom: 0, zIndex: 20 }}>
-                <Dropdown show={showProfileDropdown} onToggle={setShowProfileDropdown} align="end">
-                    <Dropdown.Toggle
-                        as="div"
-                        className="nav-link d-flex align-items-center justify-content-between cursor-pointer"
-                        style={{ cursor: 'pointer' }}
-                    >
-                        <div className="d-flex align-items-center">
-                            {avatarUrl ? (
-                                <img
-                                    src={avatarUrl}
-                                    alt="Profile"
-                                    className="rounded-circle me-2"
-                                    style={{ width: 32, height: 32, objectFit: 'cover' }}
-                                    onError={() => setAvatarUrl(null)}
-                                />
-                            ) : (
-                                <div className="rounded-circle bg-white d-flex align-items-center justify-content-center me-2" style={{ width: 32, height: 32 }}>
-                                    <FaUser className="text-primary" />
-                                </div>
-                            )}
-                            <div className="d-flex flex-column">
-                                <span className="text-white small font-weight-bold" title={user?.email}>
-                                    {user?.email || 'Loading...'}
-                                </span>
-                                <span className="text-white-50 x-small" style={{ fontSize: '0.75rem' }}>
-                                    {user?.role || 'Guest'}
-                                </span>
-                            </div>
-                        </div>
-                        <FaEllipsisV className="text-white-50 ms-2" size={14} />
-                    </Dropdown.Toggle>
-
-                    <Dropdown.Menu className="shadow sidebar-dropdown-menu">
-                        <Dropdown.Item onClick={handleProfile}>
-                            <FaUser className="me-2 text-gray-400" />
-                            Profile
-                        </Dropdown.Item>
-                        <Dropdown.Divider />
-                        <Dropdown.Item onClick={handleLogout} className="text-danger">
-                            <FaSignOutAlt className="me-2" />
-                            Logout
-                        </Dropdown.Item>
-                    </Dropdown.Menu>
-                </Dropdown>
-            </li>
 
         </ul>
     );

@@ -1,59 +1,67 @@
 import React from 'react';
-import { FaBars, FaSearch, FaBell, FaEnvelope, FaUserCircle, FaCog } from 'react-icons/fa';
+import { FaUser } from 'react-icons/fa';
 import { Dropdown } from 'react-bootstrap';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Topbar = () => {
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
+    // ดึง avatar จริงจาก user (ถ้ามี) หรือใช้ Gravatar/email
+    // สมมติ user.avatarUrl จะถูกเซ็ตหลัง login หรือ fetch profile
+    const avatarUrl = user?.avatarUrl
+        ? user.avatarUrl
+        : user?.email
+            ? `https://www.gravatar.com/avatar/${btoa(user.email.trim().toLowerCase())}?d=identicon`
+            : undefined;
+    // กำหนดสี pastel สำหรับ avatar เหมือนหน้า ContactsPage
+    const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#22d3d8', '#60a5fa', '#a78bfa', '#f472b6'];
+    const colorIndex = (user?.email?.charCodeAt(0) || 0) % colors.length;
+    const avatarColor = colors[colorIndex];
     const handleLogout = () => {
-        localStorage.removeItem('crud-token');
+        logout();
         window.location.href = '/login';
+    };
+    const handleProfile = () => {
+        navigate('/profile');
     };
 
     return (
-        <nav className="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-            {/* Sidebar Toggle (Topbar) */}
-            <button id="sidebarToggleTop" className="btn btn-link d-md-none rounded-circle mr-3">
-                <FaBars />
-            </button>
+        <div className="w-full flex items-center justify-between px-8 py-4 bg-white shadow-sm"
+            style={{ minHeight: 64, position: 'sticky', top: 0, zIndex: 100 }}>
+            <div className="font-bold text-lg flex items-center gap-2">
 
-            {/* Topbar Search */}
-            <form className="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search">
-                <div className="input-group">
-                    <div className="input-group-append">
-                        <button className="btn btn-primary" type="button">
-                            <FaSearch />
-                        </button>
-                    </div>
-                </div>
-            </form>
-
-            {/* Topbar Navbar */}
-            <ul className="navbar-nav ml-auto">
-                {/* Nav Item - User Information */}
-                <li className="nav-item dropdown no-arrow">
-                    <Dropdown align="end">
-                        <Dropdown.Toggle variant="link" id="userDropdown" className="nav-link dropdown-toggle">
-                            <span className="mr-2 d-none d-lg-inline text-gray-600 small">User</span>
-                            <FaUserCircle size={28} />
-                        </Dropdown.Toggle>
-
-                        <Dropdown.Menu className="shadow animated--grow-in">
-                            <Dropdown.Item href="#">
-                                <FaUserCircle className="mr-2 text-gray-400" />
-                                Profile
-                            </Dropdown.Item>
-                            <Dropdown.Item href="#">
-                                <FaCog className="mr-2 text-gray-400" />
-                                Settings
-                            </Dropdown.Item>
-                            <Dropdown.Divider />
-                            <Dropdown.Item onClick={handleLogout}>
-                                <span className="text-danger">Logout</span>
-                            </Dropdown.Item>
-                        </Dropdown.Menu>
-                    </Dropdown>
-                </li>
-            </ul>
-        </nav>
+            </div>
+            <div className="flex items-center gap-4">
+                <Dropdown align="end">
+                    <Dropdown.Toggle variant="link" id="userDropdown" className="flex items-center gap-2 px-2 py-1 rounded-full hover:bg-gray-100">
+                        {avatarUrl ? (
+                            <img src={avatarUrl} alt={user?.email} className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                            <div
+                                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                                style={{ backgroundColor: avatarColor }}
+                            >
+                                {user?.email?.charAt(0).toUpperCase() || <FaUser />}
+                            </div>
+                        )}
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu className="shadow animated--grow-in" style={{ minWidth: 180 }}>
+                        <div className="px-3 py-2 text-right">
+                            <div className="font-semibold">{user?.email || 'User'}</div>
+                            <div className="text-xs text-gray-500 capitalize">{user?.role || 'User'}</div>
+                        </div>
+                        <Dropdown.Item onClick={handleProfile} className="d-flex justify-content-center align-items-center">
+                            <FaUser className="me-2 text-gray-400" /> Profile
+                        </Dropdown.Item>
+                        <Dropdown.Divider />
+                        <Dropdown.Item onClick={handleLogout} className="d-flex justify-content-center">
+                            <span className="text-danger">Logout</span>
+                        </Dropdown.Item>
+                    </Dropdown.Menu>
+                </Dropdown>
+            </div>
+        </div>
     );
 };
 

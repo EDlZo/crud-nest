@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { FiEdit2, FiTrash2, FiFilter, FiEye } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiFilter } from 'react-icons/fi';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -260,13 +260,13 @@ export const ContactsPage = () => {
   // Filter contacts based on search and column filters
   const filteredContacts = contacts.filter((contact) => {
     const fullName = `${contact.firstName} ${contact.lastName}`.toLowerCase();
-    
+
     // Column filters
     if (filters.name && !fullName.includes(filters.name.toLowerCase())) return false;
     if (filters.email && !contact.email?.toLowerCase().includes(filters.email.toLowerCase())) return false;
     if (filters.phone && !contact.phone?.toLowerCase().includes(filters.phone.toLowerCase())) return false;
     if (filters.address && !contact.address?.toLowerCase().includes(filters.address.toLowerCase())) return false;
-    
+
     // Global search
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
@@ -277,7 +277,7 @@ export const ContactsPage = () => {
         contact.email?.toLowerCase().includes(searchLower)
       );
     }
-    
+
     return true;
   });
 
@@ -303,26 +303,26 @@ export const ContactsPage = () => {
   const renderFilterDropdown = (field: keyof FilterState, label: string) => {
     const isActive = activeFilter === field;
     const hasValue = filters[field] !== '';
-    
+
     return (
       <div className="position-relative d-inline-block">
-        <div 
-          className="d-flex align-items-center gap-2" 
+        <div
+          className="d-flex align-items-center gap-2"
           style={{ cursor: 'pointer' }}
           onClick={() => setActiveFilter(isActive ? null : field)}
         >
           {label}
-          <FiFilter 
-            size={14} 
-            className={hasValue ? 'text-primary' : 'text-muted'} 
-            style={{ cursor: 'pointer' }} 
+          <FiFilter
+            size={14}
+            className={hasValue ? 'text-primary' : 'text-muted'}
+            style={{ cursor: 'pointer' }}
           />
         </div>
         {isActive && (
-          <div 
+          <div
             className="position-fixed bg-white shadow-lg rounded p-3"
-            style={{ 
-              zIndex: 9999, 
+            style={{
+              zIndex: 9999,
               minWidth: '220px',
               border: '1px solid #e5e7eb',
               marginTop: '8px'
@@ -340,13 +340,13 @@ export const ContactsPage = () => {
               />
             </div>
             <div className="d-flex justify-content-between">
-              <button 
+              <button
                 className="btn btn-sm btn-outline-secondary"
                 onClick={() => clearFilter(field)}
               >
                 Clear
               </button>
-              <button 
+              <button
                 className="btn btn-sm btn-primary"
                 onClick={() => setActiveFilter(null)}
               >
@@ -367,10 +367,10 @@ export const ContactsPage = () => {
   const renderPagination = () => {
     const pages = [];
     const maxVisiblePages = 5;
-    
+
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-    
+
     if (endPage - startPage + 1 < maxVisiblePages) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
@@ -385,7 +385,7 @@ export const ContactsPage = () => {
           {filteredContacts.length} contacts in total
         </div>
         <div className="d-flex align-items-center gap-2">
-          <button 
+          <button
             className="btn btn-sm btn-outline-secondary"
             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
             disabled={currentPage === 1}
@@ -413,15 +413,15 @@ export const ContactsPage = () => {
               <button className="btn btn-sm btn-outline-secondary" onClick={() => setCurrentPage(totalPages)}>{totalPages}</button>
             </>
           )}
-          <button 
+          <button
             className="btn btn-sm btn-outline-secondary"
             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
             disabled={currentPage === totalPages}
           >
             &gt;
           </button>
-          <select 
-            className="form-select form-select-sm" 
+          <select
+            className="form-select form-select-sm"
             style={{ width: 'auto' }}
             value={itemsPerPage}
             onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
@@ -456,12 +456,12 @@ export const ContactsPage = () => {
         {hasActiveFilters && (
           <div className="mb-3 d-flex align-items-center gap-2 flex-wrap">
             <span className="text-muted">Filters:</span>
-            {Object.entries(filters).map(([key, value]) => 
+            {Object.entries(filters).map(([key, value]) =>
               value && (
                 <span key={key} className="badge bg-primary d-flex align-items-center gap-1" style={{ fontSize: '0.85rem', padding: '0.5rem 0.75rem' }}>
                   {key}: {value}
-                  <button 
-                    className="btn-close btn-close-white" 
+                  <button
+                    className="btn-close btn-close-white"
                     style={{ fontSize: '0.6rem', marginLeft: '0.25rem' }}
                     onClick={() => clearFilter(key as keyof FilterState)}
                   />
@@ -475,7 +475,7 @@ export const ContactsPage = () => {
         )}
 
         {/* Contact Table */}
-        <div className="card shadow-sm border-0">
+        <div className="card shadow-lg border-0">
           <div className="card-body p-0">
             {contacts.length === 0 && !loading ? (
               <p className="text-center py-5">No contacts yet. Try adding a new one.</p>
@@ -509,12 +509,12 @@ export const ContactsPage = () => {
                       {paginatedContacts.map((contact) => {
                         const canModify =
                           user?.role === 'admin' || user?.role === 'superadmin' || contact.userId === user?.userId;
-                        
+
                         // Generate random pastel color based on name
                         const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#22d3d8', '#60a5fa', '#a78bfa', '#f472b6'];
                         const colorIndex = (contact.firstName?.charCodeAt(0) || 0) % colors.length;
                         const avatarColor = colors[colorIndex];
-                        
+
                         return (
                           <tr key={contact.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                             <td className="py-3 px-4 border-0">
@@ -559,9 +559,6 @@ export const ContactsPage = () => {
                             <td className="py-3 px-4 border-0 text-center">
                               {canModify ? (
                                 <div className="d-flex justify-content-center gap-1">
-                                  <button className="icon-btn view" aria-label="view" title="View">
-                                    <FiEye />
-                                  </button>
                                   <button className="icon-btn edit" aria-label="edit" title="Edit" onClick={() => handleEdit(contact)}>
                                     <FiEdit2 />
                                   </button>

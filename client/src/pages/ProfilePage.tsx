@@ -21,7 +21,7 @@ const withBase = (path: string) => `${API_BASE_URL}${path}`;
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
-  const { token, user, logout } = useAuth();
+  const { token, user, logout, setUser } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [formData, setFormData] = useState({
     avatarUrl: '',
@@ -76,6 +76,10 @@ export const ProfilePage = () => {
         setAvatarPreview(data.avatarUrl);
       } else {
         setAvatarPreview(null);
+      }
+      // Sync avatarUrl to user context (for Topbar)
+      if (user && data.avatarUrl && user.avatarUrl !== data.avatarUrl) {
+        setUser({ ...user, avatarUrl: data.avatarUrl });
       }
     } catch (err) {
       setError((err as Error).message);
@@ -389,8 +393,8 @@ export const ProfilePage = () => {
                 <img
                   src={profile.avatarUrl}
                   alt="Profile"
-                  className="rounded-circle mb-3"
-                  style={{ width: '150px', height: '150px', objectFit: 'cover' }}
+                  className="rounded-circle mb-3 d-block mx-auto"
+                  style={{ width: '150px', height: '150px', objectFit: 'cover', margin: '0 auto' }}
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
                   }}
@@ -398,7 +402,7 @@ export const ProfilePage = () => {
               ) : (
                 <div
                   className="rounded-circle bg-primary d-flex align-items-center justify-content-center mx-auto mb-3"
-                  style={{ width: '150px', height: '150px' }}
+                  style={{ width: '150px', height: '150px', margin: '0 auto' }}
                 >
                   <FaUser size={60} className="text-white" />
                 </div>

@@ -1,4 +1,5 @@
-import { IsOptional, IsString, IsObject, IsArray } from 'class-validator';
+import { IsOptional, IsString, IsObject, IsArray, IsNumber, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateCompanyDto {
   @IsString()
@@ -56,4 +57,22 @@ export class CreateCompanyDto {
   @IsArray()
   @IsString({ each: true })
   contacts?: string[];
+
+  @IsOptional()
+  @IsNumber()
+  amountDue?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ServiceDto)
+  services?: ServiceDto[];
+}
+
+export class ServiceDto {
+  @IsString()
+  name: string;
+
+  @IsNumber()
+  amount: number;
 }

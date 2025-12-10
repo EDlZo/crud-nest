@@ -1,11 +1,15 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaEnvelope, FaPhone, FaPen } from 'react-icons/fa';
+import { FaArrowLeft, FaEnvelope, FaPhone, FaPen, FaCheck } from 'react-icons/fa';
+import { FiEye } from 'react-icons/fi';
+import { FiEyeOff } from 'react-icons/fi';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
 
 type Company = {
+    services?: { name: string; amount: number }[];
+    amountDue?: number;
     id?: string;
     type: 'individual' | 'company';
     name: string;
@@ -25,7 +29,10 @@ type Company = {
     updatedByEmail?: string;
     contacts?: string[];
     avatarUrl?: string;
+
 };
+
+
 
 type Contact = {
     id: string;
@@ -57,6 +64,19 @@ const emptyCompany: Company = {
 const withBase = (path: string) => `${API_BASE_URL}${path}`;
 
 export const CompanyDetailsPage = () => {
+    // Contact search state
+    const [contactSearch, setContactSearch] = useState('');
+    // Toggle for showing/hiding service list
+    const [showServices, setShowServices] = useState(false);
+
+    // Custom SVG Eye Icon (outline style)
+    const EyeIcon = ({ size = 24 }: { size?: number }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#6c757d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <ellipse cx="12" cy="12" rx="9" ry="7" />
+            <circle cx="12" cy="12" r="3" />
+        </svg>
+    );
+
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { token } = useAuth();
@@ -64,6 +84,20 @@ export const CompanyDetailsPage = () => {
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+
+    // Billing services modal state
+    const [showBillingModal, setShowBillingModal] = useState(false);
+    const [serviceName, setServiceName] = useState('');
+    const [serviceAmount, setServiceAmount] = useState('');
+    const [services, setServices] = useState<{ name: string; amount: number }[]>([]);
+
+    // Only update local services state when opening the modal
+    const openBillingModal = () => {
+        setServices(company?.services || []);
+        setShowBillingModal(true);
+    };
+
 
     // Inline Editing State
     const [editingField, setEditingField] = useState<string | null>(null);
@@ -78,6 +112,11 @@ export const CompanyDetailsPage = () => {
     // Custom Popup State
     const [showPopup, setShowPopup] = useState(false);
     const [popupContent, setPopupContent] = useState({ title: '', message: '' });
+
+    // Payment History State
+
+
+
 
     const fetchCompanyAndContacts = useCallback(async () => {
         if (!token || !id) return;
@@ -365,6 +404,133 @@ export const CompanyDetailsPage = () => {
                                 </button>
                             </div>
                         </div>
+
+                        {/* Amount Due Card */}
+                        <div className="card shadow mb-4">
+                            <div className="card-header py-3 d-flex justify-content-between align-items-center bg-white">
+                                <h6 className="m-0 font-weight-bold text-dark">
+                                    <span className="me-2">Billing</span>
+                                </h6>
+                            </div>
+                            <div className="card-body">
+                                <div className="row mb-3">
+                                    <div className="col-md-4">
+                                        <div className="text-muted small mb-1">Amount Due</div>
+                                        <div className="fw-bold text-xl d-flex align-items-center" style={{ fontSize: 24 }}>
+                                            <span>
+                                                ฿{(() => {
+                                                    if (typeof company.amountDue === 'number' && !isNaN(company.amountDue) && company.amountDue > 0) {
+                                                        return company.amountDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                                    }
+                                                    return '0.00';
+                                                })()}
+                                            </span>
+                                            {company.services && company.services.length > 0 && (
+                                                <button
+                                                    className="btn btn-link p-0 ms-2"
+                                                    style={{ fontSize: 22, lineHeight: 1, verticalAlign: 'middle' }}
+                                                    title={showServices ? 'ซ่อนบริการ' : 'แสดงบริการ'}
+                                                    onClick={() => setShowServices((v) => !v)}
+                                                >
+                                                    {showServices ? <FiEyeOff color="#6c757d" /> : <FiEye color="#6c757d" />}
+                                                </button>
+                                            )}
+                                        </div>
+                                        {showServices && company.services && company.services.length > 0 && (
+                                            <ul className="mt-2 mb-0 ps-3" style={{ fontSize: 15 }}>
+                                                {company.services.map((s, idx) => (
+                                                    <li key={idx}>{s.name}: ฿{s.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                    <div className="col-md-4">
+                                        <div className="text-muted small mb-1">Billing Date</div>
+                                        <div className="fw-bold text-xl d-flex align-items-center" style={{ fontSize: 20 }}>
+                                            {editingField === 'billingDate' ? (
+                                                <>
+                                                    <select
+                                                        className="form-select form-select-sm me-2"
+                                                        value={editValue}
+                                                        onChange={e => setEditValue(e.target.value)}
+                                                        onBlur={() => saveField('billingDate')}
+                                                        autoFocus
+                                                        style={{ width: 80, display: 'inline-block' }}
+                                                    >
+                                                        <option value="">-</option>
+                                                        {Array.from({ length: 31 }, (_, i) => (
+                                                            <option key={i + 1} value={String(i + 1)}>{i + 1}</option>
+                                                        ))}
+                                                    </select>
+                                                    <button className="btn btn-sm btn-secondary" onClick={cancelEditing}>Cancel</button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    {company.billingDate ? `Day ${company.billingDate}` : '-'}
+                                                    <button
+                                                        className="btn btn-link p-0 ms-2"
+                                                        style={{ fontSize: 16, color: '#6c757d' }}
+                                                        title="Edit Billing Date"
+                                                        onClick={() => startEditing('billingDate', company.billingDate || '')}
+                                                    >
+                                                        <FaPen />
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="col-md-4">
+                                        <div className="text-muted small mb-1">Notification Date</div>
+                                        <div className="fw-bold text-xl d-flex align-items-center" style={{ fontSize: 20 }}>
+                                            {editingField === 'notificationDate' ? (
+                                                <>
+                                                    <select
+                                                        className="form-select form-select-sm me-2"
+                                                        value={editValue}
+                                                        onChange={e => setEditValue(e.target.value)}
+                                                        onBlur={() => saveField('notificationDate')}
+                                                        autoFocus
+                                                        style={{ width: 80, display: 'inline-block' }}
+                                                    >
+                                                        <option value="">-</option>
+                                                        {Array.from({ length: 31 }, (_, i) => (
+                                                            <option key={i + 1} value={String(i + 1)}>{i + 1}</option>
+                                                        ))}
+                                                    </select>
+                                                    <button className="btn btn-sm btn-secondary" onClick={cancelEditing}>Cancel</button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    {company.notificationDate ? `Day ${company.notificationDate}` : '-'}
+                                                    <button
+                                                        className="btn btn-link p-0 ms-2"
+                                                        style={{ fontSize: 16, color: '#6c757d' }}
+                                                        title="Edit Notification Date"
+                                                        onClick={() => startEditing('notificationDate', company.notificationDate || '')}
+                                                    >
+                                                        <FaPen />
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={() => {
+                                        setShowBillingModal(true);
+                                        setServices(company?.services || []);
+                                        setServiceName('');
+                                        setServiceAmount('');
+                                    }}
+                                >
+                                    Add / Edit
+                                </button>
+
+                            </div>
+                        </div>
+
+
                     </div>
 
                     {/* Sidebar - Company Info */}
@@ -448,6 +614,7 @@ export const CompanyDetailsPage = () => {
                                                 { value: 'company', label: 'Company (นิติบุคคล)' },
                                                 { value: 'individual', label: 'Individual (บุคคล)' }
                                             ])}
+                                            {renderEditableField('address', 'Address', company.address)}
                                             {renderEditableField('taxId', 'Tax ID', company.taxId)}
 
                                             {company.type === 'company' && (
@@ -459,18 +626,9 @@ export const CompanyDetailsPage = () => {
 
                                             {renderEditableField('phone', 'Phone', company.phone)}
                                             {renderEditableField('fax', 'Fax', company.fax)}
-                                            {renderEditableField('billingCycle', 'Billing Cycle', company.billingCycle, 'select', [
-                                                { value: 'monthly', label: 'Monthly' },
-                                                { value: 'quarterly', label: 'Quarterly' },
-                                                { value: 'yearly', label: 'Yearly' }
-                                            ])}
-                                            {renderEditableField('billingDate', 'Billing Date', company.billingDate || '', 'select', 
-                                                Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))
-                                            )}
-                                            {renderEditableField('notificationDate', 'Notification Date', company.notificationDate || '', 'select',
-                                                Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))
-                                            )}
-                                            {renderEditableField('address', 'Address', company.address)}
+
+                                            {/* Billing Date and Notification Date removed from Company Info */}
+
                                         </>
                                     );
                                 })()}
@@ -478,91 +636,175 @@ export const CompanyDetailsPage = () => {
                         </div>
                     </div>
                 </div>
-            </div>
-            {/* Contacts Modal */}
-            {showContactsModal && (
-                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                    <div className="modal-dialog modal-lg">
-                        <div className="modal-content">
-                            <div className="modal-header">
-                                <h5 className="modal-title">Add contacts to {company.name}</h5>
-                                <button type="button" className="btn-close" onClick={closeContactsModal}></button>
-                            </div>
-                            <div className="modal-body">
-                                <div className="mb-3">
-                                    <input className="form-control" placeholder="Search contacts" />
+            </div >
+            {/* Billing Modal */}
+            {
+                showBillingModal && (
+                    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                        <div className="modal-dialog">
+                            <div className="modal-content">
+                                <div className="modal-header">
+                                    <h5 className="modal-title">Add/Edit Services</h5>
+                                    <button type="button" className="btn-close" onClick={() => setShowBillingModal(false)}></button>
                                 </div>
-                                <div style={{ maxHeight: 360, overflow: 'auto' }}>
-                                    {allContacts.map((c) => (
-                                        <div key={c.id} className="form-check d-flex align-items-center mb-2">
-                                            <input
-                                                className="form-check-input"
-                                                type="checkbox"
-                                                checked={selectedContactIds.includes(c.id)}
-                                                onChange={() => toggleContactSelection(c.id)}
-                                                id={`contact_${c.id}`}
-                                            />
-                                            <label className="form-check-label ms-2 d-flex align-items-center" htmlFor={`contact_${c.id}`}>
-                                                {(c.avatarUrl || c.photo) ? (
-                                                    <img
-                                                        src={c.avatarUrl || c.photo}
-                                                        alt={c.firstName || c.email}
-                                                        style={{ width: 28, height: 28, borderRadius: '50%', marginRight: 8 }}
-                                                    />
-                                                ) : (
-                                                    <div
-                                                        className="d-flex align-items-center justify-content-center text-white fw-bold"
-                                                        style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#dc3545', marginRight: 8, fontSize: 12 }}
-                                                    >
-                                                        {c.firstName?.charAt(0).toUpperCase() || 'C'}
-                                                    </div>
-                                                )}
-                                                {c.firstName ? `${c.firstName} ${c.lastName || ''}` : c.email}
-                                            </label>
-                                        </div>
-                                    ))}
+                                <div className="modal-body">
+                                    <div className="mb-3">
+                                        <label className="form-label">Service Name</label>
+                                        <input className="form-control" value={serviceName} onChange={e => setServiceName(e.target.value)} />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label">Amount</label>
+                                        <input type="number" className="form-control" value={serviceAmount} onChange={e => setServiceAmount(e.target.value)} min={0} step={0.01} />
+                                    </div>
+                                    <button className="btn btn-success mb-3" onClick={() => {
+                                        if (!serviceName || !serviceAmount) return;
+                                        setServices([...services, { name: serviceName, amount: parseFloat(serviceAmount) }]);
+                                        setServiceName('');
+                                        setServiceAmount('');
+                                    }}>Add Service</button>
+                                    <ul className="list-group mb-3">
+                                        {services.map((s, idx) => (
+                                            <li className="list-group-item d-flex justify-content-between align-items-center" key={idx}>
+                                                <span>{s.name} <span className="text-muted">(฿{s.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })})</span></span>
+                                                <button className="btn btn-sm btn-danger" onClick={() => setServices(services.filter((_, i) => i !== idx))}>Remove</button>
+                                            </li>
+                                        ))}
+                                    </ul>
                                 </div>
-                            </div>
-                            <div className="modal-footer">
-                                <button className="btn btn-primary" onClick={saveCompanyContacts}>Save</button>
-                                <button className="btn btn-secondary" onClick={closeContactsModal}>Cancel</button>
+                                <div className="modal-footer">
+                                    <button className="btn btn-primary" onClick={async () => {
+                                        if (!company?.id || !token) return;
+                                        const total = services.reduce((sum, s) => sum + s.amount, 0);
+                                        try {
+                                            const res = await fetch(withBase(`/companies/${company.id}`), {
+                                                method: 'PATCH',
+                                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                                                body: JSON.stringify({ services, amountDue: total }),
+                                            });
+                                            if (res.ok) {
+                                                const updated = await res.json();
+                                                setCompany(updated);
+                                                setShowBillingModal(false);
+                                            }
+                                        } catch { }
+                                    }}>Save</button>
+                                    <button className="btn btn-secondary" onClick={() => {
+                                        setServices(company?.services || []);
+                                        setServiceName('');
+                                        setServiceAmount('');
+                                        setShowBillingModal(false);
+                                    }}>Cancel</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
+
+            {/* Contacts Modal */}
+            {
+                showContactsModal && (
+                    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                        <div className="modal-dialog modal-lg">
+                            <div className="modal-content">
+                                <div className="modal-header">
+                                    <h5 className="modal-title">Add contacts to {company.name}</h5>
+                                    <button type="button" className="btn-close" onClick={closeContactsModal}></button>
+                                </div>
+                                <div className="modal-body">
+                                    <div className="mb-3">
+                                        <input
+                                            className="form-control"
+                                            placeholder="Search contacts"
+                                            value={contactSearch}
+                                            onChange={e => setContactSearch(e.target.value)}
+                                        />
+                                    </div>
+                                    <div style={{ maxHeight: 360, overflow: 'auto' }}>
+                                        {allContacts
+                                            .filter(c => {
+                                                const term = contactSearch.trim().toLowerCase();
+                                                if (!term) return true;
+                                                return (
+                                                    (c.firstName && c.firstName.toLowerCase().includes(term)) ||
+                                                    (c.lastName && c.lastName.toLowerCase().includes(term)) ||
+                                                    (c.email && c.email.toLowerCase().includes(term)) ||
+                                                    (c.position && c.position.toLowerCase().includes(term))
+                                                );
+                                            })
+                                            .map((c) => (
+                                                <div key={c.id} className="form-check d-flex align-items-center mb-2">
+                                                    <input
+                                                        className="form-check-input"
+                                                        type="checkbox"
+                                                        checked={selectedContactIds.includes(c.id)}
+                                                        onChange={() => toggleContactSelection(c.id)}
+                                                        id={`contact_${c.id}`}
+                                                    />
+                                                    <label className="form-check-label ms-2 d-flex align-items-center" htmlFor={`contact_${c.id}`}>
+                                                        {(c.avatarUrl || c.photo) ? (
+                                                            <img
+                                                                src={c.avatarUrl || c.photo}
+                                                                alt={c.firstName || c.email}
+                                                                style={{ width: 28, height: 28, borderRadius: '50%', marginRight: 8 }}
+                                                            />
+                                                        ) : (
+                                                            <div
+                                                                className="d-flex align-items-center justify-content-center text-white fw-bold"
+                                                                style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#dc3545', marginRight: 8, fontSize: 12 }}
+                                                            >
+                                                                {c.firstName?.charAt(0).toUpperCase() || 'C'}
+                                                            </div>
+                                                        )}
+                                                        {c.firstName ? `${c.firstName} ${c.lastName || ''}` : c.email}
+                                                    </label>
+                                                </div>
+                                            ))}
+                                    </div>
+                                </div>
+                                <div className="modal-footer">
+                                    <button className="btn btn-primary" onClick={saveCompanyContacts}>Save</button>
+                                    <button className="btn btn-secondary" onClick={closeContactsModal}>Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
 
             {/* Custom Popup Modal */}
-            {showPopup && (
-                <div
-                    className="modal show d-block"
-                    style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-                    onClick={closePopup}
-                >
+            {
+                showPopup && (
                     <div
-                        className="modal-dialog modal-dialog-centered"
-                        onClick={(e) => e.stopPropagation()}
+                        className="modal show d-block"
+                        style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+                        onClick={closePopup}
                     >
-                        <div className="modal-content" style={{ borderRadius: '16px', border: 'none' }}>
-                            <div className="modal-body text-center p-4">
-                                <h5 className="mb-3" style={{ fontSize: '24px', fontWeight: '600' }}>
-                                    {popupContent.title}
-                                </h5>
-                                <p className="mb-4" style={{ fontSize: '16px', color: '#666' }}>
-                                    {popupContent.message}
-                                </p>
-                                <button
-                                    className="btn btn-primary px-4"
-                                    onClick={closePopup}
-                                    style={{ borderRadius: '8px', fontSize: '16px' }}
-                                >
-                                    OK
-                                </button>
+                        <div
+                            className="modal-dialog modal-dialog-centered"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="modal-content" style={{ borderRadius: '16px', border: 'none' }}>
+                                <div className="modal-body text-center p-4">
+                                    <h5 className="mb-3" style={{ fontSize: '24px', fontWeight: '600' }}>
+                                        {popupContent.title}
+                                    </h5>
+                                    <p className="mb-4" style={{ fontSize: '16px', color: '#666' }}>
+                                        {popupContent.message}
+                                    </p>
+                                    <button
+                                        className="btn btn-primary px-4"
+                                        onClick={closePopup}
+                                        style={{ borderRadius: '8px', fontSize: '16px' }}
+                                    >
+                                        OK
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </>
     );
 };

@@ -16,7 +16,8 @@ type DashboardStats = {
   pipelineValue: number;
   wonDeals: number;
   recentActivities: any[];
-  upcomingTasks: any[];
+
+  billingDueToday: any[];
 };
 
 export const DashboardPage = () => {
@@ -30,7 +31,8 @@ export const DashboardPage = () => {
     pipelineValue: 0,
     wonDeals: 0,
     recentActivities: [],
-    upcomingTasks: [],
+
+    billingDueToday: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -60,10 +62,10 @@ export const DashboardPage = () => {
 
       const companies = companiesRes.ok ? await companiesRes.json() : [];
       const contacts = contactsRes.ok ? await contactsRes.json() : [];
-      
+
       let activities: any[] = [];
       let deals: any[] = [];
-      
+
       try {
         if (activitiesRes.ok) {
           const contentType = activitiesRes.headers.get('content-type');
@@ -74,7 +76,7 @@ export const DashboardPage = () => {
       } catch (err) {
         console.warn('Error parsing activities:', err);
       }
-      
+
       try {
         if (dealsRes.ok) {
           const contentType = dealsRes.headers.get('content-type');
@@ -86,14 +88,16 @@ export const DashboardPage = () => {
         console.warn('Error parsing deals:', err);
       }
 
-      const pendingActivities = activities.filter((a: any) => 
+      const pendingActivities = activities.filter((a: any) =>
         a.status === 'pending' || a.status === 'in_progress'
       );
-      
-      const upcomingTasks = activities
-        .filter((a: any) => a.dueDate && new Date(a.dueDate) >= new Date())
-        .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-        .slice(0, 5);
+
+      const todayDay = new Date().getDate().toString();
+
+
+      const billingDueToday = Array.isArray(companies)
+        ? companies.filter((c: any) => String(c.billingDate) === todayDay)
+        : [];
 
       const pipelineValue = deals
         .filter((d: any) => d.stage !== 'lost')
@@ -110,7 +114,7 @@ export const DashboardPage = () => {
         pipelineValue,
         wonDeals,
         recentActivities: activities.slice(0, 5),
-        upcomingTasks,
+        billingDueToday,
       });
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -228,40 +232,37 @@ export const DashboardPage = () => {
 
       {/* Charts and Lists */}
       <div className="row">
-        {/* Upcoming Tasks */}
+        {/* Billing Due Today */}
         <div className="col-xl-6 col-lg-6">
           <div className="card shadow mb-4">
             <div className="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-              <h6 className="m-0 font-weight-bold text-primary">Upcoming Tasks</h6>
-              <Link to="/activities" className="btn btn-sm btn-primary">
+              <h6 className="m-0 font-weight-bold text-primary">Billing Due Today</h6>
+              <Link to="/companies" className="btn btn-sm btn-primary">
                 View All
               </Link>
             </div>
             <div className="card-body">
-              {stats.upcomingTasks.length === 0 ? (
-                <p className="text-center text-muted">No upcoming tasks</p>
+              {stats.billingDueToday.length === 0 ? (
+                <p className="text-center text-muted">No billing due today</p>
               ) : (
                 <div className="list-group">
-                  {stats.upcomingTasks.map((task: any) => (
-                    <div key={task.id} className="list-group-item">
+                  {stats.billingDueToday.map((company: any) => (
+                    <div key={company.id} className="list-group-item">
                       <div className="d-flex justify-content-between align-items-center">
                         <div>
-                          <h6 className="mb-1">{task.title}</h6>
+                          <h6 className="mb-1">
+                            <Link to={`/companies/${company.id}`} className="text-decoration-none text-dark">
+                              {company.name}
+                            </Link>
+                          </h6>
                           <small className="text-muted">
-                            Due: {new Date(task.dueDate).toLocaleString('th-TH', {
-                              year: 'numeric',
-                              month: '2-digit',
-                              day: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                            Amount Due: ฿{typeof company.amountDue === 'number'
+                              ? company.amountDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                              : '0.00'}
                           </small>
                         </div>
-                        <span className={`badge ${
-                          task.priority === 'high' ? 'bg-danger' :
-                          task.priority === 'medium' ? 'bg-warning' : 'bg-success'
-                        }`}>
-                          {task.priority || 'medium'}
+                        <span className="badge bg-warning text-dark">
+                          Due Today
                         </span>
                       </div>
                     </div>
@@ -295,11 +296,10 @@ export const DashboardPage = () => {
                             {activity.type} • {new Date(activity.createdAt).toLocaleDateString()}
                           </small>
                         </div>
-                        <span className={`badge ${
-                          activity.status === 'completed' ? 'bg-success' :
+                        <span className={`badge ${activity.status === 'completed' ? 'bg-success' :
                           activity.status === 'in_progress' ? 'bg-info' :
-                          activity.status === 'cancelled' ? 'bg-secondary' : 'bg-warning'
-                        }`}>
+                            activity.status === 'cancelled' ? 'bg-secondary' : 'bg-warning'
+                          }`}>
                           {activity.status}
                         </span>
                       </div>

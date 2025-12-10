@@ -12,8 +12,7 @@ interface Recipient {
 
 interface NotificationSettings {
     recipients: Recipient[];
-    advanceNotification: boolean;
-    advanceDays: number;
+    // advanceNotification and advanceDays removed
     onBillingDate: boolean;
     notificationTime: string;
     emailTemplate: string;
@@ -22,8 +21,7 @@ interface NotificationSettings {
 
 const defaultSettings: NotificationSettings = {
     recipients: [],
-    advanceNotification: true,
-    advanceDays: 7,
+    // advanceNotification and advanceDays removed
     onBillingDate: true,
     notificationTime: '09:00',
     emailTemplate: '',
@@ -302,39 +300,7 @@ export const NotificationSettingsPage = () => {
                             </h6>
                         </div>
                         <div className="card-body">
-                            <div className="form-check mb-3">
-                                <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    checked={settings.advanceNotification}
-                                    onChange={(e) =>
-                                        setSettings((prev) => ({ ...prev, advanceNotification: e.target.checked }))
-                                    }
-                                    id="advanceNotification"
-                                />
-                                <label className="form-check-label" htmlFor="advanceNotification">
-                                    Send advance notification (before billing date)
-                                </label>
-                            </div>
-                            {settings.advanceNotification && (
-                                <div className="ms-4 mb-3">
-                                    <label className="form-label">Notify days before billing:</label>
-                                    <input
-                                        type="number"
-                                        className="form-control"
-                                        style={{ width: 100 }}
-                                        min={1}
-                                        max={30}
-                                        value={settings.advanceDays}
-                                        onChange={(e) =>
-                                            setSettings((prev) => ({
-                                                ...prev,
-                                                advanceDays: parseInt(e.target.value) || 7,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                            )}
+                            {/* Advance notification removed */}
 
                             <div className="form-check mb-3">
                                 <input

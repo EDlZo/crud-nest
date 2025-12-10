@@ -19,4 +19,6 @@ export class Company {
   createdAt?: string;
   updatedAt?: string;
   updatedByEmail?: string;
+  amountDue?: number;
+  services?: { name: string; amount: number }[];
 }

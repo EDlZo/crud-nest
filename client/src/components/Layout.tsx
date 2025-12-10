@@ -1,5 +1,7 @@
 import React, { ReactNode } from 'react';
+
 import Sidebar from './Sidebar';
+import Topbar from './Topbar';
 import './layout.css';
 
 
@@ -12,6 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div id="wrapper" className="d-flex">
             <Sidebar />
             <div id="content-wrapper" className="d-flex flex-column w-100">
+                <Topbar />
                 <div id="content" style={{ flex: 1 }}>
                     <div className="container-fluid app-container">
                         {children}

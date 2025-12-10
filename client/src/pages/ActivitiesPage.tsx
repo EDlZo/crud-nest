@@ -1,6 +1,8 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { FaCheck, FaClock, FaExclamationTriangle, FaEye } from 'react-icons/fa';
+import { FaCheck, FaClock, FaExclamationTriangle, FaPlus, FaEllipsisV } from 'react-icons/fa';
+import { FiEye } from 'react-icons/fi';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { Dropdown } from 'react-bootstrap';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -47,6 +49,7 @@ export const ActivitiesPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterPriority, setFilterPriority] = useState<string>('all');
   const [companies, setCompanies] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -78,7 +81,7 @@ export const ActivitiesPage = () => {
         },
       });
       console.log('Response status:', response.status, response.statusText);
-      
+
       if (response.status === 401) {
         handleUnauthorized();
         return;
@@ -95,29 +98,34 @@ export const ActivitiesPage = () => {
           throw new Error(`Server error: ${response.status} ${response.statusText}`);
         }
       }
-      
+
       const contentType = response.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) {
         const text = await response.text();
         console.error('Non-JSON response:', text);
         throw new Error('Server returned non-JSON response. Please check if backend is running.');
       }
-      
+
       const data = await response.json();
       console.log('Fetched activities data:', data);
       let filteredData = Array.isArray(data) ? data : [];
       console.log('Filtered data (before filters):', filteredData.length, 'items');
-      
+
       // Filter by type
       if (filterType !== 'all') {
         filteredData = filteredData.filter((activity: Activity) => activity.type === filterType);
       }
-      
+
       // Filter by status
       if (filterStatus !== 'all') {
         filteredData = filteredData.filter((activity: Activity) => activity.status === filterStatus);
       }
-      
+
+      // Filter by priority
+      if (filterPriority !== 'all') {
+        filteredData = filteredData.filter((activity: Activity) => (activity.priority || 'medium') === filterPriority);
+      }
+
       console.log('Final filtered data:', filteredData.length, 'items');
       setActivities(filteredData);
     } catch (err) {
@@ -126,7 +134,7 @@ export const ActivitiesPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [token, filterType, filterStatus]);
+  }, [token, filterType, filterStatus, filterPriority]);
 
   useEffect(() => {
     fetchActivities();
@@ -166,17 +174,17 @@ export const ActivitiesPage = () => {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
-      
+
       if (companiesRes.ok) {
         const data = await companiesRes.json();
         setCompanies(Array.isArray(data) ? data : []);
       }
-      
+
       if (contactsRes.ok) {
         const data = await contactsRes.json();
         setContacts(Array.isArray(data) ? data : []);
       }
-      
+
       if (usersRes.ok) {
         const data = await usersRes.json();
         setUsers(Array.isArray(data) ? data : []);
@@ -294,14 +302,14 @@ export const ActivitiesPage = () => {
       const isEdit = Boolean(editingId);
       const url = withBase(`/activities${isEdit ? `/${editingId}` : ''}`);
       console.log(`${isEdit ? 'Updating' : 'Creating'} activity at:`, url);
-      
+
       const response = await fetch(url, {
-          method: isEdit ? 'PATCH' : 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
+        method: isEdit ? 'PATCH' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
       });
 
       console.log('Response status:', response.status, response.statusText);
@@ -411,442 +419,452 @@ export const ActivitiesPage = () => {
 
   return (
     <>
-      <div className="container-fluid">
-        <div className="d-sm-flex align-items-center justify-content-between mb-4">
-          <h1 className="h3 mb-0 text-gray-800">Activities & Tasks</h1>
-        </div>
-
-        <div className="card shadow mb-4">
-          <div className="card-header py-3 d-flex justify-content-between align-items-center">
-            <h6 className="m-0 font-weight-bold text-primary">Activities List</h6>
-            <div>
-              <button className="btn btn-sm btn-add me-2" onClick={openAddModal}>
-                Add New Activity
-              </button>
-              <button
-                className="btn btn-sm btn-info shadow-sm"
-                onClick={fetchActivities}
-                disabled={loading}
-              >
-                {loading ? 'Loading...' : 'Refresh'}
-              </button>
-            </div>
-          </div>
-          <div className="card-body">
-            {/* Filters */}
-            <div className="row mb-3">
-              <div className="col-md-4">
-                <label className="form-label">Filter by Type</label>
-                <select
-                  className="form-select form-select-sm"
-                  value={filterType}
-                  onChange={(e) => {
-                    setFilterType(e.target.value);
-                  }}
-                >
-                  <option value="all">All Types</option>
-                  <option value="task">Task</option>
-                  <option value="call">Call</option>
-                  <option value="email">Email</option>
-                  <option value="meeting">Meeting</option>
-                  <option value="note">Note</option>
-                </select>
-              </div>
-              <div className="col-md-4">
-                <label className="form-label">Filter by Status</label>
-                <select
-                  className="form-select form-select-sm"
-                  value={filterStatus}
-                  onChange={(e) => {
-                    setFilterStatus(e.target.value);
-                  }}
-                >
-                  <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
-            </div>
-
-            {error && <div className="alert alert-danger">{error}</div>}
-            {activities.length === 0 && !loading ? (
-              <p className="text-center">No activities found. Try adding new activities.</p>
-            ) : (
-              <div className="table-responsive">
-                <table className="table table-bordered" width="100%" cellSpacing={0}>
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th>Title</th>
-                      <th>Status</th>
-                      <th>Priority</th>
-                      <th>Due Date</th>
-                      <th>Assigned To</th>
-                      <th>Created</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activities.map((activity) => {
-                      const canModify =
-                        user?.role === 'admin' ||
-                        user?.role === 'superadmin' ||
-                        activity.assignedTo === user?.userId;                      
-                      const statusBadge = getStatusBadge(activity.status);
-                      const priorityBadge = getPriorityBadge(activity.priority);
-                      
-                      return (
-                        <tr key={activity.id}>
-                          <td>
-                            <span className="me-2">{getTypeIcon(activity.type)}</span>
-                            {activity.type}
-                          </td>
-                          <td>
-                            <strong>{activity.title}</strong>
-                            {activity.description && (
-                              <div className="small text-muted">{activity.description.substring(0, 50)}...</div>
-                            )}
-                          </td>
-                          <td>
-                            <select
-                              className={`form-select form-select-sm ${statusBadge.class} text-white`}
-                              value={activity.status}
-                              onChange={(e) => handleStatusChange(activity.id!, e.target.value)}
-                              disabled={!canModify}
-                            >
-                              <option value="pending">Pending</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="completed">Completed</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
-                          </td>
-                          <td>
-                            <span 
-                              className={`badge ${priorityBadge.class}`}
-                              style={{ 
-                                display: 'inline-flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center',
-                                gap: '0.25rem',
-                                lineHeight: '1'
-                              }}
-                            >
-                              {priorityBadge.icon && (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', lineHeight: '1' }}>
-                                  {priorityBadge.icon}
-                                </span>
-                              )}
-                              <span style={{ lineHeight: '1', display: 'inline-block' }}>
-                                {priorityBadge.label}
-                              </span>
-                            </span>
-                          </td>
-                          <td>
-                            {activity.dueDate
-                              ? new Date(activity.dueDate).toLocaleString('th-TH', {
-                                  year: 'numeric',
-                                  month: '2-digit',
-                                  day: '2-digit',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })
-                              : '-'}
-                          </td>
-                          <td>
-                            {(() => {
-                              if (activity.assignedToEmail) {
-                                return activity.assignedToEmail;
-                              }
-                              if (activity.assignedTo && users.length > 0) {
-                                const assignedUser = users.find(
-                                  (u) => (u.id || u.userId) === activity.assignedTo
-                                );
-                                return assignedUser?.email || '-';
-                              }
-                              return '-';
-                            })()}
-                          </td>
-                          <td>
-                            {activity.createdAt
-                              ? new Date(activity.createdAt).toLocaleDateString()
-                              : '-'}
-                          </td>
-                          <td>
-                            <div className="btn-group">
-                              <button
-                                className="icon-btn view"
-                                aria-label="view"
-                                title="View Details"
-                                onClick={() => handleViewActivity(activity)}
-                              >
-                                <FaEye />
-                              </button>
-                              {canModify && (
-                                <>
-                                  <button
-                                    className="icon-btn edit"
-                                    aria-label="edit"
-                                    title="Edit"
-                                    onClick={() => handleEdit(activity)}
-                                  >
-                                    <FiEdit2 />
-                                  </button>
-                                  <button
-                                    className="icon-btn delete"
-                                    aria-label="delete"
-                                    title="Delete"
-                                    onClick={() => handleDelete(activity.id)}
-                                  >
-                                    <FiTrash2 />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                            {!canModify && (
-                              <span className="badge bg-secondary ms-2">No Permission</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+      <div className="flex flex-col gap-6 px-8 py-6 bg-gray-50 min-h-screen">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-gray-800">Activities & Tasks</h1>
+          <div className="flex items-center gap-3">
+            <button
+              className="px-4 py-2 rounded-lg bg-[#3869a9] text-white font-medium shadow hover:bg-[#2c5282] transition-colors flex items-center gap-2"
+              onClick={openAddModal}
+            >
+              <FaPlus /> Add New Activity
+            </button>
+            <button
+              className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium shadow-sm hover:bg-gray-50 transition-colors"
+              onClick={fetchActivities}
+              disabled={loading}
+            >
+              {loading ? 'Loading...' : 'Refresh'}
+            </button>
           </div>
         </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap gap-4 mb-6">
+          <div className="w-full md:w-64">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Type</label>
+            <select
+              className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+            >
+              <option value="all">All Types</option>
+              <option value="task">Task</option>
+              <option value="call">Call</option>
+              <option value="email">Email</option>
+              <option value="meeting">Meeting</option>
+              <option value="note">Note</option>
+            </select>
+          </div>
+          <div className="w-full md:w-64">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Status</label>
+            <select
+              className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div className="w-full md:w-64">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Priority</label>
+            <select
+              className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              value={filterPriority}
+              onChange={(e) => setFilterPriority(e.target.value)}
+            >
+              <option value="all">All Priorities</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </div>
+
+        {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">{error}</div>}
+
+        {activities.length === 0 && !loading ? (
+          <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+            <p className="text-gray-500 text-lg">No activities found. Try adding new activities.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {activities.map((activity) => {
+              const canModify =
+                user?.role === 'admin' ||
+                user?.role === 'superadmin' ||
+                activity.assignedTo === user?.userId;
+              const statusBadge = getStatusBadge(activity.status);
+              const priorityBadge = getPriorityBadge(activity.priority);
+
+              return (
+                <div key={activity.id} className="bg-white rounded-xl shadow-lg p-6 flex flex-col gap-4 border border-gray-100 hover:shadow-xl transition-shadow">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-xl">
+                        {getTypeIcon(activity.type)}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 line-clamp-1" title={activity.title}>
+                          {activity.title}
+                        </h3>
+                        <span className="text-xs text-gray-500 capitalize">{activity.type}</span>
+                      </div>
+                    </div>
+                    {canModify && (
+                      <Dropdown align="end">
+                        <Dropdown.Toggle as="button" className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 border-0 bg-transparent">
+                          <FaEllipsisV />
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          <Dropdown.Item onClick={() => handleViewActivity(activity)}>
+                            <FiEye className="me-2" /> View Details
+                          </Dropdown.Item>
+                          <Dropdown.Item onClick={() => handleEdit(activity)}>
+                            <FiEdit2 className="me-2" /> Edit
+                          </Dropdown.Item>
+                          <Dropdown.Divider />
+                          <Dropdown.Item onClick={() => handleDelete(activity.id)} className="text-danger">
+                            <FiTrash2 className="me-2" /> Delete
+                          </Dropdown.Item>
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    )}
+                  </div>
+
+                  {activity.description && (
+                    <p className="text-sm text-gray-600 line-clamp-2 h-10">
+                      {activity.description}
+                    </p>
+                  )}
+
+                  <div className="flex flex-col gap-2 mt-auto">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500">Status</span>
+                      {canModify ? (
+                        <select
+                          className={`appearance-none border-0 rounded-full px-3 py-1 text-xs font-medium text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 text-center ${statusBadge.class}`}
+                          style={{
+                            backgroundImage: 'none',
+                            width: 'auto',
+                            minWidth: '80px'
+                          }}
+                          value={activity.status}
+                          onChange={(e) => handleStatusChange(activity.id!, e.target.value)}
+                        >
+                          <option value="pending" className="text-gray-800 bg-white">Pending</option>
+                          <option value="in_progress" className="text-gray-800 bg-white">In Progress</option>
+                          <option value="completed" className="text-gray-800 bg-white">Completed</option>
+                          <option value="cancelled" className="text-gray-800 bg-white">Cancelled</option>
+                        </select>
+                      ) : (
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${statusBadge.class}`}>
+                          {statusBadge.label}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500">Priority</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium text-white flex items-center gap-1 ${priorityBadge.class}`}>
+                        {priorityBadge.icon} {priorityBadge.label}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500">Due Date</span>
+                      <span className="font-medium text-gray-700">
+                        {activity.dueDate
+                          ? new Date(activity.dueDate).toLocaleDateString('th-TH', { day: '2-digit', month: 'short' })
+                          : '-'}
+                      </span>
+                    </div>
+                    <div className="pt-3 mt-1 border-t border-gray-100 flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+                          {(() => {
+                            if (activity.assignedToEmail) return activity.assignedToEmail.charAt(0).toUpperCase();
+                            if (activity.assignedTo && users.length > 0) {
+                              const u = users.find(u => (u.id || u.userId) === activity.assignedTo);
+                              return u?.email?.charAt(0).toUpperCase() || '?';
+                            }
+                            return '?';
+                          })()}
+                        </div>
+                        <span className="text-xs text-gray-500 truncate max-w-[100px]">
+                          {(() => {
+                            if (activity.assignedToEmail) return activity.assignedToEmail;
+                            if (activity.assignedTo && users.length > 0) {
+                              const u = users.find(u => (u.id || u.userId) === activity.assignedTo);
+                              return u?.email || 'Unassigned';
+                            }
+                            return 'Unassigned';
+                          })()}
+                        </span>
+                      </div>
+                      {!canModify && (
+                        <span className="text-xs text-gray-400">Read only</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Modal for Add/Edit activity */}
       {showModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  {editingId ? 'Edit Activity' : 'Add New Activity'}
-                </h5>
-                <button type="button" className="btn-close" onClick={closeModal}></button>
-              </div>
-              <div className="modal-body">
-                <form onSubmit={handleSubmit}>
-                  <div className="row">
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">
-                        Type <span className="text-danger">*</span>
-                      </label>
-                      <select
-                        className="form-select"
-                        value={formData.type}
-                        onChange={(e) => handleChange('type', e.target.value)}
-                        required
-                      >
-                        <option value="task">Task</option>
-                        <option value="call">Call</option>
-                        <option value="email">Email</option>
-                        <option value="meeting">Meeting</option>
-                        <option value="note">Note</option>
-                      </select>
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">
-                        Status <span className="text-danger">*</span>
-                      </label>
-                      <select
-                        className="form-select"
-                        value={formData.status}
-                        onChange={(e) => handleChange('status', e.target.value)}
-                        required
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                    </div>
-                    <div className="col-md-12 mb-3">
-                      <label className="form-label">
-                        Title <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={formData.title}
-                        onChange={(e) => handleChange('title', e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="col-md-12 mb-3">
-                      <label className="form-label">Description</label>
-                      <textarea
-                        className="form-control"
-                        value={formData.description || ''}
-                        onChange={(e) => handleChange('description', e.target.value)}
-                        rows={3}
-                      />
-                    </div>
-                    <div className="col-md-4 mb-3">
-                      <label className="form-label">Priority</label>
-                      <select
-                        className="form-select"
-                        value={formData.priority || 'medium'}
-                        onChange={(e) => handleChange('priority', e.target.value)}
-                      >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                      </select>
-                    </div>
-                    <div className="col-md-4 mb-3">
-                      <label className="form-label">Due Date & Time</label>
-                      <input
-                        type="datetime-local"
-                        className="form-control"
-                        value={formData.dueDate ? (() => {
-                          // Convert stored date to local datetime-local format
-                          const dateStr = formData.dueDate;
-                          // If already in YYYY-MM-DDTHH:mm format, use directly
-                          if (dateStr.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/)) {
-                            return dateStr.slice(0, 16);
-                          }
-                          // Parse as Date (will interpret as local if no timezone)
-                          const date = new Date(dateStr);
-                          if (isNaN(date.getTime())) return '';
-                          // Get local components
-                          const year = date.getFullYear();
-                          const month = String(date.getMonth() + 1).padStart(2, '0');
-                          const day = String(date.getDate()).padStart(2, '0');
-                          const hours = String(date.getHours()).padStart(2, '0');
-                          const minutes = String(date.getMinutes()).padStart(2, '0');
-                          return `${year}-${month}-${day}T${hours}:${minutes}`;
-                        })() : ''}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value) {
-                            // datetime-local input gives us YYYY-MM-DDTHH:mm in local time
-                            // Create Date object - it will interpret as local time
-                            const localDate = new Date(value);
-                            if (isNaN(localDate.getTime())) {
-                              handleChange('dueDate', '');
-                              return;
-                            }
-                            // Extract local time components (not UTC)
-                            const year = localDate.getFullYear();
-                            const month = String(localDate.getMonth() + 1).padStart(2, '0');
-                            const day = String(localDate.getDate()).padStart(2, '0');
-                            const hours = String(localDate.getHours()).padStart(2, '0');
-                            const minutes = String(localDate.getMinutes()).padStart(2, '0');
-                            // Store as YYYY-MM-DDTHH:mm:ss format (local time, no timezone)
-                            // This preserves the exact time the user selected
-                            const localTimeString = `${year}-${month}-${day}T${hours}:${minutes}:00`;
-                            handleChange('dueDate', localTimeString);
-                          } else {
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
+            style={{ animation: 'slideUp 0.3s ease-out' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-[linear-gradient(180deg,#3763a0,#1d4b8b)] text-white px-6 py-4 flex justify-between items-center">
+              <h5 className="text-xl font-bold m-0">
+                {editingId ? 'Edit Activity' : 'Add New Activity'}
+              </h5>
+              <button
+                type="button"
+                className="text-white/80 hover:text-white transition-colors border-0 bg-transparent p-0"
+                onClick={closeModal}
+              >
+                <span className="text-2xl">&times;</span>
+              </button>
+            </div>
+            <div className="p-6 max-h-[80vh] overflow-y-auto">
+              <form onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  {/* Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      value={formData.type}
+                      onChange={(e) => handleChange('type', e.target.value)}
+                      required
+                    >
+                      <option value="task">Task</option>
+                      <option value="call">Call</option>
+                      <option value="email">Email</option>
+                      <option value="meeting">Meeting</option>
+                      <option value="note">Note</option>
+                    </select>
+                  </div>
+                  {/* Status */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      value={formData.status}
+                      onChange={(e) => handleChange('status', e.target.value)}
+                      required
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    value={formData.title}
+                    onChange={(e) => handleChange('title', e.target.value)}
+                    required
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    value={formData.description || ''}
+                    onChange={(e) => handleChange('description', e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  {/* Priority */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                    <select
+                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      value={formData.priority || 'medium'}
+                      onChange={(e) => handleChange('priority', e.target.value)}
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+                  {/* Due Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Due Date & Time</label>
+                    <input
+                      type="datetime-local"
+                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      value={formData.dueDate ? (() => {
+                        const dateStr = formData.dueDate;
+                        if (dateStr.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/)) {
+                          return dateStr.slice(0, 16);
+                        }
+                        const date = new Date(dateStr);
+                        if (isNaN(date.getTime())) return '';
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const hours = String(date.getHours()).padStart(2, '0');
+                        const minutes = String(date.getMinutes()).padStart(2, '0');
+                        return `${year}-${month}-${day}T${hours}:${minutes}`;
+                      })() : ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value) {
+                          const localDate = new Date(value);
+                          if (isNaN(localDate.getTime())) {
                             handleChange('dueDate', '');
+                            return;
                           }
-                        }}
-                      />
-                    </div>
-                    <div className="col-md-4 mb-3">
-                      <label className="form-label">Assigned To</label>
+                          const year = localDate.getFullYear();
+                          const month = String(localDate.getMonth() + 1).padStart(2, '0');
+                          const day = String(localDate.getDate()).padStart(2, '0');
+                          const hours = String(localDate.getHours()).padStart(2, '0');
+                          const minutes = String(localDate.getMinutes()).padStart(2, '0');
+                          const localTimeString = `${year}-${month}-${day}T${hours}:${minutes}:00`;
+                          handleChange('dueDate', localTimeString);
+                        } else {
+                          handleChange('dueDate', '');
+                        }
+                      }}
+                    />
+                  </div>
+                  {/* Assigned To */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+                    <select
+                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      value={formData.assignedTo || ''}
+                      onChange={(e) => handleChange('assignedTo', e.target.value)}
+                    >
+                      <option value="">-- Select User --</option>
+                      {users.map((userItem) => (
+                        <option key={userItem.id || userItem.userId} value={userItem.id || userItem.userId}>
+                          {userItem.email} {userItem.firstName || userItem.lastName ? `(${userItem.firstName || ''} ${userItem.lastName || ''})`.trim() : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {/* Related To */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Related To</label>
+                    <select
+                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      value={formData.relatedTo || ''}
+                      onChange={(e) => {
+                        handleChange('relatedTo', e.target.value as any);
+                        handleChange('relatedId', '');
+                      }}
+                    >
+                      <option value="">None</option>
+                      <option value="company">Company</option>
+                      <option value="contact">Contact</option>
+                    </select>
+                  </div>
+                  {/* Related ID Selection */}
+                  {formData.relatedTo === 'company' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Select Company</label>
                       <select
-                        className="form-select"
-                        value={formData.assignedTo || ''}
-                        onChange={(e) => handleChange('assignedTo', e.target.value)}
+                        className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        value={formData.relatedId || ''}
+                        onChange={(e) => handleChange('relatedId', e.target.value)}
                       >
-                        <option value="">-- Select User --</option>
-                        {users.map((userItem) => (
-                          <option key={userItem.id || userItem.userId} value={userItem.id || userItem.userId}>
-                            {userItem.email} {userItem.firstName || userItem.lastName ? `(${userItem.firstName || ''} ${userItem.lastName || ''})`.trim() : ''}
+                        <option value="">-- Select Company --</option>
+                        {companies.map((company) => (
+                          <option key={company.id} value={company.id}>
+                            {company.name} {company.type === 'individual' ? '(Individual)' : '(Company)'}
                           </option>
                         ))}
                       </select>
                     </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Related To</label>
+                  )}
+                  {formData.relatedTo === 'contact' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Select Contact</label>
                       <select
-                        className="form-select"
-                        value={formData.relatedTo || ''}
-                        onChange={(e) => {
-                          handleChange('relatedTo', e.target.value as any);
-                          handleChange('relatedId', ''); // Reset ID when changing type
-                        }}
+                        className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        value={formData.relatedId || ''}
+                        onChange={(e) => handleChange('relatedId', e.target.value)}
                       >
-                        <option value="">None</option>
-                        <option value="company">Company</option>
-                        <option value="contact">Contact</option>
-                        {/* <option value="deal">Deal</option> */}
+                        <option value="">-- Select Contact --</option>
+                        {contacts.map((contact) => (
+                          <option key={contact.id} value={contact.id}>
+                            {contact.firstName} {contact.lastName}
+                          </option>
+                        ))}
                       </select>
                     </div>
-                    {formData.relatedTo === 'company' && (
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">Select Company</label>
-                        <select
-                          className="form-select"
-                          value={formData.relatedId || ''}
-                          onChange={(e) => handleChange('relatedId', e.target.value)}
-                        >
-                          <option value="">-- Select Company --</option>
-                          {companies.map((company) => (
-                            <option key={company.id} value={company.id}>
-                              {company.name} {company.type === 'individual' ? '(Individual)' : '(Company)'}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                    {formData.relatedTo === 'contact' && (
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">Select Contact</label>
-                        <select
-                          className="form-select"
-                          value={formData.relatedId || ''}
-                          onChange={(e) => handleChange('relatedId', e.target.value)}
-                        >
-                          <option value="">-- Select Contact --</option>
-                          {contacts.map((contact) => (
-                            <option key={contact.id} value={contact.id}>
-                              {contact.firstName} {contact.lastName}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                    {formData.relatedTo === 'deal' && (
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">Related Deal ID</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder="Enter Deal ID"
-                          value={formData.relatedId || ''}
-                          onChange={(e) => handleChange('relatedId', e.target.value)}
-                        />
-                        <small className="form-text text-muted">Deal selection will be added in future update</small>
-                      </div>
-                    )}
-                  </div>
-                  {error && <div className="alert alert-danger">{error}</div>}
-                  <div className="d-flex gap-2">
-                    <button type="submit" className="btn btn-primary" disabled={submitting}>
-                      {submitting
-                        ? 'Saving...'
-                        : editingId
+                  )}
+                  {formData.relatedTo === 'deal' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Related Deal ID</label>
+                      <input
+                        type="text"
+                        className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        placeholder="Enter Deal ID"
+                        value={formData.relatedId || ''}
+                        onChange={(e) => handleChange('relatedId', e.target.value)}
+                      />
+                      <small className="text-xs text-gray-500 mt-1 block">Deal selection will be added in future update</small>
+                    </div>
+                  )}
+                </div>
+
+                {error && <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-4 text-sm">{error}</div>}
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                  <button
+                    type="button"
+                    className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm"
+                    onClick={closeModal}
+                    disabled={submitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-sm"
+                    disabled={submitting}
+                  >
+                    {submitting
+                      ? 'Saving...'
+                      : editingId
                         ? 'Save Changes'
                         : 'Add Activity'}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={closeModal}
-                      disabled={submitting}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
@@ -854,343 +872,178 @@ export const ActivitiesPage = () => {
 
       {/* View Activity Details Modal */}
       {viewingActivity && (
-        <div 
-          className="modal show d-block" 
-          style={{ 
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(4px)',
-            animation: 'fadeIn 0.3s ease-in'
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setViewingActivity(null);
-            }
-          }}
-        >
-          <div className="modal-dialog modal-lg" style={{ marginTop: '5vh' }}>
-            <div 
-              className="modal-content"
-              style={{
-                borderRadius: '16px',
-                border: 'none',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-                animation: 'slideUp 0.3s ease-out'
-              }}
-            >
-              <div 
-                className="modal-header"
-                style={{
-                  background: 'linear-gradient(135deg, #0d6efd 0%, #0056b3 100%)',
-                  color: 'white',
-                  borderRadius: '16px 16px 0 0',
-                  padding: '1.5rem',
-                  border: 'none'
-                }}
-              >
-                <h5 className="modal-title" style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, display: 'flex', alignItems: 'center' }}>
-                  <FaEye style={{ marginRight: '0.5rem' }} />
-                  Activity Details
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close btn-close-white"
-                  onClick={() => setViewingActivity(null)}
-                  style={{ opacity: 0.9 }}
-                ></button>
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="bg-[linear-gradient(180deg,#3763a0,#1d4b8b)] text-white px-6 py-4 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <FiEye className="text-xl" />
+                <h5 className="text-xl font-bold m-0">Activity Details</h5>
               </div>
-              <div className="modal-body" style={{ padding: '2rem' }}>
-                {/* Title Section */}
-                <div className="mb-4">
-                  <h4 style={{ color: '#333', fontWeight: '600', marginBottom: '0.5rem' }}>
-                    {viewingActivity.title}
-                  </h4>
-                  <div className="d-flex gap-2 mt-2">
-                    <span 
-                      className={`badge ${getStatusBadge(viewingActivity.status).class} px-3 py-2`}
-                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                    >
-                      {getStatusBadge(viewingActivity.status).label}
-                    </span>
-                    <span 
-                      className={`badge ${getPriorityBadge(viewingActivity.priority).class} px-3 py-2`}
-                      style={{ 
-                        display: 'inline-flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        gap: '0.25rem',
-                        lineHeight: '1'
-                      }}
-                    >
-                      {getPriorityBadge(viewingActivity.priority).icon && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', lineHeight: '1' }}>
-                          {getPriorityBadge(viewingActivity.priority).icon}
-                        </span>
-                      )}
-                      <span style={{ lineHeight: '1', display: 'inline-block' }}>
-                        {getPriorityBadge(viewingActivity.priority).label}
-                      </span>
-                    </span>
-                    <span 
-                      className="badge bg-info px-3 py-2"
-                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                    >
-                      {getTypeIcon(viewingActivity.type)}
-                      <span className="ms-1 text-capitalize">{viewingActivity.type}</span>
+              <button
+                type="button"
+                className="text-white/80 hover:text-white transition-colors border-0 bg-transparent p-0"
+                onClick={() => setViewingActivity(null)}
+              >
+                <span className="text-2xl">&times;</span>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              {/* Title & Badges */}
+              <div className="mb-6">
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <h4 className="text-2xl font-bold text-gray-800 m-0">{viewingActivity.title}</h4>
+                  <span className="text-sm text-gray-500 whitespace-nowrap">
+                    ID: {viewingActivity.id?.substring(0, 8)}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {/* Status Badge */}
+                  <span className={`px-3 py-1.5 rounded-full text-sm font-medium text-white shadow-sm ${getStatusBadge(viewingActivity.status).class}`}>
+                    {getStatusBadge(viewingActivity.status).label}
+                  </span>
+
+                  {/* Priority Badge */}
+                  <span className={`px-3 py-1.5 rounded-full text-sm font-medium text-white shadow-sm flex items-center gap-1.5 ${getPriorityBadge(viewingActivity.priority).class}`}>
+                    {getPriorityBadge(viewingActivity.priority).icon}
+                    {getPriorityBadge(viewingActivity.priority).label}
+                  </span>
+
+                  {/* Type Badge */}
+                  <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800 flex items-center gap-1.5">
+                    {getTypeIcon(viewingActivity.type)}
+                    <span className="capitalize">{viewingActivity.type}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="bg-gray-50 rounded-xl p-5 mb-6 border border-gray-100">
+                <h6 className="text-blue-600 font-semibold mb-2">Description</h6>
+                <p className="text-gray-700 whitespace-pre-wrap m-0 leading-relaxed">
+                  {viewingActivity.description || <span className="text-gray-400 italic">No description provided</span>}
+                </p>
+              </div>
+
+              {/* Grid Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {/* Due Date */}
+                <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-100">
+                  <div className="flex items-center gap-2 mb-1 text-yellow-800 font-semibold">
+                    <FaClock /> Due Date & Time
+                  </div>
+                  <p className="text-gray-800 font-medium m-0">
+                    {viewingActivity.dueDate
+                      ? new Date(viewingActivity.dueDate).toLocaleString('th-TH', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                      : '-'}
+                  </p>
+                </div>
+
+                {/* Assigned To */}
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                  <div className="text-gray-500 font-semibold mb-1 text-sm">Assigned To</div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold text-xs">
+                      {(() => {
+                        const email = viewingActivity.assignedToEmail || '';
+                        return email.charAt(0).toUpperCase() || '?';
+                      })()}
+                    </div>
+                    <span className="text-gray-800 font-medium">
+                      {(() => {
+                        const assignedUser = users.find(
+                          (u) => (u.id || u.userId) === viewingActivity.assignedTo
+                        );
+                        if (assignedUser) {
+                          const name = `${assignedUser.firstName || ''} ${assignedUser.lastName || ''}`.trim();
+                          return name || assignedUser.email || viewingActivity.assignedToEmail || '-';
+                        }
+                        return viewingActivity.assignedToEmail || '-';
+                      })()}
                     </span>
                   </div>
                 </div>
+              </div>
 
-                {/* Description */}
-                {viewingActivity.description && (
-                  <div 
-                    className="mb-4 p-3"
-                    style={{
-                      backgroundColor: '#f8f9fa',
-                      borderRadius: '8px',
-                      borderLeft: '4px solid #0d6efd'
-                    }}
-                  >
-                    <strong style={{ color: '#0d6efd', display: 'block', marginBottom: '0.5rem' }}>
-                      Description
-                    </strong>
-                    <p style={{ whiteSpace: 'pre-wrap', margin: 0, color: '#555' }}>
-                      {viewingActivity.description}
-                    </p>
-                  </div>
-                )}
-
-                {/* Info Cards */}
-                <div className="row g-3 mb-4">
-                  {viewingActivity.dueDate && (
-                    <div className="col-md-6">
-                      <div 
-                        className="p-3 h-100"
-                        style={{
-                          backgroundColor: '#fff3cd',
-                          borderRadius: '8px',
-                          border: '1px solid #ffc107'
-                        }}
-                      >
-                        <div className="d-flex align-items-center mb-2">
-                          <FaClock className="text-warning me-2" />
-                          <strong style={{ color: '#856404' }}>Due Date & Time</strong>
-                        </div>
-                        <p style={{ margin: 0, color: '#856404', fontWeight: '500' }}>
-                          {new Date(viewingActivity.dueDate).toLocaleString('th-TH', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </div>
+              {/* Related To Section */}
+              {viewingActivity.relatedTo && viewingActivity.relatedId && (
+                <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 mb-6 flex items-center justify-between">
+                  <div>
+                    <div className="text-blue-600 font-semibold mb-1 text-sm capitalize">
+                      Related To: {viewingActivity.relatedTo}
                     </div>
-                  )}
-                  {viewingActivity.assignedToEmail && (
-                    <div className="col-md-6">
-                      <div 
-                        className="p-3 h-100"
-                        style={{
-                          backgroundColor: '#f8f9fa',
-                          borderRadius: '8px'
-                        }}
-                      >
-                        <strong style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>
-                          Assigned To
-                        </strong>
-                        <p style={{ margin: 0, color: '#333', fontSize: '0.9rem' }}>
-                          {(() => {
-                            const assignedUser = users.find(
-                              (u) => (u.id || u.userId) === viewingActivity.assignedTo
-                            );
-                            if (assignedUser) {
-                              const name = `${assignedUser.firstName || ''} ${assignedUser.lastName || ''}`.trim();
-                              return name || assignedUser.email || viewingActivity.assignedToEmail || '-';
-                            }
-                            return viewingActivity.assignedToEmail || '-';
-                          })()}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Related To */}
-                {viewingActivity.relatedTo && viewingActivity.relatedId && (
-                  <div 
-                    className="mb-4 p-3"
-                    style={{
-                      backgroundColor: '#f8f9fa',
-                      borderRadius: '8px',
-                      borderLeft: '4px solid #0d6efd'
-                    }}
-                  >
-                    <div className="d-flex justify-content-between align-items-center mb-2" style={{ minHeight: '2rem' }}>
-                      <strong style={{ color: '#0d6efd', textTransform: 'capitalize', display: 'flex', alignItems: 'center', height: '100%' }}>
-                        Related To: {viewingActivity.relatedTo}
-                      </strong>
-                      {viewingActivity.relatedTo === 'contact' && relatedContact && (
-                        <button
-                          className="btn btn-sm btn-link p-0"
-                          onClick={() => setShowContactModal(true)}
-                          style={{ 
-                            color: '#0d6efd', 
-                            textDecoration: 'none',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            height: '100%',
-                            margin: 0,
-                            padding: '0.25rem 0'
-                          }}
-                          title="View Contact Details"
-                        >
-                          <FaEye style={{ marginRight: '0.375rem', fontSize: '0.875rem' }} />
-                          <span>View Details</span>
-                        </button>
-                      )}
-                      {viewingActivity.relatedTo === 'company' && relatedCompany && (
-                        <button
-                          className="btn btn-sm btn-link p-0"
-                          onClick={() => setShowContactModal(true)}
-                          style={{ 
-                            color: '#0d6efd', 
-                            textDecoration: 'none',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            height: '100%',
-                            margin: 0,
-                            padding: '0.25rem 0'
-                          }}
-                          title="View Company Details"
-                        >
-                          <FaEye style={{ marginRight: '0.375rem', fontSize: '0.875rem' }} />
-                          <span>View Details</span>
-                        </button>
-                      )}
-                    </div>
-                    <p style={{ margin: 0, color: '#0d6efd', fontWeight: '500' }}>
+                    <div className="text-gray-800 font-bold text-lg">
                       {viewingActivity.relatedTo === 'contact' && relatedContact ? (
-                        <span>
-                          {relatedContact.firstName} {relatedContact.lastName}
-                          {relatedContact.phone && ` - ${relatedContact.phone}`}
-                        </span>
+                        <span>{relatedContact.firstName} {relatedContact.lastName}</span>
                       ) : viewingActivity.relatedTo === 'company' && relatedCompany ? (
-                        <span>
-                          {relatedCompany.name}
-                          {relatedCompany.type && ` (${relatedCompany.type})`}
-                        </span>
+                        <span>{relatedCompany.name}</span>
                       ) : (
-                        <span style={{ color: '#666' }}>{viewingActivity.relatedId}</span>
+                        <span>{viewingActivity.relatedId}</span>
                       )}
-                    </p>
+                    </div>
                   </div>
-                )}
+                  {(relatedContact || relatedCompany) && (
+                    <button
+                      className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 text-sm border-0 bg-transparent p-0"
+                      onClick={() => setShowContactModal(true)}
+                    >
+                      <FiEye /> View Details
+                    </button>
+                  )}
+                </div>
+              )}
 
-                {/* Metadata */}
-                <div className="row g-3">
-                  <div className="col-md-6">
-                    <div 
-                      className="p-3"
-                      style={{
-                        backgroundColor: '#f8f9fa',
-                        borderRadius: '8px'
-                      }}
-                    >
-                      <strong style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>
-                        Created At
-                      </strong>
-                      <p style={{ margin: 0, color: '#333', fontSize: '0.9rem' }}>
-                        {viewingActivity.createdAt
-                          ? new Date(viewingActivity.createdAt).toLocaleString('th-TH', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })
-                          : '-'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="col-md-6">
-                    <div 
-                      className="p-3"
-                      style={{
-                        backgroundColor: '#f8f9fa',
-                        borderRadius: '8px'
-                      }}
-                    >
-                      <strong style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>
-                        Last Updated
-                      </strong>
-                      <p style={{ margin: 0, color: '#333', fontSize: '0.9rem' }}>
-                        {viewingActivity.updatedAt
-                          ? new Date(viewingActivity.updatedAt).toLocaleString('th-TH', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })
-                          : '-'}
-                      </p>
-                    </div>
-                  </div>
+              {/* Timestamps */}
+              <div className="grid grid-cols-2 gap-4 text-sm text-gray-500 border-t border-gray-100 pt-4">
+                <div>
+                  <span className="block font-medium mb-1">Created At</span>
+                  {viewingActivity.createdAt
+                    ? new Date(viewingActivity.createdAt).toLocaleString('th-TH')
+                    : '-'}
+                </div>
+                <div>
+                  <span className="block font-medium mb-1">Last Updated</span>
+                  {viewingActivity.updatedAt
+                    ? new Date(viewingActivity.updatedAt).toLocaleString('th-TH')
+                    : '-'}
                 </div>
               </div>
-              <div 
-                className="modal-footer"
-                style={{
-                  padding: '1.5rem',
-                  borderTop: '1px solid #e9ecef',
-                  borderRadius: '0 0 16px 16px'
-                }}
-              >
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setViewingActivity(null)}
-                  style={{
-                    borderRadius: '8px',
-                    padding: '0.5rem 1.5rem',
-                    fontWeight: '500',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  Close
-                </button>
-                {(user?.role === 'admin' ||
-                  user?.role === 'superadmin' ||
-                  viewingActivity.assignedTo === user?.userId) && (
 
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-100">
+              <button
+                className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm"
+                onClick={() => setViewingActivity(null)}
+              >
+                Close
+              </button>
+              {(user?.role === 'admin' ||
+                user?.role === 'superadmin' ||
+                viewingActivity.assignedTo === user?.userId) && (
                   <button
-                    type="button"
-                    className="btn btn-primary"
+                    className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2 border-0"
                     onClick={() => {
                       setViewingActivity(null);
                       handleEdit(viewingActivity);
                     }}
-                    style={{
-                      borderRadius: '8px',
-                      padding: '0.5rem 1.5rem',
-                      fontWeight: '500',
-                      background: 'linear-gradient(135deg, #0d6efd 0%, #0056b3 100%)',
-                      border: 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
                   >
-                    <FiEdit2 className="me-2" />
-                    Edit
+                    <FiEdit2 /> Edit Activity
                   </button>
                 )}
-              </div>
             </div>
           </div>
         </div>
@@ -1198,240 +1051,159 @@ export const ActivitiesPage = () => {
 
       {/* Contact/Company Details Modal */}
       {showContactModal && (relatedContact || relatedCompany) && (
-        <div 
-          className="modal show d-block" 
-          style={{ 
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 1060
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowContactModal(false);
-            }
-          }}
-        >
-          <div className="modal-dialog modal-lg" style={{ marginTop: '5vh' }}>
-            <div 
-              className="modal-content"
-              style={{
-                borderRadius: '16px',
-                border: 'none',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-                animation: 'slideUp 0.3s ease-out'
-              }}
-            >
-              <div 
-                className="modal-header"
-                style={{
-                  background: 'linear-gradient(135deg, #0d6efd 0%, #0056b3 100%)',
-                  color: 'white',
-                  borderRadius: '16px 16px 0 0',
-                  padding: '1.5rem',
-                  border: 'none'
-                }}
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden"
+            style={{ animation: 'slideUp 0.3s ease-out' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="bg-[linear-gradient(180deg,#3763a0,#1d4b8b)] text-white px-6 py-4 flex justify-between items-center">
+              <h5 className="text-xl font-bold m-0">
+                {relatedContact ? 'Contact Details' : 'Company Details'}
+              </h5>
+              <button
+                type="button"
+                className="text-white/80 hover:text-white transition-colors border-0 bg-transparent p-0"
+                onClick={() => setShowContactModal(false)}
               >
-                <h5 className="modal-title" style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0 }}>
-                  {relatedContact ? 'Contact Details' : 'Company Details'}
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close btn-close-white"
-                  onClick={() => setShowContactModal(false)}
-                  style={{ opacity: 0.9 }}
-                ></button>
-              </div>
-              <div className="modal-body" style={{ padding: '2rem' }}>
-                {relatedContact ? (
-                  <>
-                    <div className="mb-4">
-                      <h4 style={{ color: '#333', fontWeight: '600', marginBottom: '0.5rem' }}>
-                        {relatedContact.firstName} {relatedContact.lastName}
-                      </h4>
-                    </div>
-                    <div className="row g-3">
-                      {relatedContact.phone && (
-                        <div className="col-md-6">
-                          <div className="p-3" style={{ backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                            <strong style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>
-                              Phone
-                            </strong>
-                            <p style={{ margin: 0, color: '#333', fontSize: '0.9rem' }}>{relatedContact.phone}</p>
-                          </div>
-                        </div>
-                      )}
-                      {relatedContact.address && (
-                        <div className="col-md-6">
-                          <div className="p-3" style={{ backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                            <strong style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>
-                              Address
-                            </strong>
-                            <p style={{ margin: 0, color: '#333', fontSize: '0.9rem' }}>{relatedContact.address}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : relatedCompany ? (
-                  <>
-                    <div className="mb-4">
-                      <h4 style={{ color: '#333', fontWeight: '600', marginBottom: '0.5rem' }}>
-                        {relatedCompany.name}
-                      </h4>
-                      {relatedCompany.type && (
-                        <span className={`badge ${relatedCompany.type === 'company' ? 'bg-primary' : 'bg-secondary'} px-3 py-2`} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {relatedCompany.type === 'company' ? 'Company' : 'Individual'}
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* Basic Information */}
-                    <div className="mb-3">
-                      <h6 style={{ color: '#667eea', fontWeight: '600', marginBottom: '1rem' }}>Basic Information</h6>
-                      <div className="row g-3">
-                        {relatedCompany.address && (
-                          <div className="col-md-12">
-                            <div className="p-3" style={{ backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                              <strong style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>
-                                Address
-                              </strong>
-                              <p style={{ margin: 0, color: '#333', fontSize: '0.9rem' }}>{relatedCompany.address}</p>
-                            </div>
-                          </div>
-                        )}
-                        {relatedCompany.phone && (
-                          <div className="col-md-6">
-                            <div className="p-3" style={{ backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                              <strong style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>
-                                Phone
-                              </strong>
-                              <p style={{ margin: 0, color: '#333', fontSize: '0.9rem' }}>{relatedCompany.phone}</p>
-                            </div>
-                          </div>
-                        )}
-                        {relatedCompany.fax && (
-                          <div className="col-md-6">
-                            <div className="p-3" style={{ backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                              <strong style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>
-                                Fax
-                              </strong>
-                              <p style={{ margin: 0, color: '#333', fontSize: '0.9rem' }}>{relatedCompany.fax}</p>
-                            </div>
-                          </div>
-                        )}
-                        {relatedCompany.taxId && (
-                          <div className="col-md-6">
-                            <div className="p-3" style={{ backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                              <strong style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>
-                                Tax ID
-                              </strong>
-                              <p style={{ margin: 0, color: '#333', fontSize: '0.9rem' }}>{relatedCompany.taxId}</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                <span className="text-2xl">&times;</span>
+              </button>
+            </div>
 
-                    {/* Branch Information (for Company type only) */}
-                    {relatedCompany.type === 'company' && (relatedCompany.branchName || relatedCompany.branchNumber) && (
-                      <div className="mb-3">
-                        <h6 style={{ color: '#667eea', fontWeight: '600', marginBottom: '1rem' }}>Branch Information</h6>
-                        <div className="row g-3">
-                          {relatedCompany.branchName && (
-                            <div className="col-md-6">
-                              <div className="p-3" style={{ backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                                <strong style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>
-                                  Branch Name
-                                </strong>
-                                <p style={{ margin: 0, color: '#333', fontSize: '0.9rem' }}>{relatedCompany.branchName}</p>
-                              </div>
-                            </div>
-                          )}
-                          {relatedCompany.branchNumber && (
-                            <div className="col-md-6">
-                              <div className="p-3" style={{ backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                                <strong style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>
-                                  Branch Number
-                                </strong>
-                                <p style={{ margin: 0, color: '#333', fontSize: '0.9rem' }}>{relatedCompany.branchNumber}</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+            {/* Body */}
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              {relatedContact ? (
+                <>
+                  <div className="mb-6">
+                    <h4 className="text-2xl font-bold text-gray-800 mb-2">
+                      {relatedContact.firstName} {relatedContact.lastName}
+                    </h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {relatedContact.email && (
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <strong className="text-gray-500 text-sm block mb-1">Email</strong>
+                        <p className="text-gray-800 font-medium m-0 break-all">{relatedContact.email}</p>
                       </div>
                     )}
-
-                    {/* Billing Information */}
-                    {(relatedCompany.billingCycle || relatedCompany.billingDate || relatedCompany.notificationDate) && (
-                      <div className="mb-3">
-                        <h6 style={{ color: '#667eea', fontWeight: '600', marginBottom: '1rem' }}>Billing Information</h6>
-                        <div className="row g-3">
-                          {relatedCompany.billingCycle && (
-                            <div className="col-md-4">
-                              <div className="p-3" style={{ backgroundColor: '#fff3cd', borderRadius: '8px', border: '1px solid #ffc107' }}>
-                                <strong style={{ color: '#856404', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>
-                                  Billing Cycle
-                                </strong>
-                                <p style={{ margin: 0, color: '#856404', fontSize: '0.9rem', fontWeight: '500', textTransform: 'capitalize' }}>
-                                  {relatedCompany.billingCycle}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                          {relatedCompany.billingDate && (
-                            <div className="col-md-4">
-                              <div className="p-3" style={{ backgroundColor: '#fff3cd', borderRadius: '8px', border: '1px solid #ffc107' }}>
-                                <strong style={{ color: '#856404', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>
-                                  Billing Date
-                                </strong>
-                                <p style={{ margin: 0, color: '#856404', fontSize: '0.9rem', fontWeight: '500' }}>
-                                  Day {relatedCompany.billingDate} of month
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                          {relatedCompany.notificationDate && (
-                            <div className="col-md-4">
-                              <div className="p-3" style={{ backgroundColor: '#fff3cd', borderRadius: '8px', border: '1px solid #ffc107' }}>
-                                <strong style={{ color: '#856404', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>
-                                  Notification Date
-                                </strong>
-                                <p style={{ margin: 0, color: '#856404', fontSize: '0.9rem', fontWeight: '500' }}>
-                                  Day {relatedCompany.notificationDate} of month
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                    {relatedContact.phone && (
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <strong className="text-gray-500 text-sm block mb-1">Phone</strong>
+                        <p className="text-gray-800 font-medium m-0">{relatedContact.phone}</p>
                       </div>
                     )}
-                  </>
-                ) : null}
-              </div>
-              <div 
-                className="modal-footer"
-                style={{
-                  padding: '1.5rem',
-                  borderTop: '1px solid #e9ecef',
-                  borderRadius: '0 0 16px 16px'
-                }}
+                    {relatedContact.address && (
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <strong className="text-gray-500 text-sm block mb-1">Address</strong>
+                        <p className="text-gray-800 font-medium m-0">{relatedContact.address}</p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : relatedCompany ? (
+                <>
+                  <div className="mb-6">
+                    <h4 className="text-2xl font-bold text-gray-800 mb-2">
+                      {relatedCompany.name}
+                    </h4>
+                    {relatedCompany.type && (
+                      <span className={`px-3 py-1.5 rounded-full text-sm font-medium text-white shadow-sm inline-flex ${relatedCompany.type === 'company' ? 'bg-blue-600' : 'bg-gray-600'}`}>
+                        {relatedCompany.type === 'company' ? 'Company' : 'Individual'}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Basic Information */}
+                  <div className="mb-6">
+                    <h6 className="text-blue-600 font-semibold mb-3">Basic Information</h6>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {relatedCompany.address && (
+                        <div className="col-span-1 md:col-span-2 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          <strong className="text-gray-500 text-sm block mb-1">Address</strong>
+                          <p className="text-gray-800 font-medium m-0">{relatedCompany.address}</p>
+                        </div>
+                      )}
+                      {relatedCompany.phone && (
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          <strong className="text-gray-500 text-sm block mb-1">Phone</strong>
+                          <p className="text-gray-800 font-medium m-0">{relatedCompany.phone}</p>
+                        </div>
+                      )}
+                      {relatedCompany.fax && (
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          <strong className="text-gray-500 text-sm block mb-1">Fax</strong>
+                          <p className="text-gray-800 font-medium m-0">{relatedCompany.fax}</p>
+                        </div>
+                      )}
+                      {relatedCompany.taxId && (
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          <strong className="text-gray-500 text-sm block mb-1">Tax ID</strong>
+                          <p className="text-gray-800 font-medium m-0">{relatedCompany.taxId}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Branch Information */}
+                  {relatedCompany.type === 'company' && (relatedCompany.branchName || relatedCompany.branchNumber) && (
+                    <div className="mb-6">
+                      <h6 className="text-blue-600 font-semibold mb-3">Branch Information</h6>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {relatedCompany.branchName && (
+                          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                            <strong className="text-gray-500 text-sm block mb-1">Branch Name</strong>
+                            <p className="text-gray-800 font-medium m-0">{relatedCompany.branchName}</p>
+                          </div>
+                        )}
+                        {relatedCompany.branchNumber && (
+                          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                            <strong className="text-gray-500 text-sm block mb-1">Branch Number</strong>
+                            <p className="text-gray-800 font-medium m-0">{relatedCompany.branchNumber}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Billing Information */}
+                  {(relatedCompany.billingCycle || relatedCompany.billingDate || relatedCompany.notificationDate) && (
+                    <div className="mb-6">
+                      <h6 className="text-blue-600 font-semibold mb-3">Billing Information</h6>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {relatedCompany.billingCycle && (
+                          <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-100">
+                            <strong className="text-yellow-800 text-sm block mb-1">Billing Cycle</strong>
+                            <p className="text-yellow-900 font-medium m-0 capitalize">{relatedCompany.billingCycle}</p>
+                          </div>
+                        )}
+                        {relatedCompany.billingDate && (
+                          <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-100">
+                            <strong className="text-yellow-800 text-sm block mb-1">Billing Date</strong>
+                            <p className="text-yellow-900 font-medium m-0">Day {relatedCompany.billingDate} of month</p>
+                          </div>
+                        )}
+                        {relatedCompany.notificationDate && (
+                          <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-100">
+                            <strong className="text-yellow-800 text-sm block mb-1">Notification Date</strong>
+                            <p className="text-yellow-900 font-medium m-0">Day {relatedCompany.notificationDate} of month</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : null}
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 flex justify-end border-t border-gray-100">
+              <button
+                className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm"
+                onClick={() => setShowContactModal(false)}
               >
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowContactModal(false)}
-                  style={{
-                    borderRadius: '8px',
-                    padding: '0.5rem 1.5rem',
-                    fontWeight: '500',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  Close
-                </button>
-              </div>
+                Close
+              </button>
             </div>
           </div>
         </div>

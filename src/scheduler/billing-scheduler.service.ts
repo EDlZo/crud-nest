@@ -21,12 +21,15 @@ export class BillingSchedulerService {
     async checkScheduledTime() {
         const settings = await this.settingsService.getSettings();
         if (!settings || !settings.notificationTime) {
+            this.logger.debug('No notification settings or notificationTime not set');
             return;
         }
 
         const now = new Date();
         const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         const todayDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+
+        this.logger.debug(`Scheduler check: currentTime=${currentTime}, settingsTime=${settings.notificationTime}, lastRunDate=${this.lastRunDate}, todayDate=${todayDate}`);
 
         // เช็คว่าถึงเวลาที่ตั้งไว้หรือยัง และยังไม่เคยรันในวันนี้
         if (currentTime === settings.notificationTime && this.lastRunDate !== todayDate) {
@@ -37,7 +40,7 @@ export class BillingSchedulerService {
     }
 
     async handleBillingNotifications() {
-        this.logger.log('Running billing notification check...');
+        this.logger.log('Running billing notification check (per-company notificationDate)...');
 
         const settings = await this.settingsService.getSettings();
         if (!settings) {
@@ -45,55 +48,44 @@ export class BillingSchedulerService {
             return;
         }
 
-        // ใช้ getAllRecipients เพื่อรวมทั้ง manual recipients และ admin emails (ถ้าเปิด sendToAdmins)
-        const recipients = await this.settingsService.getAllRecipients();
-        if (recipients.length === 0) {
-            this.logger.warn('No active recipients for notifications');
-            return;
-        }
-
-        this.logger.log(`Sending notifications to ${recipients.length} recipients: ${recipients.join(', ')}`);
-
         const today = new Date();
         const currentDay = today.getDate();
 
         try {
             const companiesSnapshot = await this.db.collection('companies').get();
 
+            // Get all recipients (manual list + admin emails if enabled)
+            const allRecipients = await this.settingsService.getAllRecipients();
+            if (allRecipients.length === 0) {
+                this.logger.warn('No recipients found (check notification settings)');
+                return;
+            }
+
+            this.logger.log(`Sending to ${allRecipients.length} recipients: ${allRecipients.join(', ')}`);
+
             for (const doc of companiesSnapshot.docs) {
                 const company = doc.data();
                 const billingDay = parseInt(company.billingDate, 10);
                 const notificationDay = parseInt(company.notificationDate, 10);
 
-                if (isNaN(billingDay)) continue;
-
-                // Check for advance notification
-                if (settings.advanceNotification && notificationDay && currentDay === notificationDay) {
-                    const daysUntilBilling = this.calculateDaysUntilBilling(currentDay, billingDay);
+                // Only send if notificationDate is set and today matches
+                if (!isNaN(notificationDay) && currentDay === notificationDay) {
+                    this.logger.log(`Company "${company.name}" has notificationDate=${notificationDay}, today=${currentDay}. Sending...`);
+                    const daysUntilBilling = !isNaN(billingDay) ? this.calculateDaysUntilBilling(currentDay, billingDay) : 0;
                     await this.sendNotification(
-                        recipients,
+                        allRecipients,
                         company.name,
-                        `Day ${billingDay} of each month`,
+                        doc.id,
+                        billingDay ? `Day ${billingDay} of each month` : '-',
                         company.billingCycle || 'monthly',
                         daysUntilBilling,
-                        settings.emailTemplate,
-                    );
-                }
-
-                // Check for billing date notification
-                if (settings.onBillingDate && currentDay === billingDay) {
-                    await this.sendNotification(
-                        recipients,
-                        company.name,
-                        `Day ${billingDay} of each month`,
-                        company.billingCycle || 'monthly',
-                        0,
+                        company.amountDue || 0,
                         settings.emailTemplate,
                     );
                 }
             }
 
-            this.logger.log('Billing notification check completed');
+            this.logger.log('Per-company notificationDate check completed');
         } catch (error) {
             this.logger.error('Error during billing notification check', error);
         }
@@ -111,18 +103,22 @@ export class BillingSchedulerService {
     private async sendNotification(
         recipients: string[],
         companyName: string,
+        companyId: string,
         billingDate: string,
         billingCycle: string,
         daysUntilBilling: number,
+        amountDue?: number,
         customTemplate?: string,
     ) {
         try {
             await this.emailService.sendBillingReminder(
                 recipients,
                 companyName,
+                companyId,
                 billingDate,
                 billingCycle,
                 daysUntilBilling,
+                amountDue,
                 customTemplate,
             );
             this.logger.log(`Sent billing reminder for ${companyName}`);

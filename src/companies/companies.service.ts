@@ -39,7 +39,7 @@ export class CompaniesService {
   async findAll(user?: AuthUser): Promise<Company[]> {
     try {
       console.log('CompaniesService.findAll - user:', { userId: user?.userId, email: user?.email, role: user?.role });
-      
+
       // For listing, return all companies to any authenticated user so lists look the same across roles.
       // Admin/superadmin still see all (same behavior).
       if (!user) {
@@ -77,12 +77,16 @@ export class CompaniesService {
       throw new ForbiddenException('คุณไม่มีสิทธิ์แก้ไขข้อมูลนี้');
     }
     const timestamp = new Date().toISOString();
-    const merged = { 
-      ...data, 
-      ...dto, 
+    const merged = {
+      ...data,
+      ...dto,
       updatedAt: timestamp,
       updatedByEmail: user.email ?? undefined,
     };
+    // แปลง services ให้เป็น plain object array (Firestore ไม่รับ instance)
+    if (merged.services && Array.isArray(merged.services)) {
+      merged.services = merged.services.map((s: any) => ({ name: s.name, amount: s.amount }));
+    }
     // Remove undefined fields
     Object.keys(merged).forEach(key => merged[key] === undefined && delete merged[key]);
     await docRef.set(merged, { merge: true });
