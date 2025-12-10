@@ -25,9 +25,12 @@ export class BillingSchedulerService {
             return;
         }
 
+
+        // ใช้เวลา Asia/Bangkok (UTC+7) เพื่อให้ scheduler ตรงกับเวลาประเทศไทย
         const now = new Date();
-        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        const todayDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+        const bangkokTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+        const currentTime = `${bangkokTime.getHours().toString().padStart(2, '0')}:${bangkokTime.getMinutes().toString().padStart(2, '0')}`;
+        const todayDate = bangkokTime.toISOString().split('T')[0]; // YYYY-MM-DD
 
         this.logger.debug(`Scheduler check: currentTime=${currentTime}, settingsTime=${settings.notificationTime}, lastRunDate=${this.lastRunDate}, todayDate=${todayDate}`);
 
