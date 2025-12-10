@@ -60,9 +60,11 @@ export class EmailController {
             const success = await this.emailService.sendBillingReminder(
                 recipients,
                 companyName,
-                'Day 15 of each month',
+                'test-company-id', // mock companyId for test
+                '15', // billingDate (day of month)
                 'monthly',
-                3, // 3 days until billing
+                3, // daysUntilBilling
+                10000 // amountDue (mock)
             );
             this.logger.log(`sendBillingReminder result: ${success}`);
 

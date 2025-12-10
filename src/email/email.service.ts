@@ -70,7 +70,7 @@ export class EmailService {
     const isDueToday = daysUntilBilling === 0;
     const subject = isDueToday
       ? `🔔 Billing Due Today: ${companyName}`
-      : `📅 Billing Reminder: ${companyName} - Due in ${daysUntilBilling} days`;
+      : `📅 แจ้งเตือนการเรียกเก็บเงินของบริษัท : ${companyName} - ในอีก ${daysUntilBilling} วัน`;
 
     const primaryColor = isDueToday ? '#dc3545' : '#4e73df'; // Red for due today, Blue for upcoming
     const headerText = isDueToday ? 'Billing Due Today' : 'Upcoming Billing';
