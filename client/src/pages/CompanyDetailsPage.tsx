@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaEnvelope, FaPhone, FaPen, FaCheck } from 'react-icons/fa';
+import { FaArrowLeft, FaEnvelope, FaPhone, FaPen, FaCheck, FaTrash } from 'react-icons/fa';
 import { FiEye } from 'react-icons/fi';
 import { FiEyeOff } from 'react-icons/fi';
 import '../App.css';
@@ -113,7 +113,7 @@ export const CompanyDetailsPage = () => {
     const [showPopup, setShowPopup] = useState(false);
     const [popupContent, setPopupContent] = useState({ title: '', message: '' });
 
-    // Payment History State
+    // (payments UI removed) 
 
 
 
@@ -526,6 +526,7 @@ export const CompanyDetailsPage = () => {
                                 >
                                     Add / Edit
                                 </button>
+                                
 
                             </div>
                         </div>
@@ -666,7 +667,14 @@ export const CompanyDetailsPage = () => {
                                         {services.map((s, idx) => (
                                             <li className="list-group-item d-flex justify-content-between align-items-center" key={idx}>
                                                 <span>{s.name} <span className="text-muted">(฿{s.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })})</span></span>
-                                                <button className="btn btn-sm btn-danger" onClick={() => setServices(services.filter((_, i) => i !== idx))}>Remove</button>
+                                                <button
+                                                    className="btn btn-sm btn-danger"
+                                                    onClick={() => setServices(services.filter((_, i) => i !== idx))}
+                                                    title="Remove service"
+                                                    aria-label={`Remove ${s.name}`}
+                                                >
+                                                    <FaTrash />
+                                                </button>
                                             </li>
                                         ))}
                                     </ul>

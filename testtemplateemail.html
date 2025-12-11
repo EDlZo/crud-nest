@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        /* สไตล์หลัก */
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        
+        /* สไตล์ส่วนหัว */
+        .header { background-color: #007bff; color: #ffffff; padding: 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 24px; }
+        
+        /* สไตล์เนื้อหา */
+        .content { padding: 30px; color: #333333; line-height: 1.6; }
+        
+        /* สไตล์กล่องข้อมูลบิล */
+        .billing-info { background-color: #f9f9f9; border: 1px solid #eeeeee; padding: 20px; margin: 25px 0; border-radius: 6px; text-align: center; }
+        .amount { font-size: 36px; font-weight: bold; color: #dc3545; } /* **สีแดง** สำหรับจำนวนเงิน */
+        .due-date { font-size: 18px; font-weight: bold; color: #007bff; } /* **สีน้ำเงิน** สำหรับวันกำหนดชำระ */
+        .days-left { font-size: 16px; color: #6c757d; margin-top: 15px; } 
+        
+        /* สไตล์ปุ่ม */
+        .button { 
+            display: inline-block; 
+            background-color: #28a745; /* **สีเขียว** */
+            color: #ffffff !important; 
+            padding: 12px 25px; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            font-weight: bold;
+        }
+        
+        /* สไตล์ส่วนท้าย */
+        .footer { background-color: #eeeeee; color: #6c757d; padding: 15px; text-align: center; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>แจ้งเตือนการเรียกเก็บเงิน</h1>
+        </div>
+
+        <div class="content">
+            <p>เรียน ลูกค้าผู้มีอุปการคุณ,</p>
+
+            <p>อีเมลนี้เพื่อแจ้งว่าการเรียกเก็บเงินจาก **Company A จำกัด** ใกล้ถึงกำหนดชำระแล้ว โปรดดำเนินการตรวจสอบและชำระเงินตามรายละเอียดด้านล่าง:</p>
+
+            <div class="billing-info">
+                <p><strong>วันครบกำหนดชำระ:</strong></p>
+                <p class="due-date">20 ธันวาคม 2568</p>
+                
+                <p><strong>จำนวนเงินที่ต้องชำระ:</strong></p>
+                <p class="amount">1,590.00 บาท</p>
+                
+                <p class="days-left">
+                    (เหลือเวลาอีก <strong>9 วัน</strong> ก่อนถึงกำหนดชำระ)
+                </p>
+            </div>
+
+            <p>เพื่อความต่อเนื่องในการใช้งานบริการ กรุณาชำระเงินภายในกำหนด</p>
+
+            <div class="call-to-action">
+                <a href="https://payment.companya.com/invoice12345" class="button">
+                    คลิกที่นี่เพื่อชำระเงิน
+                </a>
+            </div>
+            
+            <p style="margin-top: 30px;">ขอบคุณที่ใช้บริการของเรา</p>
+
+            <p>ขอแสดงความนับถือ,<br>
+            ทีมงานบัญชี Company A จำกัด</p>
+        </div>
+
+        <div class="footer">
+            <p>อีเมลนี้ถูกสร้างขึ้นโดยอัตโนมัติ | Company A จำกัด</p>
+        </div>
+    </div>
+</body>
+</html>

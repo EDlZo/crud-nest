@@ -75,6 +75,10 @@ export class EmailService {
     const primaryColor = isDueToday ? '#dc3545' : '#4e73df'; // Red for due today, Blue for upcoming
     const headerText = isDueToday ? 'Billing Due Today' : 'Upcoming Billing';
 
+    const amountStr = amountDue && typeof amountDue === 'number'
+      ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(amountDue)
+      : new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(0);
+
     const defaultHtml = `
       <!DOCTYPE html>
       <html lang="en">
@@ -138,6 +142,10 @@ export class EmailService {
                 <span class="label">Status</span>
                 <span class="value" style="color: ${primaryColor}">${isDueToday ? 'Due Today' : 'Upcoming'}</span>
               </div>
+              <div class="info-row">
+                <span class="label">Amount Due</span>
+                <span class="value">${amountStr}</span>
+              </div>
             </div>
 
             <div class="btn-container">
@@ -160,6 +168,7 @@ export class EmailService {
         .replace(/\{\{billingDate\}\}/g, billingDate)
         .replace(/\{\{billingCycle\}\}/g, billingCycle)
         .replace(/\{\{daysUntilBilling\}\}/g, String(daysUntilBilling))
+        .replace(/\{\{amountDue\}\}/g, amountStr)
       : defaultHtml;
 
     return this.sendEmail(to, subject, html);

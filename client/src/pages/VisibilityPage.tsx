@@ -40,17 +40,58 @@ export const VisibilityPage = () => {
     }
   };
 
-  const pageKeys: { key: string; label: string }[] = [
-    { key: 'dashboard', label: 'Manage Data' },
-    { key: 'companies', label: 'Companies' },
-    { key: 'activities', label: 'Activities & Tasks' },
-    // { key: 'deals', label: 'Deals Pipeline' }, // Hidden temporarily
-    { key: 'admin_users', label: 'Manage Users' },
-    { key: 'visibility', label: 'Visibility Settings' },
-  ];
+  const [pageKeys, setPageKeys] = useState<{ key: string; label: string }[]>([]);
 
   const roles = ['superadmin', 'admin', 'guest'];
 
+  
+  // Discover known frontend pages so Visibility can manage every page.
+  // This list is derived from client/src/pages/*.tsx and backend PageVisibility usage.
+  const discoveredKeys = [
+    'dashboard',
+    'contacts',
+    'companies',
+    'activities',
+    'admin_users',
+    'visibility',
+    'notification_settings',
+  ];
+  // Preferred ordering for display
+  const preferred = ['dashboard', 'contacts', 'companies', 'activities', 'admin_users', 'visibility', 'notification_settings'];
+
+  const humanLabel = (key: string) => {
+    if (key === 'activities') return 'Activities & Tasks';
+    if (key === 'admin_users') return 'User';
+    if (key === 'contacts') return 'Contacts';
+    if (key === 'notification' || key === 'notification_settings' || key === 'notification-settings') return 'Notification';
+    return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
+  // Build pageKeys state after visibility is fetched
+  useEffect(() => {
+    if (!visibility) return;
+    const keys = new Set<string>();
+    Object.keys(visibility).forEach((r) => {
+      const map = visibility[r] || {};
+      Object.keys(map).forEach((k) => keys.add(k));
+    });
+    discoveredKeys.forEach((k) => keys.add(k));
+    // Ensure 'deals' is not shown in the Visibility UI (remove it if present)
+    if (keys.has('deals')) keys.delete('deals');
+
+    const ordered: { key: string; label: string }[] = [];
+    preferred.forEach((k) => {
+      if (keys.has(k)) {
+        ordered.push({ key: k, label: humanLabel(k) });
+        keys.delete(k);
+      }
+    });
+    Array.from(keys)
+      .sort()
+      .forEach((k) => ordered.push({ key: k, label: humanLabel(k) }));
+
+    setPageKeys(ordered);
+  }, [visibility]);
   const toggle = (role: string, pageKey: string) => {
     setVisibility((v) => {
       const copy: VisibilityMap = JSON.parse(JSON.stringify(v || {}));
@@ -101,34 +142,48 @@ export const VisibilityPage = () => {
           )}
 
           {!forbidden && (
-            <div className="row">
-            {roles.map((role) => (
-              <div key={role} className="col-md-4 mb-4">
-                <div className="card border-left-primary shadow h-100 py-2">
-                  <div className="card-body">
-                    <div className="row no-gutters align-items-center">
-                      <div className="col mr-2">
-                        <div className="text-xs font-weight-bold text-primary text-uppercase mb-1">{role}</div>
-                        <div className="h5 mb-0 font-weight-bold text-gray-800">
-                          {pageKeys.map((p) => (
-                            <div key={p.key} className="form-check">
-                              <input
-                                className="form-check-input"
-                                type="checkbox"
-                                checked={Boolean(visibility?.[role]?.[p.key])}
-                                onChange={() => toggle(role, p.key)}
-                                disabled={!canManageVisibility}
-                              />
-                              <label className="form-check-label">{p.label}</label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <div>
+              
+              <div className="table-responsive">
+                <table className="table table-sm" style={{ tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: '50%' }} />
+                    {roles.map((r) => (
+                      <col key={r} style={{ width: `${50 / roles.length}%` }} />
+                    ))}
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Page</th>
+                      {roles.map((r, i) => (
+                        <th
+                          key={r}
+                          className="text-center text-uppercase"
+                          style={r === 'admin' ? { borderRight: 'none' } : undefined}
+                        >
+                          {r}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageKeys.map(p => (
+                      <tr key={p.key}>
+                        <td>{p.label}</td>
+                        {roles.map((r) => (
+                          <td
+                            key={r}
+                            className="text-center"
+                            style={r === 'admin' ? { borderRight: 'none' } : undefined}
+                          >
+                            <input type="checkbox" checked={Boolean(visibility?.[r]?.[p.key])} onChange={() => toggle(r, p.key)} disabled={!canManageVisibility} />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ))}
             </div>
           )}
 

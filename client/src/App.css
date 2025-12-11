@@ -39,6 +39,26 @@ body {
   box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
 }
 
+/* Dashboard specific small tweaks to align with the app look */
+.dashboard-stat-title {
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.dashboard-stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.list-group-item.d-flex.justify-content-between.align-items-center {
+  padding: 0.75rem 1rem;
+}
+
+.fw-semibold { font-weight: 600; }
+
 .form .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -398,6 +418,101 @@ table th:last-child .btn {
     transform: scale(1.05);
     box-shadow: 0 12px 32px rgba(54, 99, 160, 0.4);
   }
+}
+
+/* Responsive improvements for mobile / narrow screens */
+@media (max-width: 992px) {
+  :root {
+    --card-padding: 1rem;
+  }
+
+  .container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .card {
+    padding: var(--card-padding);
+    border-radius: 12px;
+  }
+
+  .app__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .list-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  /* Reduce table padding for small screens */
+  th, td {
+    padding: 0.5rem 0.4rem;
+  }
+
+  /* Make action buttons slightly smaller */
+  .btn-group .btn, .icon-btn {
+    width: 28px !important;
+    height: 28px !important;
+  }
+}
+
+/* Stack tables into card-like rows on very small screens */
+@media (max-width: 576px) {
+  table.table-sm {
+    border: none;
+  }
+
+  table.table-sm thead {
+    display: none; /* hide header on tiny screens */
+  }
+
+  table.table-sm, table.table-sm tbody, table.table-sm tr, table.table-sm td {
+    display: block;
+    width: 100%;
+  }
+
+  table.table-sm tr {
+    margin-bottom: 0.75rem;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(15,23,42,0.04);
+    padding: 0.5rem;
+    border: 1px solid #eef2f6;
+  }
+
+  table.table-sm td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.6rem;
+    border-bottom: none;
+  }
+
+  /* For rows that are essentially a label + checkbox group, make checkboxes right-aligned */
+  table.table-sm td .form-check {
+    margin: 0;
+  }
+
+  /* Ensure the page label stands out and wraps when needed */
+  table.table-sm td:first-child {
+    font-weight: 600;
+    color: #0f172a;
+    flex: 1 1 60%;
+    padding-right: 1rem;
+  }
+
+  /* make checkboxes larger and easier to tap */
+  table.table-sm input[type="checkbox"] {
+    transform: scale(1.25);
+    padding: 6px;
+  }
+
+  /* Make cards occupy less vertical space on tiny screens */
+  .card { margin-bottom: 0.75rem; }
 }
 
 .auth-icon {

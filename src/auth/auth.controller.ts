@@ -63,10 +63,9 @@ export class AuthController {
   async getVisibility(@Req() req: any) {
     const visibility = await this.authService.getVisibility();
     const role = (req.user?.role || 'guest').toLowerCase();
-    // If this role is not allowed to see the visibility page, forbid
-    if (!visibility?.[role]?.visibility) {
-      throw new ForbiddenException('ไม่อนุญาตให้เข้าถึงหน้า Visibility');
-    }
+    // Return the visibility document to authenticated users so the client
+    // can determine which pages should be shown for the current role.
+    // Saving/updating visibility remains restricted to superadmin.
     return visibility;
   }
 

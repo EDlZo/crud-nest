@@ -247,24 +247,18 @@ export const DashboardPage = () => {
               ) : (
                 <div className="list-group">
                   {stats.billingDueToday.map((company: any) => (
-                    <div key={company.id} className="list-group-item">
-                      <div className="d-flex justify-content-between align-items-center">
-                        <div>
-                          <h6 className="mb-1">
-                            <Link to={`/companies/${company.id}`} className="text-decoration-none text-dark">
-                              {company.name}
-                            </Link>
-                          </h6>
-                          <small className="text-muted">
-                            Amount Due: ฿{typeof company.amountDue === 'number'
-                              ? company.amountDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                              : '0.00'}
-                          </small>
-                        </div>
-                        <span className="badge bg-warning text-dark">
-                          Due Today
-                        </span>
+                    <div key={company.id} className="list-group-item d-flex justify-content-between align-items-center">
+                      <div>
+                        <h6 className="mb-1">
+                          <Link to={`/companies/${company.id}`} className="text-decoration-none text-dark fw-semibold">
+                            {company.name}
+                          </Link>
+                        </h6>
+                        <div className="text-muted small">Amount Due: <span className="fw-bold">฿{typeof company.amountDue === 'number'
+                          ? company.amountDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          : '0.00'}</span></div>
                       </div>
+                      <span className="badge rounded-pill bg-warning text-dark small">Due Today</span>
                     </div>
                   ))}
                 </div>
@@ -288,21 +282,15 @@ export const DashboardPage = () => {
               ) : (
                 <div className="list-group">
                   {stats.recentActivities.map((activity: any) => (
-                    <div key={activity.id} className="list-group-item">
-                      <div className="d-flex justify-content-between align-items-center">
-                        <div>
-                          <h6 className="mb-1">{activity.title}</h6>
-                          <small className="text-muted">
-                            {activity.type} • {new Date(activity.createdAt).toLocaleDateString()}
-                          </small>
-                        </div>
-                        <span className={`badge ${activity.status === 'completed' ? 'bg-success' :
-                          activity.status === 'in_progress' ? 'bg-info' :
-                            activity.status === 'cancelled' ? 'bg-secondary' : 'bg-warning'
-                          }`}>
-                          {activity.status}
-                        </span>
+                    <div key={activity.id} className="list-group-item d-flex justify-content-between align-items-center">
+                      <div>
+                        <h6 className="mb-1">{activity.title}</h6>
+                        <small className="text-muted">{activity.type} • {new Date(activity.createdAt).toLocaleDateString()}</small>
                       </div>
+                      <span className={`badge rounded-pill ${activity.status === 'completed' ? 'bg-success' :
+                        activity.status === 'in_progress' ? 'bg-info text-white' :
+                          activity.status === 'cancelled' ? 'bg-secondary' : 'bg-warning text-dark'
+                        } small`}>{activity.status}</span>
                     </div>
                   ))}
                 </div>
