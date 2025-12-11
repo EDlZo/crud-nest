@@ -19,6 +19,8 @@ const Sidebar = () => {
     const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
         manage: false,
     });
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const [isMini, setIsMini] = useState(false);
 
     useEffect(() => {
         if (token && user) {
@@ -74,9 +76,19 @@ const Sidebar = () => {
 
         window.addEventListener('profileUpdated', handleProfileUpdate as EventListener);
         window.addEventListener('visibilityUpdated', handleVisibilityUpdate as EventListener);
+        // close sidebar on navigation for small screens
+        const handleRouteChange = () => setMobileOpen(false);
+        window.addEventListener('hashchange', handleRouteChange);
+
+        // set mini mode based on window width (medium screens)
+        const checkMini = () => setIsMini(window.innerWidth <= 1200 && window.innerWidth > 992);
+        checkMini();
+        window.addEventListener('resize', checkMini);
         return () => {
             window.removeEventListener('profileUpdated', handleProfileUpdate as EventListener);
             window.removeEventListener('visibilityUpdated', handleVisibilityUpdate as EventListener);
+            window.removeEventListener('hashchange', handleRouteChange);
+            window.removeEventListener('resize', checkMini);
         };
     }, [token]);
 
@@ -137,13 +149,22 @@ const Sidebar = () => {
     };
 
     return (
-        <ul className="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion d-flex flex-column" id="accordionSidebar" style={{ minHeight: '100vh' }}>
+        <>
+        {/* Mobile hamburger - only visible on small screens via CSS */}
+        <button className="mobile-sidebar-toggle" aria-label="Toggle sidebar" onClick={() => setMobileOpen(v => !v)}>
+            <span className="hamburger" />
+        </button>
+
+        <div className={`sidebar-backdrop ${mobileOpen ? 'show' : ''}`} onClick={() => setMobileOpen(false)} />
+
+                <ul className={`navbar-nav bg-gradient-primary sidebar sidebar-dark accordion d-flex flex-column ${mobileOpen ? 'open-mobile' : ''} ${isMini ? 'mini' : ''}`} id="accordionSidebar" style={{ minHeight: '100vh' }}>
             {/* Sidebar - Brand */}
-            <Link className="sidebar-brand d-flex align-items-center justify-content-center" to="/">
+            <Link className="sidebar-brand d-flex align-items-center justify-content-center" to="/" onClick={() => setMobileOpen(false)}>
                 <div className="sidebar-brand-icon rotate-n-15">
                     <PiAddressBookFill size={50} />
                 </div>
             </Link>
+                        {/* mini toggle removed per request */}
 
             {/* Divider */}
             <hr className="sidebar-divider my-0" />
@@ -165,6 +186,7 @@ const Sidebar = () => {
                         <Link
                             className={`nav-link accordion-header ${isActive('/dashboard') ? 'active' : ''}`}
                             to="/dashboard"
+                            onClick={() => setMobileOpen(false)}
                         >
                             <FaTachometerAlt className="me-2" />
                             <span>Dashboard</span>
@@ -182,12 +204,13 @@ const Sidebar = () => {
             </div>
 
             {/* Contacts */}
-            {isPageVisible('dashboard') && (
+            {isPageVisible('contacts') && (
                 <li className="nav-item accordion-section">
                     <div className="accordion-card">
                         <Link
                             className={`nav-link accordion-header ${isActive('/contacts') ? 'active' : ''}`}
                             to="/contacts"
+                            onClick={() => setMobileOpen(false)}
                         >
                             <FaTable className="me-2" />
                             <span>Contacts</span>
@@ -203,6 +226,7 @@ const Sidebar = () => {
                         <Link
                             className={`nav-link accordion-header ${isActive('/companies') ? 'active' : ''}`}
                             to="/companies"
+                            onClick={() => setMobileOpen(false)}
                         >
                             <FaBuilding className="me-2" />
                             <span>Companies</span>
@@ -218,6 +242,7 @@ const Sidebar = () => {
                         <Link
                             className={`nav-link accordion-header ${isActive('/activities') ? 'active' : ''}`}
                             to="/activities"
+                            onClick={() => setMobileOpen(false)}
                         >
                             <FaTasks className="me-2" />
                             <span>Activities & Tasks</span>
@@ -268,19 +293,19 @@ const Sidebar = () => {
                             }}
                         >
                             {isPageVisible('admin_users') && (
-                                <Link className={`accordion-item ${isActive('/admin/users') ? 'active' : ''}`} to="/admin/users">
+                                <Link className={`accordion-item ${isActive('/admin/users') ? 'active' : ''}`} to="/admin/users" onClick={() => setMobileOpen(false)}>
                                     <FaUsers className="me-2" />
                                     <span>User</span>
                                 </Link>
                             )}
                             {isPageVisible('visibility') && (
-                                <Link className={`accordion-item ${isActive('/admin/visibility') ? 'active' : ''}`} to="/admin/visibility">
+                                <Link className={`accordion-item ${isActive('/admin/visibility') ? 'active' : ''}`} to="/admin/visibility" onClick={() => setMobileOpen(false)}>
                                     <FaCog className="me-2" />
                                     <span>Visibility</span>
                                 </Link>
                             )}
                             {(isPageVisible('admin_users') || isPageVisible('visibility')) && (
-                                <Link className={`accordion-item ${isActive('/admin/notifications') ? 'active' : ''}`} to="/admin/notifications">
+                                <Link className={`accordion-item ${isActive('/admin/notifications') ? 'active' : ''}`} to="/admin/notifications" onClick={() => setMobileOpen(false)}>
                                     <FaBell className="me-2" />
                                     <span>Notifications</span>
                                 </Link>
@@ -299,6 +324,7 @@ const Sidebar = () => {
 
 
         </ul>
+        </>
     );
 };
 

@@ -19,7 +19,7 @@
   background: linear-gradient(180deg, #3763a0, #1d4b8b);
   padding-top: 1rem;
   position: fixed;
-  left: 0;
+  /* desktop: keep sidebar visible by default; mobile will be handled in a media query below */
   top: 0;
   overflow: hidden;
   overflow-y: auto;
@@ -30,6 +30,31 @@
   margin-left: 250px;
   min-height:100vh;
   background: var(--bg);
+}
+
+/* Behavior when window is narrow: treat like mobile - sidebar is off-canvas and content occupies full width */
+@media (max-width: 1200px) {
+  /* make sidebar off-canvas by default on <=1200px */
+  .sidebar {
+    position: fixed;
+    left: -260px;
+    top: 0;
+    bottom: 0;
+    width: 260px;
+    z-index: 1201;
+    transition: left 0.25s ease;
+    overflow-y: auto;
+  }
+  .sidebar.open-mobile {
+    left: 0;
+  }
+  /* content should not keep left margin on narrower screens */
+  #content-wrapper { margin-left: 0; transition: margin-left 0.2s ease; }
+}
+
+/* For larger screens keep the normal margin */
+@media (min-width: 1201px) {
+  #wrapper .sidebar + #content-wrapper { margin-left: 250px; }
 }
 
 /* Container inside content */
@@ -367,4 +392,23 @@ button.btn-add:active{
   .sidebar{ position: relative; width: 100%; min-height: auto }
   #content-wrapper{ margin-left: 0 }
   .app-container{ margin: 1rem; }
+}
+
+/* Make sidebar off-canvas on narrow/medium screens and controllable via .open-mobile */
+@media (max-width: 992px) {
+  .sidebar {
+    position: fixed;
+    left: -260px;
+    top: 0;
+    bottom: 0;
+    width: 260px;
+    z-index: 1201;
+    transition: left 0.25s ease;
+    overflow-y: auto;
+  }
+  .sidebar.open-mobile {
+    left: 0;
+  }
+  /* Ensure content wrapper isn't shifted by sidebar on small screens */
+  #content-wrapper { margin-left: 0; }
 }

@@ -515,6 +515,89 @@ table th:last-child .btn {
   .card { margin-bottom: 0.75rem; }
 }
 
+/* Mobile sidebar styles */
+.mobile-sidebar-toggle {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1302;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 6px 16px rgba(2,6,23,0.08);
+  align-items: center;
+  justify-content: center;
+  border: none;
+}
+.mobile-sidebar-toggle .hamburger {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: #374151;
+  position: relative;
+}
+.mobile-sidebar-toggle .hamburger::before,
+.mobile-sidebar-toggle .hamburger::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 20px;
+  height: 2px;
+  background: #374151;
+}
+.mobile-sidebar-toggle .hamburger::before { top: -6px; }
+.mobile-sidebar-toggle .hamburger::after { top: 6px; }
+
+/* show toggle only on small screens */
+@media (max-width: 1200px) {
+  .mobile-sidebar-toggle { display: flex; }
+}
+
+/* backdrop when sidebar open on mobile */
+.sidebar-backdrop {
+  display: none;
+}
+.sidebar-backdrop.show {
+  display: block;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 1100;
+}
+
+/* Sidebar hidden by default on small screens, slide in when open */
+@media (max-width: 992px) {
+  .sidebar {
+    position: fixed;
+    left: -260px;
+    top: 0;
+    bottom: 0;
+    width: 260px;
+    z-index: 1201;
+    transition: left 0.25s ease;
+  }
+  .sidebar.open-mobile {
+    left: 0;
+  }
+  /* ensure content area has margin when sidebar open - this app's layout likely handles it, but ensure overlay covers */
+}
+
+/* Mini (icons-only) sidebar for medium screens */
+/* Disable mini-icons layout — prefer off-canvas behavior when squeezed */
+@media (min-width: 768px) {
+  /* Neutralize any .mini class so it doesn't change width or hide labels */
+  .sidebar.mini {
+    width: 250px !important;
+  }
+  .sidebar.mini .nav-link span {
+    display: inline !important;
+  }
+  .sidebar.mini .sidebar-brand { padding-left: 1rem; padding-right: 1rem; }
+  .sidebar .sidebar-mini-toggle-wrapper { display: none !important; }
+}
+
 .auth-icon {
   color: white;
   font-size: 2.5rem;
