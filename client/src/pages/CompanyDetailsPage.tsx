@@ -103,6 +103,36 @@ export const CompanyDetailsPage = () => {
     const [editingField, setEditingField] = useState<string | null>(null);
     const [editValue, setEditValue] = useState<string>('');
     const [saving, setSaving] = useState(false);
+    // Avatar upload state
+    const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [avatarHover, setAvatarHover] = useState(false);
+
+    const uploadAvatarDataUrl = async (dataUrl: string) => {
+        if (!company?.id || !token) return;
+        setSaving(true);
+        try {
+            const res = await fetch(withBase(`/companies/${company.id}`), {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ avatarUrl: dataUrl }),
+            });
+            if (!res.ok) throw new Error('Failed to upload avatar');
+            const updated = await res.json();
+            setCompany(updated);
+        } catch (err) {
+            setError((err as Error).message);
+        } finally {
+            setSaving(false);
+            setSelectedAvatar(null);
+            setAvatarPreview(null);
+            const el = document.getElementById('company-avatar-input') as HTMLInputElement | null;
+            if (el) el.value = '';
+        }
+    };
 
     // Contacts Modal State
     const [allContacts, setAllContacts] = useState<Contact[]>([]);
@@ -265,21 +295,81 @@ export const CompanyDetailsPage = () => {
                         <FaArrowLeft size={20} />
                     </button>
                     <div className="d-flex align-items-center">
-                        {company.avatarUrl ? (
-                            <img
-                                src={company.avatarUrl}
-                                alt={company.name}
-                                className="rounded me-3"
-                                style={{ width: 64, height: 64, objectFit: 'cover' }}
+                        <div
+                            style={{ display: 'inline-block', marginRight: 12, position: 'relative' }}
+                            onMouseEnter={() => setAvatarHover(true)}
+                            onMouseLeave={() => setAvatarHover(false)}
+                        >
+                            <input
+                                id="company-avatar-input"
+                                type="file"
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                disabled={saving}
+                                onChange={async (e) => {
+                                    const f = e.target.files?.[0] || null;
+                                    setSelectedAvatar(f);
+                                    if (f) {
+                                        const reader = new FileReader();
+                                        reader.onload = async () => {
+                                            const dataUrl = reader.result as string;
+                                            setAvatarPreview(dataUrl);
+                                            // Immediately upload the selected image (no extra Save step)
+                                            await uploadAvatarDataUrl(dataUrl);
+                                        };
+                                        reader.readAsDataURL(f);
+                                    } else {
+                                        setAvatarPreview(null);
+                                    }
+                                }}
                             />
-                        ) : (
-                            <div
-                                className="d-flex align-items-center justify-content-center bg-danger text-white rounded me-3"
-                                style={{ width: 64, height: 64, fontSize: 32, fontWeight: 'bold' }}
+
+                            {company.avatarUrl ? (
+                                <img
+                                    src={company.avatarUrl}
+                                    alt={company.name}
+                                    className="rounded"
+                                    style={{ width: 64, height: 64, objectFit: 'cover', display: 'block' }}
+                                />
+                            ) : (
+                                <div
+                                    className="d-flex align-items-center justify-content-center bg-danger text-white rounded"
+                                    style={{ width: 64, height: 64, fontSize: 32, fontWeight: 'bold' }}
+                                >
+                                    {company.name.charAt(0).toUpperCase()}
+                                </div>
+                            )}
+
+                            {/* Pencil overlay - appears on hover or when a new file is selected */}
+                            <label
+                                htmlFor="company-avatar-input"
+                                aria-label="Change company image"
+                                style={{
+                                    position: 'absolute',
+                                    right: -6,
+                                    top: -6,
+                                    width: 34,
+                                    height: 34,
+                                    borderRadius: 8,
+                                    background: '#ffffff',
+                                    display: (avatarHover || !!selectedAvatar || saving) ? 'inline-flex' : 'none',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    boxShadow: '0 4px 12px rgba(2,6,23,0.12)',
+                                    cursor: saving ? 'not-allowed' : 'pointer',
+                                }}
                             >
-                                {company.name.charAt(0).toUpperCase()}
-                            </div>
-                        )}
+                                {saving ? (
+                                    <svg width="14" height="14" viewBox="0 0 50 50">
+                                        <circle cx="25" cy="25" r="20" stroke="#666" strokeWidth="4" fill="none" strokeDasharray="31.4 31.4">
+                                        </circle>
+                                    </svg>
+                                ) : (
+                                    <FaPen size={14} />
+                                )}
+                            </label>
+                        </div>
+                        {/* Immediate upload: no Save/Cancel UI shown when an image is selected. Preview shows only briefly via avatarPreview when available. */}
                         <div>
                             {editingField === 'name' ? (
                                 <div className="d-flex align-items-center gap-2">

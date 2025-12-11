@@ -360,14 +360,6 @@ export const CompaniesPage = () => {
     <>
       <div className="flex flex-col gap-6 px-8 py-6 bg-gray-50 min-h-screen">
         <div className="flex items-center justify-between mb-6">
-          <button
-            className="px-4 py-2 rounded-lg bg-[#3869a9] text-white font-medium shadow"
-            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 17 }}
-            onClick={openAddModal}
-          >
-
-            + Add New Company
-          </button>
           <div className="flex items-center gap-2">
             <select
               className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring focus:border-blue-400 bg-white"
@@ -387,6 +379,15 @@ export const CompaniesPage = () => {
               onChange={e => setSearchTerm(e.target.value)}
               style={{ minWidth: 220 }}
             />
+          </div>
+          <div>
+            <button
+              className="px-4 py-2 rounded-lg bg-[#3869a9] text-white font-medium shadow"
+              style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 17 }}
+              onClick={openAddModal}
+            >
+              + Add New Company
+            </button>
           </div>
         </div>
         {error && <div className="bg-red-100 text-red-700 px-4 py-2 rounded mb-4">{error}</div>}

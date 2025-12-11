@@ -16,7 +16,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div id="content-wrapper" className="d-flex flex-column w-100">
                 <Topbar />
                 <div id="content" style={{ flex: 1 }}>
-                    <div className="container-fluid app-container">
+                    <div style={{background: '#f9fafb'}} className="container-fluid app-container" > 
                         {children}
                     </div>
                 </div>

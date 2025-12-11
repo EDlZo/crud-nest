@@ -310,20 +310,20 @@ export const DashboardPage = () => {
             <div className="card-body">
               <div className="row">
                 <div className="col-md-4 mb-3">
-                  <Link to="/companies" className="btn btn-primary w-100">
-                    <FaBuilding className="me-2" />
+                  <Link to="/companies" className="btn btn-primary w-100 quick-action-btn">
+                    <FaBuilding className="btn-icon" />
                     Manage Companies
                   </Link>
                 </div>
                 <div className="col-md-4 mb-3">
-                  <Link to="/contacts" className="btn btn-success w-100">
-                    <FaUsers className="me-2" />
+                  <Link to="/contacts" className="btn btn-success w-100 quick-action-btn">
+                    <FaUsers className="btn-icon" />
                     Manage Contacts
                   </Link>
                 </div>
                 <div className="col-md-4 mb-3">
-                  <Link to="/activities" className="btn btn-info w-100">
-                    <FaTasks className="me-2" />
+                  <Link to="/activities" className="btn btn-info w-100 quick-action-btn">
+                    <FaTasks className="btn-icon" />
                     View Activities
                   </Link>
                 </div>
