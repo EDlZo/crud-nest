@@ -5,6 +5,7 @@ import { SiLine } from 'react-icons/si';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
+import { getAvatarColor } from '../utils/avatarColor';
 
 type ProfileData = {
   email: string;
@@ -186,11 +187,13 @@ export const ProfilePage = () => {
     };
 
     // Build payload - use type assertion to allow conditional socials
+    // If the user removed the avatar, send an explicit empty string so backend deletes the field.
+    const avatarTrimmed = (formData.avatarUrl || '').trim();
     const payload: {
-      avatarUrl?: string;
-      socials?: { line?: string; facebook?: string; instagram?: string };
+      avatarUrl?: string | null;
+      socials?: { line?: string; facebook?: string; instagram?: string } | {};
     } = {
-      avatarUrl: formData.avatarUrl.trim() || undefined,
+      avatarUrl: avatarTrimmed === '' ? '' : avatarTrimmed,
       // Send empty object if no socials - backend will delete the field
       socials: Object.keys(socials).length > 0 ? socials : {},
     };
@@ -219,8 +222,10 @@ export const ProfilePage = () => {
 
       const updated = await response.json();
       setProfile(updated);
-      if (updated.avatarUrl) {
-        setAvatarPreview(updated.avatarUrl);
+      // Update preview and context even when avatarUrl was removed
+      setAvatarPreview(updated.avatarUrl || null);
+      if (user) {
+        setUser({ ...user, avatarUrl: updated.avatarUrl });
       }
       // Trigger custom event to refresh sidebar avatar
       window.dispatchEvent(new CustomEvent('profileUpdated', { detail: updated }));
@@ -366,7 +371,7 @@ export const ProfilePage = () => {
 
                 <div className="d-flex gap-2">
                   <button type="submit" className="btn btn-primary" disabled={submitting}>
-                    {submitting ? 'กำลังบันทึก...' : 'บันทึกการเปลี่ยนแปลง'}
+                    {submitting ? 'Save...' : 'Save Changes'}
                   </button>
                   <button
                     type="button"
@@ -374,7 +379,7 @@ export const ProfilePage = () => {
                     onClick={fetchProfile}
                     disabled={submitting}
                   >
-                    ยกเลิก
+                    Cancel
                   </button>
                 </div>
               </form>
@@ -401,10 +406,10 @@ export const ProfilePage = () => {
                 />
               ) : (
                 <div
-                  className="rounded-circle bg-primary d-flex align-items-center justify-content-center mx-auto mb-3"
-                  style={{ width: '150px', height: '150px', margin: '0 auto' }}
+                  className="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3 text-white fw-bold"
+                  style={{ width: '150px', height: '150px', margin: '0 auto', fontSize: 48, backgroundColor: getAvatarColor((profile as any)?.firstName || (user as any)?.firstName || user?.email || '') }}
                 >
-                  <FaUser size={60} className="text-white" />
+                  {(((profile as any)?.firstName || (user as any)?.firstName) ? ((profile as any)?.firstName || (user as any)?.firstName).charAt(0) : (user?.email ? user.email.charAt(0) : 'U')).toUpperCase()}
                 </div>
               )}
               <h5 className="mb-1">{profile?.email || user?.email}</h5>

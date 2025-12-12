@@ -6,6 +6,7 @@ import { FiEyeOff } from 'react-icons/fi';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
+import { getAvatarColor } from '../utils/avatarColor';
 
 type Company = {
     services?: { name: string; amount: number }[];
@@ -333,8 +334,8 @@ export const CompanyDetailsPage = () => {
                                 />
                             ) : (
                                 <div
-                                    className="d-flex align-items-center justify-content-center bg-danger text-white rounded"
-                                    style={{ width: 64, height: 64, fontSize: 32, fontWeight: 'bold' }}
+                                    className="d-flex align-items-center justify-content-center text-white rounded"
+                                    style={{ width: 64, height: 64, fontSize: 32, fontWeight: 'bold', backgroundColor: getAvatarColor(company.name) }}
                                 >
                                     {company.name.charAt(0).toUpperCase()}
                                 </div>
@@ -454,7 +455,7 @@ export const CompanyDetailsPage = () => {
                                                                 ) : (
                                                                     <div
                                                                         className="rounded-circle d-flex align-items-center justify-content-center me-3 text-white fw-bold"
-                                                                        style={{ width: 32, height: 32, backgroundColor: '#dc3545', fontSize: 14 }}
+                                                                        style={{ width: 32, height: 32, backgroundColor: getAvatarColor(contact.firstName || contact.email || ''), fontSize: 14 }}
                                                                     >
                                                                         {contact.firstName?.charAt(0).toUpperCase() || 'C'}
                                                                     </div>
@@ -849,7 +850,7 @@ export const CompanyDetailsPage = () => {
                                                         ) : (
                                                             <div
                                                                 className="d-flex align-items-center justify-content-center text-white fw-bold"
-                                                                style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#dc3545', marginRight: 8, fontSize: 12 }}
+                                                                style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: getAvatarColor(c.firstName || c.email || ''), marginRight: 8, fontSize: 12 }}
                                                             >
                                                                 {c.firstName?.charAt(0).toUpperCase() || 'C'}
                                                             </div>

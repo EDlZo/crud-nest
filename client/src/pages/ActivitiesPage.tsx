@@ -6,6 +6,7 @@ import { Dropdown } from 'react-bootstrap';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
+import { formatDateTime } from '../utils/formatDate';
 
 type Activity = {
   id?: string;
@@ -582,11 +583,13 @@ export const ActivitiesPage = () => {
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-500">Due Date</span>
-                      <span className="font-medium text-gray-700">
-                        {activity.dueDate
-                          ? new Date(activity.dueDate).toLocaleDateString('th-TH', { day: '2-digit', month: 'short' })
-                          : '-'}
-                      </span>
+                        <span className="font-medium text-gray-700">
+                          {activity.dueDate ? (
+                            <span title={activity.dueDate}>{formatDateTime(activity.dueDate)}</span>
+                          ) : (
+                            '-'
+                          )}
+                        </span>
                     </div>
                     <div className="pt-3 mt-1 border-t border-gray-100 flex justify-between items-center">
                       <div className="flex items-center gap-2">

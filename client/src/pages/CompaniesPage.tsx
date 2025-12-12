@@ -6,6 +6,7 @@ import { Dropdown } from 'react-bootstrap';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
+import { getAvatarColor } from '../utils/avatarColor';
 
 type Company = {
   id?: string;
@@ -165,6 +166,15 @@ export const CompaniesPage = () => {
 
   useEffect(() => {
     fetchContacts();
+  }, [fetchContacts]);
+
+  // Listen for contact changes from other pages (e.g., after deleting a contact)
+  useEffect(() => {
+    const handler = () => {
+      fetchContacts();
+    };
+    window.addEventListener('contacts:changed', handler as EventListener);
+    return () => window.removeEventListener('contacts:changed', handler as EventListener);
   }, [fetchContacts]);
 
   const handleChange = (key: keyof Company, value: string) => {
@@ -434,11 +444,15 @@ export const CompaniesPage = () => {
               })
               .map((company) => {
                 const canModify = user?.role === 'admin' || user?.role === 'superadmin' || company.ownerUserId === user?.userId;
-                const relatedContacts = Array.isArray(company.contacts) ? company.contacts : [];
-                // กำหนดสี pastel สำหรับ avatar เหมือนหน้า ContactsPage/Topbar
-                const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#22d3d8', '#60a5fa', '#a78bfa', '#f472b6'];
-                const colorIndex = (company.name?.charCodeAt(0) || 0) % colors.length;
-                const avatarColor = colors[colorIndex];
+                // Normalize company.contacts to an array of ids, handle case where contacts may be stored as objects
+                const rawRelated = Array.isArray(company.contacts) ? company.contacts : [];
+                const relatedContactIds = rawRelated
+                  .map((item: any) => (typeof item === 'string' ? item : item?.id))
+                  .filter((id: any) => !!id) as string[];
+                // Only show contacts that actually exist in the fetched `contacts` list (hide deleted references)
+                const relatedContacts = relatedContactIds.filter((id) => contacts.some((c) => c.id === id));
+                // กำหนดสี pastel สำหรับ avatar (ใช้ util เดียวกับหน้า Contacts)
+                const avatarColor = getAvatarColor(company.name);
                 return (
                   <div key={company.id} className="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
                     <div className="flex items-center gap-4">
@@ -483,9 +497,7 @@ export const CompaniesPage = () => {
                           const hasPhoto = c?.avatarUrl || c?.photo;
                           const firstLetter = c?.firstName?.charAt(0).toUpperCase() || 'C';
                           // ใช้ชุดสี pastel และ logic เดียวกับ ContactsPage
-                          const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#22d3d8', '#60a5fa', '#a78bfa', '#f472b6'];
-                          const colorIndex = (c?.firstName?.charCodeAt(0) || 0) % colors.length;
-                          const avatarColor = colors[colorIndex];
+                          const avatarColor = getAvatarColor(c?.firstName || c?.email || '');
                           return hasPhoto ? (
                             <img
                               key={cid}
@@ -569,7 +581,7 @@ export const CompaniesPage = () => {
                         ) : (
                           <div
                             className="d-flex align-items-center justify-content-center mx-auto text-white fw-bold"
-                            style={{ width: 80, height: 80, borderRadius: 8, backgroundColor: '#dc3545', fontSize: 32 }}
+                            style={{ width: 80, height: 80, borderRadius: 8, backgroundColor: getAvatarColor(formData.name || ''), fontSize: 32 }}
                           >
                             {formData.name?.charAt(0).toUpperCase() || 'C'}
                           </div>
@@ -784,13 +796,13 @@ export const CompaniesPage = () => {
                       />
                       <label className="form-check-label ms-2 d-flex align-items-center" htmlFor={`contact_${c.id}`}>
                         {(c.avatarUrl || c.photo) ? (
-                          <img src={c.avatarUrl || c.photo} alt={c.firstName || c.email} style={{ width: 28, height: 28, borderRadius: '50%', marginRight: 8 }} />
+                          <img src={c.avatarUrl || c.photo} alt={c.firstName || c.email} style={{ width: 28, height: 28, borderRadius: '50%', marginRight: 8, objectFit: 'cover' }} />
                         ) : (
                           <div
                             className="d-flex align-items-center justify-content-center text-white fw-bold"
-                            style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#dc3545', marginRight: 8, fontSize: 12 }}
+                            style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: getAvatarColor(c.firstName || c.email || ''), marginRight: 8, fontSize: 12 }}
                           >
-                            {c.firstName?.charAt(0).toUpperCase() || 'C'}
+                            {c.firstName?.charAt(0).toUpperCase() || (c.email ? c.email.charAt(0).toUpperCase() : 'C')}
                           </div>
                         )}
                         {c.firstName ? `${c.firstName} ${c.lastName || ''}` : c.email}
