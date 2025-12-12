@@ -3,6 +3,8 @@ import { FiEdit2, FiTrash2, FiFilter } from 'react-icons/fi';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
+import { formatDateTime } from '../utils/formatDate';
+import { getAvatarColor } from '../utils/avatarColor';
 
 type Contact = {
   id?: string;
@@ -251,6 +253,12 @@ export const ContactsPage = () => {
       setContacts((prev) => prev.filter((item) => item.id !== id));
       if (editingId === id) {
         resetForm();
+      }
+      // Notify other pages that contacts have changed so they can refresh related lists
+      try {
+        window.dispatchEvent(new CustomEvent('contacts:changed'));
+      } catch (e) {
+        // ignore in non-browser environments
       }
     } catch (err) {
       setError((err as Error).message);
@@ -510,10 +518,8 @@ export const ContactsPage = () => {
                         const canModify =
                           user?.role === 'admin' || user?.role === 'superadmin' || contact.userId === user?.userId;
 
-                        // Generate random pastel color based on name
-                        const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#22d3d8', '#60a5fa', '#a78bfa', '#f472b6'];
-                        const colorIndex = (contact.firstName?.charCodeAt(0) || 0) % colors.length;
-                        const avatarColor = colors[colorIndex];
+                        // Generate pastel avatar color using shared util
+                        const avatarColor = getAvatarColor(contact.firstName || contact.email || '');
 
                         return (
                           <tr key={contact.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
@@ -554,7 +560,9 @@ export const ContactsPage = () => {
                               {contact.address ?? '-'}
                             </td>
                             <td className="py-3 px-4 border-0" style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                              {contact.updatedAt ? new Date(contact.updatedAt).toLocaleDateString() : '-'}
+                                  <span title={typeof contact.updatedAt === 'string' ? contact.updatedAt : JSON.stringify(contact.updatedAt)}>
+                                    {formatDateTime(contact.updatedAt)}
+                                  </span>
                             </td>
                             <td className="py-3 px-4 border-0 text-center">
                               {canModify ? (
@@ -598,12 +606,21 @@ export const ContactsPage = () => {
                     <div className="col-md-12 mb-4 text-center">
                       <label className="form-label d-block">Profile Photo</label>
                       <div className="mb-3">
-                        <img
-                          src={photoPreview || '/default-avatar.png'}
-                          alt="Preview"
-                          className="rounded-circle"
-                          style={{ width: 100, height: 100, objectFit: 'cover', border: '2px solid #ddd' }}
-                        />
+                        {photoPreview ? (
+                          <img
+                            src={photoPreview}
+                            alt="Preview"
+                            className="rounded-circle"
+                            style={{ width: 100, height: 100, objectFit: 'cover', border: '2px solid #ddd' }}
+                          />
+                        ) : (
+                          <div
+                            className="d-flex align-items-center justify-content-center rounded-circle text-white fw-semibold"
+                            style={{ width: 100, height: 100, backgroundColor: getAvatarColor(formData.firstName || formData.email || ''), fontSize: 36, border: '2px solid #ddd' }}
+                          >
+                            {formData.firstName?.charAt(0).toUpperCase() || (formData.email ? formData.email.charAt(0).toUpperCase() : 'C')}
+                          </div>
+                        )}
                       </div>
                       <input
                         type="file"
