@@ -57,7 +57,7 @@ const Topbar = () => {
                             )}
                             <div className="flex flex-col text-left">
                                 <span className="font-semibold text-sm text-gray-800">{firstNameToShow || 'User'}</span>
-                                <span className="text-xs text-gray-500">{user?.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : ''}</span>
+                                <span className="text-xs text-gray-500">{user?.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'Guest'}</span>
                             </div>
                     </Dropdown.Toggle>
                     <Dropdown.Menu className="shadow rounded-lg p-2" style={{ minWidth: 200 }}>
