@@ -34,7 +34,7 @@ const Topbar = () => {
                 const detail = (e as CustomEvent).detail;
                 console.debug('Topbar received profileUpdated event:', detail);
                 if (detail && setUser) {
-                    setUser((prev) => ({ ...(prev || {}), ...(detail || {}) } as any));
+                    setUser({ ...(user || {}), ...(detail || {}) });
                 }
             } catch (err) {
                 console.error('Error handling profileUpdated in Topbar:', err);
@@ -46,7 +46,7 @@ const Topbar = () => {
 
     return (
         <div className="w-full flex items-center justify-between px-8 py-4 bg-white shadow-sm"
-            style={{ minHeight: 64, position: 'sticky', top: 0, zIndex: 100 }}>
+            style={{ minHeight: 64, position: 'sticky', top: 0, zIndex: 100 ,height: '20px'}}>
             <div className="font-bold text-lg flex items-center gap-2">
 
             </div>
