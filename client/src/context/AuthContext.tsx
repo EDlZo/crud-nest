@@ -5,6 +5,8 @@ import {
   useState,
   ReactNode,
   useEffect,
+  Dispatch,
+  SetStateAction,
 } from 'react';
 import { fetchProfile } from '../utils/fetchProfile';
 
@@ -23,7 +25,8 @@ type AuthContextValue = {
   user: AuthUser | null;
   login: (token: string) => void;
   logout: () => void;
-  setUser: (user: AuthUser | null) => void;
+  // Allow both direct value and functional updater to match React's setState API
+  setUser: Dispatch<SetStateAction<AuthUser | null>>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
