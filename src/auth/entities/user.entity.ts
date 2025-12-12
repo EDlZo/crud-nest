@@ -5,5 +5,7 @@ export type UserDocument = {
   passwordHash: string;
   role?: 'admin' | 'superadmin';
   createdAt: string;
+  firstName?: string;
+  lastName?: string;
 };
 

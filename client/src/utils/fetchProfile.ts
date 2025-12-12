@@ -15,6 +15,9 @@ export async function fetchProfile(token: string): Promise<AuthUser | null> {
       email: data.email,
       role: data.role,
       avatarUrl: data.avatarUrl,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      displayName: data.firstName || data.lastName ? `${(data.firstName || '')} ${(data.lastName || '')}`.trim() : (data.email ? data.email.split('@')[0] : undefined),
     };
   } catch {
     return null;

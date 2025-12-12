@@ -175,9 +175,7 @@ const Sidebar = () => {
             <hr className="sidebar-divider" />
 
             {/* Heading */}
-            <div className="sidebar-heading">
-                Interface
-            </div>
+            
 
             {/* Dashboard */}
             {isPageVisible('dashboard') && (
@@ -200,7 +198,7 @@ const Sidebar = () => {
 
             {/* Heading */}
             <div className="sidebar-heading">
-                CRM
+                PAGE
             </div>
 
             {/* Contacts */}

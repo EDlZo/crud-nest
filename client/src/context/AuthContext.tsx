@@ -13,6 +13,9 @@ export type AuthUser = {
   email: string;
   role?: 'admin' | 'superadmin';
   avatarUrl?: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
 };
 
 type AuthContextValue = {

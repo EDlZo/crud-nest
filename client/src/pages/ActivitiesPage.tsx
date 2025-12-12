@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { FaCheck, FaClock, FaExclamationTriangle, FaPlus, FaEllipsisV } from 'react-icons/fa';
+import { FaCheck, FaClock, FaExclamationTriangle, FaPlus, FaEllipsisV, FaChevronDown } from 'react-icons/fa';
 import { FiEye } from 'react-icons/fi';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { Dropdown } from 'react-bootstrap';
@@ -546,21 +546,28 @@ export const ActivitiesPage = () => {
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-500">Status</span>
                       {canModify ? (
-                        <select
-                          className={`appearance-none border-0 rounded-full px-3 py-1 text-xs font-medium text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 text-center ${statusBadge.class}`}
-                          style={{
-                            backgroundImage: 'none',
-                            width: 'auto',
-                            minWidth: '80px'
-                          }}
-                          value={activity.status}
-                          onChange={(e) => handleStatusChange(activity.id!, e.target.value)}
-                        >
-                          <option value="pending" className="text-gray-800 bg-white">Pending</option>
-                          <option value="in_progress" className="text-gray-800 bg-white">In Progress</option>
-                          <option value="completed" className="text-gray-800 bg-white">Completed</option>
-                          <option value="cancelled" className="text-gray-800 bg-white">Cancelled</option>
-                        </select>
+                        <div className="relative inline-block">
+                          <select
+                            className={`appearance-none border-0 rounded-full px-3 py-1 pr-10 text-xs font-medium text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 text-left truncate ${statusBadge.class}`}
+                              style={{
+                                backgroundImage: 'none',
+                                width: 'auto',
+                                minWidth: '100px',
+                                maxWidth: '200px',
+                                overflow: 'hidden'
+                              }}
+                            value={activity.status}
+                            onChange={(e) => handleStatusChange(activity.id!, e.target.value)}
+                          >
+                            <option value="pending" className="text-gray-800 bg-white">Pending</option>
+                            <option value="in_progress" className="text-gray-800 bg-white">In Progress</option>
+                            <option value="completed" className="text-gray-800 bg-white">Completed</option>
+                            <option value="cancelled" className="text-gray-800 bg-white">Cancelled</option>
+                          </select>
+                          <span className="pointer-events-none absolute right-2 top-1/2 transform -translate-y-1/2 text-white text-xs">
+                            <FaChevronDown />
+                          </span>
+                        </div>
                       ) : (
                         <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${statusBadge.class}`}>
                           {statusBadge.label}

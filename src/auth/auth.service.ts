@@ -42,6 +42,9 @@ export class AuthService {
       createdAt: new Date().toISOString(),
       tokenVersion: 0,
     };
+    // include optional names if provided
+    if (dto.firstName) userPayload.firstName = dto.firstName.trim();
+    if (dto.lastName) userPayload.lastName = dto.lastName.trim();
     if (isFirstUser) userPayload.role = 'superadmin';
     await docRef.set(userPayload);
 
@@ -159,6 +162,8 @@ export class AuthService {
     return {
       email: data.email,
       role: data.role,
+      firstName: data.firstName,
+      lastName: data.lastName,
       avatarUrl: data.avatarUrl,
       socials: data.socials || {},
       createdAt: data.createdAt,

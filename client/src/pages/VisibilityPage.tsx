@@ -154,7 +154,7 @@ export const VisibilityPage = () => {
                   </colgroup>
                   <thead>
                     <tr>
-                      <th style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Page</th>
+                      <th style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>PAGE</th>
                       {roles.map((r, i) => (
                         <th
                           key={r}
