@@ -24,6 +24,16 @@ async function bootstrap() {
   // Log configured origins for debugging in hosted environments
   console.log('CORS allowed origins:', allowedOrigins);
 
+  // If running on Render, automatically include the service external URL in allowed origins
+  // Render provides RENDER_EXTERNAL_URL in the environment for the deployed service.
+  if (process.env.RENDER_EXTERNAL_URL) {
+    const renderUrl = process.env.RENDER_EXTERNAL_URL.trim();
+    if (renderUrl && !allowedOrigins.includes(renderUrl)) {
+      allowedOrigins.push(renderUrl);
+      console.log('Added Render external URL to CORS allowed origins:', renderUrl);
+    }
+  }
+
   app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like curl, server-to-server)
