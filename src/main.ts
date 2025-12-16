@@ -15,7 +15,25 @@ async function bootstrap() {
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
   
   // Enable CORS so frontend (e.g. Vite dev server or deployed client) can call the API
-  app.enableCors();
+  // When client uses `credentials: 'include'`, the server must not use a wildcard
+  // origin. Use CLIENT_ORIGIN env var (comma-separated) or default to Vite dev origin.
+  const clientOrigins = process.env.CLIENT_ORIGIN
+    ? process.env.CLIENT_ORIGIN.split(',').map(s => s.trim())
+    : ['http://localhost:5173'];
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like curl, server-to-server)
+      if (!origin) return callback(null, true);
+      if (clientOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('CORS policy: origin not allowed'), false);
+    },
+    credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type, Authorization, Accept, X-Requested-With',
+  });
 
   // Enable global validation pipe for DTO validation
   app.useGlobalPipes(

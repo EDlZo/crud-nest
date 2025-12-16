@@ -21,4 +21,14 @@ export class Company {
   updatedByEmail?: string;
   amountDue?: number;
   services?: { name: string; amount: number }[];
+  subscription?: {
+    planId?: string;
+    planName?: string;
+    status?: 'active' | 'trialing' | 'past_due' | 'canceled';
+    interval?: 'monthly' | 'yearly' | 'quarterly';
+    amount?: number;
+    startDate?: string;
+    nextBillingDate?: string;
+    autoRenew?: boolean;
+  };
 }

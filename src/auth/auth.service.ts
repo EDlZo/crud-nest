@@ -137,9 +137,9 @@ export class AuthService {
     if (!doc.exists) {
       // default visibility: superadmin sees everything, admin sees dashboard and users, guest sees dashboard
       const defaults = {
-        superadmin: { dashboard: true, companies: true, admin_users: true, visibility: true, activities: true, deals: true },
-        admin: { dashboard: true, companies: true, admin_users: false, visibility: false, activities: true, deals: true },
-        guest: { dashboard: true, companies: true, admin_users: false, visibility: false, activities: true, deals: true },
+        superadmin: { dashboard: true, companies: true, admin_users: true, visibility: true, activities: true, deals: true, billing: true },
+        admin: { dashboard: true, companies: true, admin_users: false, visibility: false, activities: true, deals: true, billing: true },
+        guest: { dashboard: true, companies: true, admin_users: false, visibility: false, activities: true, deals: true, billing: true },
       };
       await ref.set(defaults);
       return defaults;
@@ -152,6 +152,39 @@ export class AuthService {
     await ref.set(visibility, { merge: true });
     const doc = await ref.get();
     return doc.data();
+  }
+
+  // Ensure every role in the visibility doc has `billing: true`.
+  // Useful to run once to migrate existing visibility settings.
+  async ensureBillingInVisibility() {
+    const ref = this.settingsCollection.doc('visibility');
+    const doc = await ref.get();
+    if (!doc.exists) {
+      const defaults = {
+        superadmin: { dashboard: true, companies: true, admin_users: true, visibility: true, activities: true, deals: true, billing: true },
+        admin: { dashboard: true, companies: true, admin_users: false, visibility: false, activities: true, deals: true, billing: true },
+        guest: { dashboard: true, companies: true, admin_users: false, visibility: false, activities: true, deals: true, billing: true },
+      };
+      await ref.set(defaults);
+      return defaults;
+    }
+
+    const data = doc.data() as Record<string, Record<string, any>>;
+    const updated: Record<string, Record<string, any>> = {};
+    // For each role in the document, ensure billing key exists and is true
+    for (const [role, map] of Object.entries(data)) {
+      updated[role] = { ...(map as Record<string, any>), billing: true };
+    }
+    // Also ensure the common roles exist if doc had custom roles
+    ['superadmin', 'admin', 'guest'].forEach((r) => {
+      if (!updated[r]) {
+        updated[r] = { billing: true } as Record<string, any>;
+      }
+    });
+
+    await ref.set(updated, { merge: true });
+    const newDoc = await ref.get();
+    return newDoc.data();
   }
 
   // Profile management

@@ -6,127 +6,150 @@ import { NotificationSettingsService } from '../notification-settings/notificati
 
 @Injectable()
 export class BillingSchedulerService {
-    private readonly logger = new Logger(BillingSchedulerService.name);
-    private db = getFirestore();
-    private lastRunDate: string | null = null; // ป้องกันส่งซ้ำในวันเดียวกัน
+  private readonly logger = new Logger(BillingSchedulerService.name);
+  private readonly db = getFirestore();
+  private lastRunDate: string | null = null; // prevent duplicate runs on same day
 
-    constructor(
-        @Inject(forwardRef(() => EmailService))
-        private readonly emailService: EmailService,
-        private readonly settingsService: NotificationSettingsService,
-    ) { }
+  constructor(
+    @Inject(forwardRef(() => EmailService))
+    private readonly emailService: EmailService,
+    private readonly settingsService: NotificationSettingsService,
+  ) {}
 
-    // เช็คทุกนาทีว่าถึงเวลาที่ตั้งไว้หรือยัง
-    @Cron('0 * * * * *') // ทุกนาทีที่วินาทีที่ 0
-    async checkScheduledTime() {
-        const settings = await this.settingsService.getSettings();
-        if (!settings || !settings.notificationTime) {
-            this.logger.debug('No notification settings or notificationTime not set');
-            return;
-        }
+  // Run every minute and check if it's time to execute notification job
+  @Cron('* * * * *')
+  async handleCron() {
+    try {
+      const settings = await this.settingsService.getSettings();
+      if (!settings || !settings.notificationTime) {
+        this.logger.debug('No notification settings or notificationTime configured');
+        return;
+      }
 
+      const now = new Date();
+      const bangkokTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+      const currentTime = `${bangkokTime.getHours().toString().padStart(2, '0')}:${bangkokTime
+        .getMinutes()
+        .toString()
+        .padStart(2, '0')}`;
+      const todayDate = bangkokTime.toISOString().split('T')[0];
 
-        // ใช้เวลา Asia/Bangkok (UTC+7) เพื่อให้ scheduler ตรงกับเวลาประเทศไทย
-        const now = new Date();
-        const bangkokTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
-        const currentTime = `${bangkokTime.getHours().toString().padStart(2, '0')}:${bangkokTime.getMinutes().toString().padStart(2, '0')}`;
-        const todayDate = bangkokTime.toISOString().split('T')[0]; // YYYY-MM-DD
+      this.logger.debug(`Scheduler check: currentTime=${currentTime}, settingsTime=${settings.notificationTime}, lastRunDate=${this.lastRunDate}, todayDate=${todayDate}`);
 
-        this.logger.debug(`Scheduler check: currentTime=${currentTime}, settingsTime=${settings.notificationTime}, lastRunDate=${this.lastRunDate}, todayDate=${todayDate}`);
+      if (currentTime === settings.notificationTime && this.lastRunDate !== todayDate) {
+        this.logger.log(`Scheduled time ${settings.notificationTime} reached! Running billing notifications...`);
+        this.lastRunDate = todayDate;
+        await this.handleBillingNotifications();
+      }
+    } catch (err) {
+      this.logger.error('Error in scheduler tick', err);
+    }
+  }
 
-        // เช็คว่าถึงเวลาที่ตั้งไว้หรือยัง และยังไม่เคยรันในวันนี้
-        if (currentTime === settings.notificationTime && this.lastRunDate !== todayDate) {
-            this.logger.log(`Scheduled time ${settings.notificationTime} reached! Running billing notifications...`);
-            this.lastRunDate = todayDate;
-            await this.handleBillingNotifications();
-        }
+  // Iterate billing-records and notify based on each record's billingDate and billingIntervalMonths
+  async handleBillingNotifications(dryRun = false) {
+    this.logger.log('Running billing notification check (per-record billingDate + billingIntervalMonths)...');
+
+    const settings = await this.settingsService.getSettings();
+    if (!settings) {
+      this.logger.warn('No notification settings found');
+      return;
     }
 
-    async handleBillingNotifications() {
-        this.logger.log('Running billing notification check (per-company notificationDate)...');
+    // Use Asia/Bangkok timezone for consistency with scheduler checks
+    const now = new Date();
+    const bangkokTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+    const todayIso = bangkokTime.toISOString().split('T')[0]; // YYYY-MM-DD
 
-        const settings = await this.settingsService.getSettings();
-        if (!settings) {
-            this.logger.warn('No notification settings found');
-            return;
-        }
+    try {
+      const allRecipients = await this.settingsService.getAllRecipients();
+      if (allRecipients.length === 0) {
+        this.logger.warn('No recipients found (check notification settings)');
+        return;
+      }
 
-        const today = new Date();
-        const currentDay = today.getDate();
+      this.logger.log(`Sending to ${allRecipients.length} recipients: ${allRecipients.join(', ')}`);
 
+      const recordsSnapshot = await this.db.collection('billing-records').get();
+
+      for (const doc of recordsSnapshot.docs) {
+        const record = doc.data() as any;
+        if (!record || !record.billingDate) continue;
+
+        const billingDateIso = (record.billingDate || '').split('T')[0];
+        if (!billingDateIso) continue;
+
+        const daysUntil = this.daysBetweenDates(bangkokTime, new Date(billingDateIso + 'T00:00:00'));
+
+        // Check contract period: prefer record-level contractDates, otherwise consider record without contract
+        let inContract = true;
         try {
-            const companiesSnapshot = await this.db.collection('companies').get();
-
-            // Get all recipients (manual list + admin emails if enabled)
-            const allRecipients = await this.settingsService.getAllRecipients();
-            if (allRecipients.length === 0) {
-                this.logger.warn('No recipients found (check notification settings)');
-                return;
-            }
-
-            this.logger.log(`Sending to ${allRecipients.length} recipients: ${allRecipients.join(', ')}`);
-
-            for (const doc of companiesSnapshot.docs) {
-                const company = doc.data();
-                const billingDay = parseInt(company.billingDate, 10);
-                const notificationDay = parseInt(company.notificationDate, 10);
-
-                // Only send if notificationDate is set and today matches
-                if (!isNaN(notificationDay) && currentDay === notificationDay) {
-                    this.logger.log(`Company "${company.name}" has notificationDate=${notificationDay}, today=${currentDay}. Sending...`);
-                    const daysUntilBilling = !isNaN(billingDay) ? this.calculateDaysUntilBilling(currentDay, billingDay) : 0;
-                    await this.sendNotification(
-                        allRecipients,
-                        company.name,
-                        doc.id,
-                        billingDay ? `Day ${billingDay} of each month` : '-',
-                        company.billingCycle || 'monthly',
-                        daysUntilBilling,
-                        company.amountDue || 0,
-                        settings.emailTemplate,
-                    );
-                }
-            }
-
-            this.logger.log('Per-company notificationDate check completed');
-        } catch (error) {
-            this.logger.error('Error during billing notification check', error);
+          const start = record.contractStartDate;
+          const end = record.contractEndDate;
+          if (start && end) {
+            inContract = !(todayIso < start || todayIso > end);
+          } else if (start && !end) {
+            inContract = !(todayIso < start);
+          } else if (!start && end) {
+            inContract = !(todayIso > end);
+          }
+        } catch (err) {
+          this.logger.debug('Error checking contract dates for record', err);
+          inContract = true;
         }
-    }
 
-    private calculateDaysUntilBilling(currentDay: number, billingDay: number): number {
-        if (billingDay >= currentDay) {
-            return billingDay - currentDay;
-        }
-        // If billing day is in next month
-        const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-        return daysInMonth - currentDay + billingDay;
-    }
+        if (!inContract) continue;
 
-    private async sendNotification(
-        recipients: string[],
-        companyName: string,
-        companyId: string,
-        billingDate: string,
-        billingCycle: string,
-        daysUntilBilling: number,
-        amountDue?: number,
-        customTemplate?: string,
-    ) {
-        try {
-            await this.emailService.sendBillingReminder(
-                recipients,
+        const shouldAdvanceNotify = settings.advanceNotification && typeof settings.advanceDays === 'number' && daysUntil === settings.advanceDays;
+        const shouldOnBillingDate = settings.onBillingDate && daysUntil === 0;
+
+        if (shouldAdvanceNotify || shouldOnBillingDate) {
+          const companyName = record.companyName || '(Unknown)';
+          const companyId = record.companyId || '';
+          const amountDue = typeof record.amount === 'number' ? record.amount : record.amount ? Number(record.amount) : 0;
+          const billingIntervalMonths = record.billingIntervalMonths || record.billingInterval || null;
+          const billingCycleText = billingIntervalMonths ? `ทุกๆ ${billingIntervalMonths} เดือน` : record.billingCycle || '-';
+
+          this.logger.log(`Record ${doc.id} for company "${companyName}" matches notify condition (daysUntil=${daysUntil}).` + (dryRun ? ' (dry-run)' : ' Sending...'));
+
+          if (!dryRun) {
+            try {
+              await this.emailService.sendBillingReminder(
+                allRecipients,
                 companyName,
                 companyId,
-                billingDate,
-                billingCycle,
-                daysUntilBilling,
+                billingDateIso,
+                billingCycleText,
+                daysUntil,
                 amountDue,
-                customTemplate,
-            );
-            this.logger.log(`Sent billing reminder for ${companyName}`);
-        } catch (error) {
-            this.logger.error(`Failed to send notification for ${companyName}`, error);
+                settings.emailTemplate,
+                doc.id,
+              );
+
+              // Optionally mark that notification was sent for this record (not required but helpful)
+              try {
+                await this.db.collection('billing-records').doc(doc.id).update({ notificationsSent: true });
+              } catch (updErr) {
+                this.logger.debug(`Failed to update notificationsSent for record ${doc.id}`, updErr);
+              }
+            } catch (sendErr) {
+              this.logger.error(`Failed to send notification for record ${doc.id}`, sendErr);
+            }
+          }
         }
+      }
+
+      this.logger.log('Per-record billingDate check completed');
+    } catch (error) {
+      this.logger.error('Error during billing notification check', error);
     }
+  }
+
+  private daysBetweenDates(fromDate: Date, toDate: Date): number {
+    const utc1 = Date.UTC(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+    const utc2 = Date.UTC(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+    const diff = Math.floor((utc2 - utc1) / (1000 * 60 * 60 * 24));
+    return diff;
+  }
 }
+

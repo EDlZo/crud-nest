@@ -233,6 +233,20 @@ const Sidebar = () => {
                 </li>
             )}
 
+            {/* Billing (Bill) - always visible */}
+            <li className="nav-item accordion-section">
+                <div className="accordion-card">
+                    <Link
+                        className={`nav-link accordion-header ${isActive('/billing') ? 'active' : ''}`}
+                        to="/billing"
+                        onClick={() => setMobileOpen(false)}
+                    >
+                        <FaCubes className="me-2" />
+                        <span>Bill</span>
+                    </Link>
+                </div>
+            </li>
+
             {/* Activities */}
             {isPageVisible('activities') && (
                 <li className="nav-item accordion-section">

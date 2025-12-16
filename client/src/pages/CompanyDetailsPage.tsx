@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaEnvelope, FaPhone, FaPen, FaCheck, FaTrash } from 'react-icons/fa';
 import { FiEye } from 'react-icons/fi';
 import { FiEyeOff } from 'react-icons/fi';
+import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -82,6 +83,8 @@ export const CompanyDetailsPage = () => {
     const navigate = useNavigate();
     const { token } = useAuth();
     const [company, setCompany] = useState<Company | null>(null);
+    const [billingRecords, setBillingRecords] = useState<any[]>([]);
+    const [billingLoading, setBillingLoading] = useState(false);
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -165,6 +168,22 @@ export const CompanyDetailsPage = () => {
             const companyData = await companyRes.json();
             setCompany(companyData);
 
+                    // Fetch billing records for this company
+                    try {
+                        const billingRes = await fetch(withBase(`/billing-records/company/${id}`), {
+                            headers: { Authorization: `Bearer ${token}` },
+                        });
+                        if (billingRes.ok) {
+                            const billingData = await billingRes.json();
+                            setBillingRecords(Array.isArray(billingData) ? billingData : []);
+                            // keep for backwards compatibility with quick table
+                            (companyData as any).billingRecords = billingData;
+                            setCompany(companyData);
+                        }
+                    } catch (err) {
+                        // ignore billing fetch errors here
+                    }
+
             // Fetch All Contacts (to filter by company's contact IDs)
             // Note: In a real app with many contacts, we should have an endpoint to fetch contacts by company ID.
             // For now, we follow the pattern in CompaniesPage.
@@ -193,6 +212,47 @@ export const CompanyDetailsPage = () => {
     useEffect(() => {
         fetchCompanyAndContacts();
     }, [fetchCompanyAndContacts]);
+
+    const refreshBillingRecords = async () => {
+        if (!token || !id) return;
+        setBillingLoading(true);
+        try {
+            const res = await fetch(withBase(`/billing-records/company/${id}`), {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error('Failed to fetch billing records');
+            const data = await res.json();
+            setBillingRecords(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Error fetching billing records:', err);
+        } finally {
+            setBillingLoading(false);
+        }
+    };
+
+    const handleDeleteBilling = async (recId?: string) => {
+        if (!recId) return;
+        if (!token) { alert('Please login to perform this action'); return; }
+        const ok = window.confirm('Are you sure you want to delete this billing record?');
+        if (!ok) return;
+        try {
+            const res = await fetch(withBase(`/billing-records/${recId}`), {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error('Delete failed');
+            // refresh
+            await refreshBillingRecords();
+        } catch (err: any) {
+            alert(err.message || 'Failed to delete billing record');
+        }
+    };
+
+    const handleSendBillingNow = async (recId?: string) => {
+        if (!recId) return;
+        // Open preview page where user can inspect and send
+        navigate(`/billing/preview/${recId}`);
+    };
 
     // Inline editing handlers
     const startEditing = (field: string, currentValue: string) => {
@@ -289,6 +349,7 @@ export const CompanyDetailsPage = () => {
 
     return (
         <>
+            {/* Billing records are shown inside the Billing card below */}
             <div className="container-fluid">
                 {/* Header */}
                 <div className="d-flex align-items-center mb-4">
@@ -496,129 +557,61 @@ export const CompanyDetailsPage = () => {
                             </div>
                         </div>
 
-                        {/* Amount Due Card */}
+                        {/* Small Billing card — link to full Bills page for this company */}
                         <div className="card shadow mb-4">
                             <div className="card-header py-3 d-flex justify-content-between align-items-center bg-white">
-                                <h6 className="m-0 font-weight-bold text-dark">
-                                    <span className="me-2">Billing</span>
-                                </h6>
+                                <h6 className="m-0 font-weight-bold text-dark">Billing</h6>
                             </div>
                             <div className="card-body">
-                                <div className="row mb-3">
-                                    <div className="col-md-4">
-                                        <div className="text-muted small mb-1">Amount Due</div>
-                                        <div className="fw-bold text-xl d-flex align-items-center" style={{ fontSize: 24 }}>
-                                            <span>
-                                                ฿{(() => {
-                                                    if (typeof company.amountDue === 'number' && !isNaN(company.amountDue) && company.amountDue > 0) {
-                                                        return company.amountDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                                    }
-                                                    return '0.00';
-                                                })()}
-                                            </span>
-                                            {company.services && company.services.length > 0 && (
-                                                <button
-                                                    className="btn btn-link p-0 ms-2"
-                                                    style={{ fontSize: 22, lineHeight: 1, verticalAlign: 'middle' }}
-                                                    title={showServices ? 'ซ่อนบริการ' : 'แสดงบริการ'}
-                                                    onClick={() => setShowServices((v) => !v)}
-                                                >
-                                                    {showServices ? <FiEyeOff color="#6c757d" /> : <FiEye color="#6c757d" />}
-                                                </button>
+                                <p className="mb-2">Manage billing records for this company. Below are the company's bills with inline actions.</p>
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table className="table table-striped table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>วันที่แจ้ง</th>
+                                                <th>ยอดรวม</th>
+                                                <th>รอบ</th>
+                                                <th>แจ้งวันนี้</th>
+                                                <th>สถานะ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {billingLoading && (
+                                                <tr>
+                                                    <td colSpan={5} className="text-center">Loading...</td>
+                                                </tr>
                                             )}
-                                        </div>
-                                        {showServices && company.services && company.services.length > 0 && (
-                                            <ul className="mt-2 mb-0 ps-3" style={{ fontSize: 15 }}>
-                                                {company.services.map((s, idx) => (
-                                                    <li key={idx}>{s.name}: ฿{s.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</li>
-                                                ))}
-                                            </ul>
-                                        )}
-                                    </div>
-                                    <div className="col-md-4">
-                                        <div className="text-muted small mb-1">Billing Date</div>
-                                        <div className="fw-bold text-xl d-flex align-items-center" style={{ fontSize: 20 }}>
-                                            {editingField === 'billingDate' ? (
-                                                <>
-                                                    <select
-                                                        className="form-select form-select-sm me-2"
-                                                        value={editValue}
-                                                        onChange={e => setEditValue(e.target.value)}
-                                                        onBlur={() => saveField('billingDate')}
-                                                        autoFocus
-                                                        style={{ width: 80, display: 'inline-block' }}
-                                                    >
-                                                        <option value="">-</option>
-                                                        {Array.from({ length: 31 }, (_, i) => (
-                                                            <option key={i + 1} value={String(i + 1)}>{i + 1}</option>
-                                                        ))}
-                                                    </select>
-                                                    <button className="btn btn-sm btn-secondary" onClick={cancelEditing}>Cancel</button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    {company.billingDate ? `Day ${company.billingDate}` : '-'}
-                                                    <button
-                                                        className="btn btn-link p-0 ms-2"
-                                                        style={{ fontSize: 16, color: '#6c757d' }}
-                                                        title="Edit Billing Date"
-                                                        onClick={() => startEditing('billingDate', company.billingDate || '')}
-                                                    >
-                                                        <FaPen />
-                                                    </button>
-                                                </>
+                                            {!billingLoading && billingRecords.length === 0 && (
+                                                <tr>
+                                                    <td colSpan={5} className="text-center">No billing records found.</td>
+                                                </tr>
                                             )}
-                                        </div>
-                                    </div>
-                                    <div className="col-md-4">
-                                        <div className="text-muted small mb-1">Notification Date</div>
-                                        <div className="fw-bold text-xl d-flex align-items-center" style={{ fontSize: 20 }}>
-                                            {editingField === 'notificationDate' ? (
-                                                <>
-                                                    <select
-                                                        className="form-select form-select-sm me-2"
-                                                        value={editValue}
-                                                        onChange={e => setEditValue(e.target.value)}
-                                                        onBlur={() => saveField('notificationDate')}
-                                                        autoFocus
-                                                        style={{ width: 80, display: 'inline-block' }}
-                                                    >
-                                                        <option value="">-</option>
-                                                        {Array.from({ length: 31 }, (_, i) => (
-                                                            <option key={i + 1} value={String(i + 1)}>{i + 1}</option>
-                                                        ))}
-                                                    </select>
-                                                    <button className="btn btn-sm btn-secondary" onClick={cancelEditing}>Cancel</button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    {company.notificationDate ? `Day ${company.notificationDate}` : '-'}
-                                                    <button
-                                                        className="btn btn-link p-0 ms-2"
-                                                        style={{ fontSize: 16, color: '#6c757d' }}
-                                                        title="Edit Notification Date"
-                                                        onClick={() => startEditing('notificationDate', company.notificationDate || '')}
-                                                    >
-                                                        <FaPen />
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <button
-                                    className="btn btn-primary"
-                                    onClick={() => {
-                                        setShowBillingModal(true);
-                                        setServices(company?.services || []);
-                                        setServiceName('');
-                                        setServiceAmount('');
-                                    }}
-                                >
-                                    Add / Edit
-                                </button>
-                                
+                                            {!billingLoading && billingRecords.map((r: any) => {
+                                                const now = new Date();
+                                                const bangkokToday = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+                                                const bangkokTodayIso = bangkokToday.toISOString().split('T')[0];
+                                                const billingDateIso = r.billingDate ? (r.billingDate + '').split('T')[0] : null;
+                                                const isNotifyToday = billingDateIso === bangkokTodayIso;
 
+                                                return (
+                                                    <tr key={r.id || `${r.companyId}-${r.billingDate}-${r.amount}`}>
+                                                        <td>{r.billingDate || '-'}</td>
+                                                        <td>{typeof r.amount === 'number' ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(r.amount) : (r.amount ?? '-')}</td>
+                                                        <td>{r.billingCycle || '-'}</td>
+                                                        <td>{isNotifyToday ? <span className="badge bg-success">แจ้งวันนี้</span> : '-'}</td>
+                                                        <td>{r.status || '-'}</td>
+                                                        {/* actions removed in company details view */}
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="mt-2">
+                                    <button className="btn btn-link p-0" onClick={() => navigate(`/billing?companyId=${company.id}`)}>
+                                        Open full Billing page
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

@@ -22,6 +22,16 @@ type Company = {
   notificationDate?: string; // วันที่แจ้งเตือนล่วงหน้า (1-31)
   amountDue?: number;
   billingCycle?: 'monthly' | 'yearly' | 'quarterly';
+  subscription?: {
+    planId?: string;
+    planName?: string;
+    status?: string;
+    interval?: 'monthly' | 'yearly' | 'quarterly';
+    amount?: number;
+    startDate?: string;
+    nextBillingDate?: string;
+    autoRenew?: boolean;
+  };
   createdAt?: string;
   updatedAt?: string;
   ownerUserId?: string;
@@ -45,6 +55,11 @@ const emptyCompany: Company = {
   notificationDate: '',
   billingCycle: 'monthly',
   contacts: [],
+  subscription: {
+    interval: 'monthly',
+    amount: 0,
+    autoRenew: true,
+  },
   avatarUrl: '',
 };
 
@@ -98,8 +113,9 @@ export const CompaniesPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
-  const [filterBillingDue, setFilterBillingDue] = useState<string>('all');
+  
   const [contacts, setContacts] = useState<any[]>([]);
+  const [billingSums, setBillingSums] = useState<Record<string, number>>({});
   const [showContactsModal, setShowContactsModal] = useState(false);
   const [activeCompany, setActiveCompany] = useState<Company | null>(null);
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
@@ -150,6 +166,42 @@ export const CompaniesPage = () => {
     fetchCompanies();
   }, [fetchCompanies]);
 
+  // After companies are loaded, fetch billing sums per company
+  useEffect(() => {
+    if (!token || companies.length === 0) return;
+
+    const controller = new AbortController();
+
+    const fetchSums = async () => {
+      const map: Record<string, number> = {};
+      await Promise.all(
+        companies.map(async (c) => {
+          if (!c.id) return;
+          try {
+            const res = await fetch(withBase(`/billing-records/company/${c.id}`), {
+              headers: { Authorization: `Bearer ${token}` },
+              signal: controller.signal,
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!Array.isArray(data)) return;
+            const sum = data.reduce((s: number, item: any) => {
+              const a = typeof item.amount === 'number' ? item.amount : parseFloat(item.amount) || 0;
+              return s + (isNaN(a) ? 0 : a);
+            }, 0);
+            map[c.id!] = sum;
+          } catch (err) {
+            // ignore per-company errors
+          }
+        })
+      );
+      setBillingSums(map);
+    };
+
+    fetchSums();
+    return () => controller.abort();
+  }, [companies, token]);
+
   // fetch contacts list for use in adding contacts to a company
   const fetchContacts = useCallback(async () => {
     if (!token) return;
@@ -181,6 +233,16 @@ export const CompaniesPage = () => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleSubscriptionChange = (key: string, value: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      subscription: {
+        ...(prev.subscription || {}),
+        [key]: value,
+      },
+    }));
+  };
+
   const resetForm = () => {
     setEditingId(null);
     setFormData(emptyCompany);
@@ -210,11 +272,22 @@ export const CompaniesPage = () => {
       phone: formData.phone?.trim() || undefined,
       fax: formData.fax?.trim() || undefined,
       taxId: formData.taxId?.trim() || undefined,
-      billingDate: formData.billingDate || undefined,
       notificationDate: formData.notificationDate || undefined,
       billingCycle: formData.billingCycle || undefined,
       avatarUrl: formData.avatarUrl || undefined,
     };
+
+    // attach subscription if provided
+    if (formData.subscription && (formData.subscription.planName || formData.subscription.amount)) {
+      payload.subscription = {
+        planId: formData.subscription.planId || undefined,
+        planName: formData.subscription.planName || undefined,
+        interval: formData.subscription.interval || undefined,
+        amount: typeof formData.subscription.amount === 'number' ? formData.subscription.amount : undefined,
+        nextBillingDate: formData.subscription.nextBillingDate || undefined,
+        autoRenew: typeof formData.subscription.autoRenew === 'boolean' ? formData.subscription.autoRenew : undefined,
+      };
+    }
 
     // เพิ่ม branch fields เฉพาะเมื่อเป็น company
     if (formData.type === 'company') {
@@ -371,16 +444,7 @@ export const CompaniesPage = () => {
       <div className="flex flex-col gap-6 px-8 py-6 bg-gray-50 min-h-screen">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <select
-              className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring focus:border-blue-400 bg-white"
-              value={filterBillingDue}
-              onChange={(e) => setFilterBillingDue(e.target.value)}
-              style={{ minWidth: 150 }}
-            >
-              <option value="all">All Billing Dates</option>
-              <option value="today">Due Today</option>
-              <option value="week">Due This Week</option>
-            </select>
+            
             <input
               type="text"
               className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring focus:border-blue-400"
@@ -415,30 +479,7 @@ export const CompaniesPage = () => {
                 if (filterType !== 'all' && company.type !== filterType) return false;
 
                 // Billing Due Filter
-                if (filterBillingDue !== 'all') {
-                  const billingDay = parseInt(company.billingDate || '0');
-                  if (!billingDay) return false;
-
-                  const today = new Date();
-
-                  if (filterBillingDue === 'today') {
-                    if (billingDay !== today.getDate()) return false;
-                  } else if (filterBillingDue === 'week') {
-                    // Calculate days in current week (Sunday to Saturday)
-                    const currentDay = today.getDay(); // 0 (Sun) - 6 (Sat)
-                    const startOfWeek = new Date(today);
-                    startOfWeek.setDate(today.getDate() - currentDay);
-
-                    const daysInWeek: number[] = [];
-                    for (let i = 0; i < 7; i++) {
-                      const d = new Date(startOfWeek);
-                      d.setDate(startOfWeek.getDate() + i);
-                      daysInWeek.push(d.getDate());
-                    }
-
-                    if (!daysInWeek.includes(billingDay)) return false;
-                  }
-                }
+                
 
                 return true;
               })
@@ -472,20 +513,15 @@ export const CompaniesPage = () => {
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center bg-gray-50 rounded-lg p-3 border border-gray-100">
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
                       <div>
-                        <div className="text-gray-500 text-xs uppercase tracking-wider font-medium mb-1">Billing Date</div>
-                        <div className="font-bold text-gray-800 flex items-center gap-1">
-                          <span className="text-lg">{company.billingDate ? company.billingDate : '-'}</span>
-                          {company.billingDate && <span className="text-xs text-gray-500 font-normal">of month</span>}
-                        </div>
-                      </div>
-                      <div className="text-right">
                         <div className="text-gray-500 text-xs uppercase tracking-wider font-medium mb-1">Amount Due</div>
                         <div className="font-bold text-lg text-primary">
-                          ฿{typeof company.amountDue === 'number' && !isNaN(company.amountDue)
-                            ? company.amountDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                            : '0.00'}
+                          {(() => {
+                            const sum = company.id ? (billingSums[company.id] ?? company.amountDue ?? 0) : (company.amountDue ?? 0);
+                            const num = typeof sum === 'number' ? sum : parseFloat(String(sum)) || 0;
+                            return `฿${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -718,20 +754,7 @@ export const CompaniesPage = () => {
                       <h6 className="mb-3">Billing Information</h6>
                     </div>
 
-                    <div className="col-md-4 mb-3">
-                      <label className="form-label">Billing Date</label>
-                      <select
-                        className="form-select"
-                        value={formData.billingDate || ''}
-                        onChange={(e) => handleChange('billingDate', e.target.value)}
-                      >
-                        <option value="">Select day...</option>
-                        {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                          <option key={day} value={String(day)}>{day}</option>
-                        ))}
-                      </select>
-                      <small className="form-text text-muted">วันที่เรียกเก็บเงินในแต่ละรอบ</small>
-                    </div>
+                    {/* Billing Date field removed - not used anymore */}
                     <div className="col-md-4 mb-3">
                       <label className="form-label">Notification Date</label>
                       <select
@@ -745,6 +768,61 @@ export const CompaniesPage = () => {
                         ))}
                       </select>
                       <small className="form-text text-muted">วันที่แจ้งเตือนก่อนถึงกำหนด</small>
+                    </div>
+                    <div className="col-md-12 mb-3">
+                      <label className="form-label">Subscription / Recurring (optional)</label>
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Plan Name</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={formData.subscription?.planName || ''}
+                        onChange={(e) => handleSubscriptionChange('planName', e.target.value)}
+                      />
+                      <small className="form-text text-muted">Subscription plan name (e.g., Basic, Pro)</small>
+                    </div>
+                    <div className="col-md-3 mb-3">
+                      <label className="form-label">Subscription Amount</label>
+                      <input
+                        type="number"
+                        className="form-control"
+                        value={String(formData.subscription?.amount ?? '')}
+                        onChange={(e) => handleSubscriptionChange('amount', parseFloat(e.target.value || '0'))}
+                      />
+                    </div>
+                    <div className="col-md-3 mb-3">
+                      <label className="form-label">Interval</label>
+                      <select
+                        className="form-select"
+                        value={formData.subscription?.interval || 'monthly'}
+                        onChange={(e) => handleSubscriptionChange('interval', e.target.value)}
+                      >
+                        <option value="monthly">Monthly</option>
+                        <option value="quarterly">Quarterly</option>
+                        <option value="yearly">Yearly</option>
+                      </select>
+                    </div>
+                    <div className="col-md-6 mb-3 d-flex align-items-center">
+                      <div className="form-check">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          checked={Boolean(formData.subscription?.autoRenew)}
+                          onChange={(e) => handleSubscriptionChange('autoRenew', e.target.checked)}
+                          id="autoRenew"
+                        />
+                        <label className="form-check-label ms-2" htmlFor="autoRenew">Auto renew</label>
+                      </div>
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Next Billing Date</label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={formData.subscription?.nextBillingDate ? String(formData.subscription.nextBillingDate).split('T')[0] : ''}
+                        onChange={(e) => handleSubscriptionChange('nextBillingDate', e.target.value)}
+                      />
                     </div>
                   </div>
                   {error && <div className="alert alert-danger">{error}</div>}

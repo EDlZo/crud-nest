@@ -1,4 +1,6 @@
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { FiEdit2, FiTrash2, FiFilter } from 'react-icons/fi';
 import '../App.css';
 import { API_BASE_URL } from '../config';
@@ -42,7 +44,13 @@ type FilterState = {
 export const ContactsPage = () => {
   const { token, user, logout } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [openCompaniesFor, setOpenCompaniesFor] = useState<string | null>(null);
+  const popupRef = useRef<HTMLDivElement | null>(null);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<Contact>(emptyContact);
+  const [popupPosition, setPopupPosition] = useState<{ x: number; y: number } | null>(null);
+  const [popupCompanies, setPopupCompanies] = useState<any[] | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -96,9 +104,42 @@ export const ContactsPage = () => {
     }
   }, [token]);
 
+  const fetchCompanies = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await fetch(withBase('/companies'), { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) return;
+      const data = await response.json();
+      setCompanies(Array.isArray(data) ? data : []);
+    } catch (err) {
+      // ignore companies fetch errors for now
+    }
+  }, [token]);
+
   useEffect(() => {
     fetchContacts();
-  }, [fetchContacts]);
+    fetchCompanies();
+  }, [fetchContacts, fetchCompanies]);
+
+  // Close popup when clicking outside or pressing Escape
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!openCompaniesFor) return;
+      const el = popupRef.current;
+      if (el && !el.contains(e.target as Node)) {
+        setOpenCompaniesFor(null);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpenCompaniesFor(null);
+    };
+    document.addEventListener('click', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('click', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [openCompaniesFor]);
 
   const handleChange = (key: keyof Contact, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -506,6 +547,9 @@ export const ContactsPage = () => {
                           {renderFilterDropdown('address', 'Address')}
                         </th>
                         <th className="border-0 py-3 px-4" style={{ fontWeight: 500, color: '#374151' }}>
+                          บริษัท
+                        </th>
+                        <th className="border-0 py-3 px-4" style={{ fontWeight: 500, color: '#374151' }}>
                           Last Updated
                         </th>
                         <th className="border-0 py-3 px-4 text-center" style={{ fontWeight: 500, color: '#374151' }}>
@@ -559,6 +603,43 @@ export const ContactsPage = () => {
                             <td className="py-3 px-4 border-0" style={{ color: '#6b7280' }}>
                               {contact.address ?? '-'}
                             </td>
+                            <td className="py-3 px-4 border-0" style={{ color: '#6b7280', position: 'relative' }}>
+                              {(() => {
+                                // find all companies that list this contact in their contacts array
+                                const found = companies.filter(c => Array.isArray(c.contacts) && c.contacts.includes(contact.id));
+                                if (!found || found.length === 0) return '-';
+                                const first = found[0];
+                                return (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span
+                                      role="button"
+                                      onClick={() => navigate(`/companies/${first.id}`)}
+                                      style={{ cursor: 'pointer', color: '#6b7280', textDecoration: 'none', fontWeight: 500 }}
+                                    >
+                                      {first.name || first.branchName || first.id}
+                                    </span>
+                                    {found.length > 1 && (
+                                      <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-secondary"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const next: string | null = openCompaniesFor === contact.id ? null : (contact.id ?? null);
+                                          const el = e.currentTarget as HTMLElement;
+                                          const rect = el.getBoundingClientRect();
+                                          setPopupPosition({ x: rect.left + rect.width / 2, y: rect.bottom });
+                                          setPopupCompanies(found);
+                                          setOpenCompaniesFor(next);
+                                        }}
+                                        aria-expanded={openCompaniesFor === contact.id}
+                                      >
+                                        +{found.length - 1}
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </td>
                             <td className="py-3 px-4 border-0" style={{ color: '#6b7280', fontSize: '0.875rem' }}>
                                   <span title={typeof contact.updatedAt === 'string' ? contact.updatedAt : JSON.stringify(contact.updatedAt)}>
                                     {formatDateTime(contact.updatedAt)}
@@ -590,6 +671,31 @@ export const ContactsPage = () => {
           </div>
         </div>
       </div>
+      {/* Portal popup rendered at body so it's not affected by card stacking contexts */}
+      {openCompaniesFor && popupCompanies && popupPosition && createPortal(
+        <div
+          ref={popupRef}
+          className="shadow-lg bg-white rounded"
+          style={{
+            position: 'fixed',
+            top: popupPosition.y + 8,
+            left: popupPosition.x - 110,
+            zIndex: 2147483647,
+            minWidth: 220,
+            border: '1px solid #e5e7eb',
+            padding: 8,
+          }}
+        >
+          {popupCompanies.map((c, idx) => (
+            <div key={c.id || idx} style={{ padding: '6px 8px', cursor: 'pointer' }}
+              onClick={() => { navigate(`/companies/${c.id}`); setOpenCompaniesFor(null); setPopupCompanies(null); }}
+            >
+              {c.name || c.branchName || c.id}
+            </div>
+          ))}
+        </div>,
+        document.body
+      )}
       {/* Modal for Add/Edit contact */}
       {showModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>

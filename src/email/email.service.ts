@@ -1,10 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as postmark from 'postmark';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private client: postmark.ServerClient | null = null;
+  private transporter: nodemailer.Transporter | null = null;
   private fromEmail: string = 'notifications@schoolsync.ai';
 
   constructor() {
@@ -17,44 +19,75 @@ export class EmailService {
 
     this.logger.log(`Initializing Postmark with API token: ${apiToken ? apiToken.substring(0, 8) + '***' : 'NOT SET'}`);
 
-    if (!apiToken) {
-      this.logger.warn('POSTMARK_API_TOKEN not configured. Email sending will not work.');
-      return;
+    if (apiToken) {
+      this.client = new postmark.ServerClient(apiToken);
+      this.logger.log('Postmark client configured');
+    } else {
+      this.logger.warn('POSTMARK_API_TOKEN not configured. Will attempt SMTP fallback if configured.');
     }
-
-    this.client = new postmark.ServerClient(apiToken);
     if (fromEmail) {
       this.fromEmail = fromEmail;
     }
     this.logger.log(`Postmark initialized. From email: ${this.fromEmail}`);
+
+    // Setup nodemailer fallback (Gmail SMTP with app password)
+    const gmailUser = process.env.GMAIL_USER;
+    const gmailPass = process.env.GMAIL_APP_PASSWORD;
+    if (!this.client && gmailUser && gmailPass) {
+      this.transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: gmailUser,
+          pass: gmailPass,
+        },
+      });
+      this.fromEmail = gmailUser;
+      this.logger.log('Nodemailer Gmail transporter configured as fallback');
+    }
   }
 
   async sendEmail(to: string | string[], subject: string, html: string): Promise<boolean> {
-    if (!this.client) {
-      this.logger.error('Postmark not initialized. Check POSTMARK_API_TOKEN environment variable.');
-      return false;
-    }
+    const recipients = Array.isArray(to) ? to : [to];
+    this.logger.log(`Attempting to send email to: ${recipients.join(', ')}`);
 
-    try {
-      const recipients = Array.isArray(to) ? to : [to];
-      this.logger.log(`Attempting to send email to: ${recipients.join(', ')}`);
-
-      // Postmark sends to each recipient separately
-      for (const recipient of recipients) {
-        const result = await this.client.sendEmail({
-          From: this.fromEmail,
-          To: recipient,
-          Subject: subject,
-          HtmlBody: html,
-        });
-        this.logger.log(`Email sent successfully to ${recipient}. MessageID: ${result.MessageID}`);
+    // Prefer Postmark if available
+    if (this.client) {
+      try {
+        for (const recipient of recipients) {
+          const result = await this.client.sendEmail({
+            From: this.fromEmail,
+            To: recipient,
+            Subject: subject,
+            HtmlBody: html,
+          });
+          this.logger.log(`Postmark: Email sent to ${recipient}. MessageID: ${result.MessageID}`);
+        }
+        return true;
+      } catch (error) {
+        this.logger.error('Postmark send failed:', error);
+        // fall through to try transporter
       }
-
-      return true;
-    } catch (error) {
-      this.logger.error('Failed to send email:', error);
-      return false;
     }
+
+    // Fallback to nodemailer if configured
+    if (this.transporter) {
+      try {
+        await this.transporter.sendMail({
+          from: this.fromEmail,
+          to: recipients.join(','),
+          subject,
+          html,
+        });
+        this.logger.log(`Nodemailer: Email sent to ${recipients.join(',')}`);
+        return true;
+      } catch (err) {
+        this.logger.error('Nodemailer send failed:', err);
+        return false;
+      }
+    }
+
+    this.logger.error('No email transport configured (Postmark or Gmail). Set POSTMARK_API_TOKEN or GMAIL_USER & GMAIL_APP_PASSWORD.');
+    return false;
   }
 
   async sendBillingReminder(
@@ -66,6 +99,7 @@ export class EmailService {
     daysUntilBilling: number,
     amountDue?: number,
     customTemplate?: string,
+    recordId?: string,
   ): Promise<boolean> {
     const isDueToday = daysUntilBilling === 0;
     const subject = isDueToday
@@ -149,7 +183,7 @@ export class EmailService {
             </div>
 
             <div class="btn-container">
-              <a href="https://protrain-crm.web.app/companies/${companyId}" class="btn">View Company Details</a>
+              <a href="${process.env.FRONTEND_URL || 'https://protrain-crm.web.app'}/billing${recordId ? `?recordId=${recordId}` : `?companyId=${companyId}`}" class="btn">View Billing</a>
             </div>
           </div>
           <div class="footer">

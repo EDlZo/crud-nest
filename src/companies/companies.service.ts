@@ -87,6 +87,22 @@ export class CompaniesService {
     if (merged.services && Array.isArray(merged.services)) {
       merged.services = merged.services.map((s: any) => ({ name: s.name, amount: s.amount }));
     }
+    // แปลง subscription ให้เป็น plain object (เก็บเฉพาะฟิลด์ที่ต้องการ)
+    if (merged.subscription && typeof merged.subscription === 'object') {
+      const sub = merged.subscription as any;
+      merged.subscription = {
+        planId: sub.planId,
+        planName: sub.planName,
+        status: sub.status,
+        interval: sub.interval,
+        amount: sub.amount,
+        startDate: sub.startDate,
+        nextBillingDate: sub.nextBillingDate,
+        autoRenew: sub.autoRenew,
+      };
+      // Remove undefined fields inside subscription
+      Object.keys(merged.subscription).forEach(key => merged.subscription[key] === undefined && delete merged.subscription[key]);
+    }
     // Remove undefined fields
     Object.keys(merged).forEach(key => merged[key] === undefined && delete merged[key]);
     await docRef.set(merged, { merge: true });

@@ -1,5 +1,47 @@
-import { IsOptional, IsString, IsObject, IsArray, IsNumber, ValidateNested } from 'class-validator';
+import { IsOptional, IsString, IsObject, IsArray, IsNumber, ValidateNested, IsBoolean, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
+
+export class ServiceDto {
+  @IsString()
+  name: string;
+
+  @IsNumber()
+  amount: number;
+}
+
+export class SubscriptionDto {
+  @IsOptional()
+  @IsString()
+  planId?: string;
+
+  @IsOptional()
+  @IsString()
+  planName?: string;
+
+  @IsOptional()
+  @IsIn(['active', 'trialing', 'past_due', 'canceled'])
+  status?: 'active' | 'trialing' | 'past_due' | 'canceled';
+
+  @IsOptional()
+  @IsIn(['monthly', 'yearly', 'quarterly'])
+  interval?: 'monthly' | 'yearly' | 'quarterly';
+
+  @IsOptional()
+  @IsNumber()
+  amount?: number;
+
+  @IsOptional()
+  @IsString()
+  startDate?: string;
+
+  @IsOptional()
+  @IsString()
+  nextBillingDate?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  autoRenew?: boolean;
+}
 
 export class CreateCompanyDto {
   @IsString()
@@ -67,12 +109,10 @@ export class CreateCompanyDto {
   @ValidateNested({ each: true })
   @Type(() => ServiceDto)
   services?: ServiceDto[];
-}
 
-export class ServiceDto {
-  @IsString()
-  name: string;
-
-  @IsNumber()
-  amount: number;
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => SubscriptionDto)
+  subscription?: SubscriptionDto;
 }

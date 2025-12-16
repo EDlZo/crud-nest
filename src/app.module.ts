@@ -9,6 +9,7 @@ import { ActivitiesModule } from './activities/activities.module';
 import { DealsModule } from './deals/deals.module';
 import { EmailModule } from './email/email.module';
 import { NotificationSettingsModule } from './notification-settings/notification-settings.module';
+import { BillingRecordsModule } from './billing-records/billing-records.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 
 @Module({
@@ -22,6 +23,7 @@ import { SchedulerModule } from './scheduler/scheduler.module';
     EmailModule,
     NotificationSettingsModule,
     SchedulerModule,
+    BillingRecordsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

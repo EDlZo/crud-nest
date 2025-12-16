@@ -84,20 +84,22 @@ export class EmailController {
     // ทดสอบ run scheduler ด้วยมือ - จะเช็คบริษัททั้งหมดและส่ง email แบบเดียวกับ cron job
     @Post('trigger-scheduler')
     @Roles('admin', 'superadmin')
-    async triggerScheduler() {
-        this.logger.log('Manual trigger of billing scheduler requested');
+    async triggerScheduler(@Body() body: { dryRun?: boolean }) {
+        const dryRun = !!body?.dryRun;
+        this.logger.log(`Manual trigger of billing scheduler requested (dryRun=${dryRun})`);
         try {
-            await this.schedulerService.handleBillingNotifications();
-            return { 
-                success: true, 
-                message: 'Scheduler triggered successfully. Check logs for details.',
-                timestamp: new Date().toISOString()
+            const result = await this.schedulerService.handleBillingNotifications(dryRun);
+            return {
+                success: true,
+                message: dryRun ? 'Dry-run completed. No emails sent.' : 'Scheduler triggered successfully. Check logs for details.',
+                timestamp: new Date().toISOString(),
+                result,
             };
         } catch (error) {
             this.logger.error('triggerScheduler error:', error);
-            return { 
-                success: false, 
-                message: `Error: ${error.message || 'Unknown error'}` 
+            return {
+                success: false,
+                message: `Error: ${error.message || 'Unknown error'}`,
             };
         }
     }

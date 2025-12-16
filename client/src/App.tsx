@@ -11,6 +11,9 @@ import { VisibilityPage } from './pages/VisibilityPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ActivitiesPage } from './pages/ActivitiesPage';
 import { NotificationSettingsPage } from './pages/NotificationSettingsPage';
+import { BillingPage } from './pages/BillingPage';
+import { BillingCreatePage } from './pages/BillingCreatePage';
+import { BillingPreviewPage } from './pages/BillingPreviewPage';
 // import { DealsPage } from './pages/DealsPage'; // Hidden temporarily
 import Layout from './components/Layout';
 
@@ -110,6 +113,36 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <ActivitiesPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <BillingPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing/create"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <BillingCreatePage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing/preview/:id"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <BillingPreviewPage />
               </Layout>
             </ProtectedRoute>
           }

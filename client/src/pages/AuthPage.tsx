@@ -23,6 +23,14 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Role presets for quick login during development/testing.
+  // Update these values to match accounts in your dev environment.
+  const rolePresets: Record<string, { email: string; password: string }> = {
+    superadmin: { email: 'purin.keuasakul@gmail.com', password: '123456789' },
+    admin: { email: 'purin.k@rmutsvmail.com', password: '123456789' },
+    guest: { email: 'dewhaha061@gmail.com', password: '123456789' },
+  };
+
   useEffect(() => {
     if (token) {
       navigate('/');
@@ -82,6 +90,15 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const fillPreset = (key: string) => {
+    const preset = rolePresets[key];
+    if (!preset) return;
+    setFormData((s) => ({ ...s, email: preset.email, password: preset.password }));
+    setSelectedRole(key);
+    setError(null);
   };
 
   return (
@@ -185,6 +202,83 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
               <span>{mode === 'login' ? 'Sign In' : 'Register'}</span>
             )}
           </button>
+
+          {mode === 'login' && (
+            <div
+              className="form-group role-presets-row"
+              style={{ marginTop: 18, textAlign: 'center' }}
+            >
+              <div style={{ fontWeight: 400, color: '#888', fontSize: 14, marginBottom: 8, letterSpacing: 0.2 }}>Quick login</div>
+              <div style={{ display: 'flex', gap: 14, justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  className="quick-login-btn"
+                  style={{
+                    border: selectedRole === 'superadmin' ? '2px solid #2563eb' : '1.5px solid #d1d5db',
+                    background: selectedRole === 'superadmin' ? '#e0e7ef' : '#fff',
+                    color: selectedRole === 'superadmin' ? '#1e293b' : '#64748b',
+                    borderRadius: 18,
+                    padding: '7px 22px',
+                    fontWeight: selectedRole === 'superadmin' ? 700 : 500,
+                    fontSize: 15,
+                    transition: 'all 0.18s',
+                    boxShadow: 'none',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                  onMouseOver={e => (e.currentTarget.style.background = selectedRole === 'superadmin' ? '#dbeafe' : '#f3f4f6')}
+                  onMouseOut={e => (e.currentTarget.style.background = selectedRole === 'superadmin' ? '#e0e7ef' : '#fff')}
+                  onClick={() => fillPreset('superadmin')}
+                >
+                  Superadmin
+                </button>
+                <button
+                  type="button"
+                  className="quick-login-btn"
+                  style={{
+                    border: selectedRole === 'admin' ? '2px solid #2563eb' : '1.5px solid #d1d5db',
+                    background: selectedRole === 'admin' ? '#e0e7ef' : '#fff',
+                    color: selectedRole === 'admin' ? '#1e293b' : '#64748b',
+                    borderRadius: 18,
+                    padding: '7px 22px',
+                    fontWeight: selectedRole === 'admin' ? 700 : 500,
+                    fontSize: 15,
+                    transition: 'all 0.18s',
+                    boxShadow: 'none',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                  onMouseOver={e => (e.currentTarget.style.background = selectedRole === 'admin' ? '#dbeafe' : '#e0e7ef')}
+                  onMouseOut={e => (e.currentTarget.style.background = selectedRole === 'admin' ? '#e0e7ef' : '#fff')}
+                  onClick={() => fillPreset('admin')}
+                >
+                  Admin
+                </button>
+                <button
+                  type="button"
+                  className="quick-login-btn"
+                  style={{
+                    border: selectedRole === 'guest' ? '2px solid #2563eb' : '1.5px solid #d1d5db',
+                    background: selectedRole === 'guest' ? '#f1f5f9' : '#fff',
+                    color: selectedRole === 'guest' ? '#1e293b' : '#64748b',
+                    borderRadius: 18,
+                    padding: '7px 22px',
+                    fontWeight: selectedRole === 'guest' ? 700 : 500,
+                    fontSize: 15,
+                    transition: 'all 0.18s',
+                    boxShadow: 'none',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                  onMouseOver={e => (e.currentTarget.style.background = selectedRole === 'guest' ? '#e5e7eb' : '#f1f5f9')}
+                  onMouseOut={e => (e.currentTarget.style.background = selectedRole === 'guest' ? '#f1f5f9' : '#fff')}
+                  onClick={() => fillPreset('guest')}
+                >
+                  Guest
+                </button>
+              </div>
+            </div>
+          )}
         </form>
 
         <div className="auth-divider">

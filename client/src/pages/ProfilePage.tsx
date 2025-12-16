@@ -379,7 +379,7 @@ export const ProfilePage = () => {
                     onClick={fetchProfile}
                     disabled={submitting}
                   >
-                    Cancel
+                    Canceltop
                   </button>
                 </div>
               </form>

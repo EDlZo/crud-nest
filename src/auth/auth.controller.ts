@@ -76,6 +76,13 @@ export class AuthController {
     return this.authService.setVisibility(body.visibility);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('superadmin')
+  @Post('visibility/ensure-billing')
+  async ensureBillingVisibility() {
+    return this.authService.ensureBillingInVisibility();
+  }
+
   // Profile endpoints
   @UseGuards(JwtAuthGuard)
   @Get('profile')
