@@ -74,6 +74,7 @@ async function bootstrap() {
         req.path.startsWith('/cruds') ||
         req.path.startsWith('/auth') ||
         req.path.startsWith('/companies') ||
+        req.path.startsWith('/billing-records') ||
         req.path.startsWith('/activities') ||
         req.path.startsWith('/deals') ||
         req.path.startsWith('/notification-settings') ||
