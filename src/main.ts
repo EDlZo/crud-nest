@@ -20,15 +20,20 @@ async function bootstrap() {
   const clientOrigins = process.env.CLIENT_ORIGIN
     ? process.env.CLIENT_ORIGIN.split(',').map(s => s.trim())
     : ['http://localhost:5173'];
+  const allowedOrigins = Array.isArray(clientOrigins) ? clientOrigins : [clientOrigins];
+  // Log configured origins for debugging in hosted environments
+  console.log('CORS allowed origins:', allowedOrigins);
 
   app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like curl, server-to-server)
       if (!origin) return callback(null, true);
-      if (clientOrigins.includes(origin)) {
+      // Support wildcard '*' to allow all origins (USE WITH CAUTION, dev-only)
+      if (allowedOrigins.includes('*')) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      return callback(new Error('CORS policy: origin not allowed'), false);
+      return callback(new Error(`CORS policy: origin not allowed (${origin})`), false);
     },
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
