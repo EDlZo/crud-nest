@@ -11,6 +11,7 @@ import { EmailModule } from './email/email.module';
 import { NotificationSettingsModule } from './notification-settings/notification-settings.module';
 import { BillingRecordsModule } from './billing-records/billing-records.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
+import { ThailandModule } from './thailand/thailand.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { SchedulerModule } from './scheduler/scheduler.module';
     NotificationSettingsModule,
     SchedulerModule,
     BillingRecordsModule,
+    ThailandModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -184,7 +184,7 @@ export const DashboardPage = () => {
       <div className="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 className="h3 mb-0 text-gray-800">Dashboard</h1>
         <div>
-          <button className="btn btn-sm btn-info" onClick={fetchDashboardData}>
+          <button className="btn-refresh" onClick={fetchDashboardData}>
             Refresh
           </button>
         </div>
@@ -236,7 +236,7 @@ export const DashboardPage = () => {
           <div className="card shadow mb-4 dashboard-gray">
             <div className="card-header py-3 d-flex flex-row align-items-center justify-content-between">
               <h6 className="m-0 font-weight-bold text-primary">Billing Due Today</h6>
-              <Link to="/companies" className="btn btn-sm btn-primary">
+              <Link to="/billing" className="btn btn-sm btn-primary">
                 View All
               </Link>
             </div>
@@ -312,22 +312,28 @@ export const DashboardPage = () => {
             </div>
             <div className="card-body">
               <div className="row">
-                <div className="col-md-4 mb-3">
-                  <Link to="/companies" className="btn btn-primary w-100 quick-action-btn">
-                    <FaBuilding className="btn-icon" />
-                    Manage Companies
-                  </Link>
-                </div>
-                <div className="col-md-4 mb-3">
+                <div className="col-md-3 mb-3">
                   <Link to="/contacts" className="btn btn-success w-100 quick-action-btn">
                     <FaUsers className="btn-icon" />
-                    Manage Contacts
+                    Contact
                   </Link>
                 </div>
-                <div className="col-md-4 mb-3">
+                <div className="col-md-3 mb-3">
+                  <Link to="/companies" className="btn btn-primary w-100 quick-action-btn">
+                    <FaBuilding className="btn-icon" />
+                    Companies
+                  </Link>
+                </div>
+                <div className="col-md-3 mb-3">
+                  <Link to="/billing" className="btn btn-warning w-100 quick-action-btn">
+                    <FaDollarSign className="btn-icon" />
+                    Bill
+                  </Link>
+                </div>
+                <div className="col-md-3 mb-3">
                   <Link to="/activities" className="btn btn-info w-100 quick-action-btn">
                     <FaTasks className="btn-icon" />
-                    View Activities
+                    Activities
                   </Link>
                 </div>
                 {/* Deals Pipeline - Hidden temporarily */}

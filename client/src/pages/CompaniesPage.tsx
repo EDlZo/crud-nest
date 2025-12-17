@@ -4,6 +4,9 @@ import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { Dropdown } from 'react-bootstrap';
 import '../App.css';
+import provincesFallback from '../data/thailand-provinces.json';
+import localThailandHierarchy from '../data/thailand-hierarchy.json';
+import fullThailandHierarchy from '../data/thailand-hierarchy-full.json';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
 import { getAvatarColor } from '../utils/avatarColor';
@@ -13,6 +16,9 @@ type Company = {
   type: 'individual' | 'company';
   name: string;
   address?: string;
+  province?: string;
+  amphoe?: string;
+  tambon?: string;
   phone?: string;
   fax?: string;
   taxId?: string;
@@ -46,6 +52,9 @@ const emptyCompany: Company = {
   type: 'company',
   name: '',
   address: '',
+  province: '',
+  amphoe: '',
+  tambon: '',
   phone: '',
   fax: '',
   taxId: '',
@@ -249,6 +258,81 @@ export const CompaniesPage = () => {
     setPhotoPreview('');
   };
 
+  const [thailandHierarchy, setThailandHierarchy] = useState<any[] | null>(null);
+
+  const extractThaiPartsFromAddress = (addr?: string) => {
+    if (!addr || typeof addr !== 'string') return { tambon: '', amphoe: '', province: '' };
+    const s = addr.replace(/\s+/g, ' ').trim();
+    const tambonMatch = s.match(/(?:ต(?:\.|ำบล)?\s*)([ก-๙\-\s\u0E00-\u0E7F]+)/);
+    const amphoeMatch = s.match(/(?:อ(?:\.|ำเภอ)?\s*)([ก-๙\-\s\u0E00-\u0E7F]+)/);
+    const provinceMatch = s.match(/(?:จ(?:\.|ังหวัด)?\s*)([ก-๙\-\s\u0E00-\u0E7F]+)/);
+    const clean = (m?: RegExpMatchArray | null) => (m && m[1] ? m[1].trim().replace(/\s+/g, ' ') : '');
+    return { tambon: clean(tambonMatch), amphoe: clean(amphoeMatch), province: clean(provinceMatch) };
+  };
+
+  const inferPartsByLookup = (addr?: string) => {
+    if (!addr || !Array.isArray(thailandHierarchy)) return { tambon: '', amphoe: '', province: '' };
+    const s = addr.replace(/\s+/g, '');
+    for (const prov of thailandHierarchy) {
+      const pname = (prov.name || prov.province || prov.province_name || '').toString();
+      const provClean = pname.replace(/\s+/g, '');
+      if (provClean && s.includes(provClean)) {
+        if (Array.isArray(prov.amphoes)) {
+          for (const a of prov.amphoes) {
+            const aname = (a.name || a.amphoe || '').toString().replace(/\s+/g, '');
+            if (aname && s.includes(aname)) {
+              if (Array.isArray(a.tambons)) {
+                for (const t of a.tambons) {
+                  const tname = (typeof t === 'string' ? t : (t.name || t.tambon || '')).toString().replace(/\s+/g, '');
+                  if (tname && s.includes(tname)) {
+                    return { tambon: (typeof t === 'string' ? t : t.name || t.tambon || '') as string, amphoe: a.name || a.amphoe || '', province: pname };
+                  }
+                }
+              }
+              return { tambon: '', amphoe: a.name || a.amphoe || '', province: pname };
+            }
+          }
+        }
+        return { tambon: '', amphoe: '', province: pname };
+      }
+    }
+    return { tambon: '', amphoe: '', province: '' };
+  };
+
+  const fetchThailandHierarchy = useCallback(async () => {
+    setThailandHierarchy(null);
+    try {
+      const response = await fetch(withBase('/thailand/hierarchy'));
+      if (!response.ok) {
+        let fallback: any = Array.isArray(fullThailandHierarchy) ? fullThailandHierarchy : (Array.isArray(localThailandHierarchy) ? localThailandHierarchy : provincesFallback);
+        if (Array.isArray(fallback) && fallback.length > 0 && fallback[0].province && fallback[0].amphoe && fallback[0].district) {
+          const map: any = {};
+          fallback.forEach((r: any) => {
+            const prov = r.province;
+            const amph = r.amphoe;
+            const tamb = r.district;
+            if (!map[prov]) map[prov] = { name: prov, amphoes: {} };
+            if (!map[prov].amphoes[amph]) map[prov].amphoes[amph] = { name: amph, tambons: [] };
+            if (tamb && !map[prov].amphoes[amph].tambons.includes(tamb)) map[prov].amphoes[amph].tambons.push(tamb);
+          });
+          fallback = Object.values(map).map((pv: any) => ({ name: pv.name, amphoes: Object.values(pv.amphoes) }));
+        }
+        setThailandHierarchy(fallback);
+        return;
+      }
+      const data = await response.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setThailandHierarchy(data);
+        return;
+      }
+      setThailandHierarchy(Array.isArray(fullThailandHierarchy) ? fullThailandHierarchy : (Array.isArray(localThailandHierarchy) ? localThailandHierarchy : provincesFallback));
+    } catch (err) {
+      setThailandHierarchy(Array.isArray(fullThailandHierarchy) ? fullThailandHierarchy : (Array.isArray(localThailandHierarchy) ? localThailandHierarchy : provincesFallback));
+    }
+  }, []);
+
+  useEffect(() => { fetchThailandHierarchy(); }, [fetchThailandHierarchy]);
+
   const openAddModal = () => {
     resetForm();
     setShowModal(true);
@@ -293,6 +377,17 @@ export const CompaniesPage = () => {
     if (formData.type === 'company') {
       payload.branchName = formData.branchName?.trim() || undefined;
       payload.branchNumber = formData.branchNumber?.trim() || undefined;
+    }
+
+    // Attach province/amphoe/tambon: prefer selects, otherwise try to infer from address
+    if (formData.province) payload.province = formData.province;
+    if (formData.amphoe) payload.amphoe = formData.amphoe;
+    if (formData.tambon) payload.tambon = formData.tambon;
+    if (!payload.province || !payload.amphoe) {
+      const inferred = inferPartsByLookup(formData.address || '') || extractThaiPartsFromAddress(formData.address || '');
+      if (!payload.province && inferred.province) payload.province = inferred.province;
+      if (!payload.amphoe && inferred.amphoe) payload.amphoe = inferred.amphoe;
+      if (!payload.tambon && inferred.tambon) payload.tambon = inferred.tambon;
     }
 
     // Debug log
@@ -454,13 +549,20 @@ export const CompaniesPage = () => {
               style={{ minWidth: 220 }}
             />
           </div>
-          <div>
+          <div className="flex items-center gap-2">
             <button
               className="px-4 py-2 rounded-lg bg-[#3869a9] text-white font-medium shadow"
-              style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 17 }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 17 }}
               onClick={openAddModal}
             >
               + Add New Company
+            </button>
+            <button
+              className="btn-refresh"
+              onClick={fetchCompanies}
+              disabled={loading}
+            >
+              {loading ? 'Loading...' : 'Refresh'}
             </button>
           </div>
         </div>
@@ -691,14 +793,74 @@ export const CompaniesPage = () => {
                         required
                       />
                     </div>
+                    {/* Province / Amphoe / Tambon selects placed under Address label in a single row */}
                     <div className="col-md-12 mb-3">
                       <label className="form-label">Address</label>
                       <textarea
-                        className="form-control"
+                        className="form-control mb-2"
                         value={formData.address || ''}
                         onChange={(e) => handleChange('address', e.target.value)}
                         rows={3}
                       />
+                      <div className="row gx-2 mb-2">
+                        <div className="col-12 col-md-4">
+                          <select
+                            className="form-select"
+                            value={formData.province || ''}
+                            onChange={(e) => {
+                              const val = e.target.value || '';
+                              handleChange('province', val);
+                              handleChange('amphoe', '');
+                              handleChange('tambon', '');
+                            }}
+                          >
+                            <option value="">Select province</option>
+                            {Array.isArray(thailandHierarchy) && thailandHierarchy.map((p: any) => (
+                              <option key={p.name || p.province} value={p.name || p.province}>{p.name || p.province}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="col-12 col-md-4">
+                          <select
+                            className="form-select"
+                            value={formData.amphoe || ''}
+                            onChange={(e) => {
+                              const val = e.target.value || '';
+                              handleChange('amphoe', val);
+                              handleChange('tambon', '');
+                            }}
+                            disabled={!formData.province}
+                          >
+                            <option value="">Select amphoe</option>
+                            {Array.isArray(thailandHierarchy) && formData.province && (() => {
+                              const prov = thailandHierarchy.find((x: any) => (x.name || x.province) === formData.province);
+                              if (!prov || !Array.isArray(prov.amphoes)) return null;
+                              return prov.amphoes.map((a: any) => (
+                                <option key={a.name || a.amphoe} value={a.name || a.amphoe}>{a.name || a.amphoe}</option>
+                              ));
+                            })()}
+                          </select>
+                        </div>
+                        <div className="col-12 col-md-4">
+                          <select
+                            className="form-select"
+                            value={formData.tambon || ''}
+                            onChange={(e) => handleChange('tambon', e.target.value || '')}
+                            disabled={!formData.amphoe}
+                          >
+                            <option value="">Select tambon</option>
+                            {Array.isArray(thailandHierarchy) && formData.province && formData.amphoe && (() => {
+                              const prov = thailandHierarchy.find((x: any) => (x.name || x.province) === formData.province);
+                              if (!prov || !Array.isArray(prov.amphoes)) return null;
+                              const amph = prov.amphoes.find((a: any) => (a.name || a.amphoe) === formData.amphoe);
+                              if (!amph || !Array.isArray(amph.tambons)) return null;
+                              return amph.tambons.map((t: any) => (
+                                <option key={typeof t === 'string' ? t : (t.name || t.tambon)} value={typeof t === 'string' ? t : (t.name || t.tambon)}>{typeof t === 'string' ? t : (t.name || t.tambon)}</option>
+                              ));
+                            })()}
+                          </select>
+                        </div>
+                      </div>
                     </div>
                     <div className="col-md-6 mb-3">
                       <label className="form-label">Phone</label>
@@ -749,81 +911,6 @@ export const CompaniesPage = () => {
                         </div>
                       </>
                     )}
-                    <div className="col-md-12 mb-3">
-                      <hr /> <br />
-                      <h6 className="mb-3">Billing Information</h6>
-                    </div>
-
-                    {/* Billing Date field removed - not used anymore */}
-                    <div className="col-md-4 mb-3">
-                      <label className="form-label">Notification Date</label>
-                      <select
-                        className="form-select"
-                        value={formData.notificationDate || ''}
-                        onChange={(e) => handleChange('notificationDate', e.target.value)}
-                      >
-                        <option value="">Select day...</option>
-                        {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                          <option key={day} value={String(day)}>{day}</option>
-                        ))}
-                      </select>
-                      <small className="form-text text-muted">วันที่แจ้งเตือนก่อนถึงกำหนด</small>
-                    </div>
-                    <div className="col-md-12 mb-3">
-                      <label className="form-label">Subscription / Recurring (optional)</label>
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Plan Name</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={formData.subscription?.planName || ''}
-                        onChange={(e) => handleSubscriptionChange('planName', e.target.value)}
-                      />
-                      <small className="form-text text-muted">Subscription plan name (e.g., Basic, Pro)</small>
-                    </div>
-                    <div className="col-md-3 mb-3">
-                      <label className="form-label">Subscription Amount</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={String(formData.subscription?.amount ?? '')}
-                        onChange={(e) => handleSubscriptionChange('amount', parseFloat(e.target.value || '0'))}
-                      />
-                    </div>
-                    <div className="col-md-3 mb-3">
-                      <label className="form-label">Interval</label>
-                      <select
-                        className="form-select"
-                        value={formData.subscription?.interval || 'monthly'}
-                        onChange={(e) => handleSubscriptionChange('interval', e.target.value)}
-                      >
-                        <option value="monthly">Monthly</option>
-                        <option value="quarterly">Quarterly</option>
-                        <option value="yearly">Yearly</option>
-                      </select>
-                    </div>
-                    <div className="col-md-6 mb-3 d-flex align-items-center">
-                      <div className="form-check">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          checked={Boolean(formData.subscription?.autoRenew)}
-                          onChange={(e) => handleSubscriptionChange('autoRenew', e.target.checked)}
-                          id="autoRenew"
-                        />
-                        <label className="form-check-label ms-2" htmlFor="autoRenew">Auto renew</label>
-                      </div>
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Next Billing Date</label>
-                      <input
-                        type="date"
-                        className="form-control"
-                        value={formData.subscription?.nextBillingDate ? String(formData.subscription.nextBillingDate).split('T')[0] : ''}
-                        onChange={(e) => handleSubscriptionChange('nextBillingDate', e.target.value)}
-                      />
-                    </div>
                   </div>
                   {error && <div className="alert alert-danger">{error}</div>}
                   <div className="d-flex gap-2">

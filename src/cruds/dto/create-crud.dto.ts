@@ -18,5 +18,17 @@ export class CreateCrudDto {
 
   @IsOptional()
   @IsString()
+  province?: string;
+
+  @IsOptional()
+  @IsString()
+  amphoe?: string;
+
+  @IsOptional()
+  @IsString()
+  tambon?: string;
+
+  @IsOptional()
+  @IsString()
   photo?: string;
 }

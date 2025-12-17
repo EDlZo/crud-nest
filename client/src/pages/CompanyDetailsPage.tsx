@@ -1,10 +1,13 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaEnvelope, FaPhone, FaPen, FaCheck, FaTrash } from 'react-icons/fa';
+import { FaArrowLeft, FaEnvelope, FaPhone, FaPen, FaCheck, FaTrash, FaExternalLinkAlt } from 'react-icons/fa';
 import { FiEye } from 'react-icons/fi';
 import { FiEyeOff } from 'react-icons/fi';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import '../App.css';
+import provincesFallback from '../data/thailand-provinces.json';
+import localThailandHierarchy from '../data/thailand-hierarchy.json';
+import fullThailandHierarchy from '../data/thailand-hierarchy-full.json';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
 import { getAvatarColor } from '../utils/avatarColor';
@@ -106,6 +109,10 @@ export const CompanyDetailsPage = () => {
     // Inline Editing State
     const [editingField, setEditingField] = useState<string | null>(null);
     const [editValue, setEditValue] = useState<string>('');
+    const [editedProvince, setEditedProvince] = useState<string>('');
+    const [editedAmphoe, setEditedAmphoe] = useState<string>('');
+    const [editedTambon, setEditedTambon] = useState<string>('');
+    const [thailandHierarchy, setThailandHierarchy] = useState<any[] | null>(null);
     const [saving, setSaving] = useState(false);
     // Avatar upload state
     const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
@@ -258,6 +265,21 @@ export const CompanyDetailsPage = () => {
     const startEditing = (field: string, currentValue: string) => {
         setEditingField(field);
         setEditValue(currentValue || '');
+        if (field === 'address') {
+            const existingP = (company as any)?.province || '';
+            const existingA = (company as any)?.amphoe || '';
+            const existingT = (company as any)?.tambon || '';
+            if (existingP || existingA || existingT) {
+                setEditedProvince(existingP);
+                setEditedAmphoe(existingA);
+                setEditedTambon(existingT);
+            } else {
+                const inferred = inferPartsByLookup((company as any)?.address || '');
+                setEditedProvince(inferred.province || '');
+                setEditedAmphoe(inferred.amphoe || '');
+                setEditedTambon(inferred.tambon || '');
+            }
+        }
     };
 
     const cancelEditing = () => {
@@ -271,13 +293,29 @@ export const CompanyDetailsPage = () => {
         setError(null);
 
         try {
+            const bodyPayload: any = {};
+            if (field === 'address') {
+                bodyPayload.address = editValue.trim() || undefined;
+                if (editedProvince) bodyPayload.province = editedProvince;
+                if (editedAmphoe) bodyPayload.amphoe = editedAmphoe;
+                if (editedTambon) bodyPayload.tambon = editedTambon;
+                if ((!editedProvince || !editedAmphoe) && editValue) {
+                    const inferred = inferPartsByLookup(editValue);
+                    if (!bodyPayload.province && inferred.province) bodyPayload.province = inferred.province;
+                    if (!bodyPayload.amphoe && inferred.amphoe) bodyPayload.amphoe = inferred.amphoe;
+                    if (!bodyPayload.tambon && inferred.tambon) bodyPayload.tambon = inferred.tambon;
+                }
+            } else {
+                bodyPayload[field as string] = editValue.trim() || undefined;
+            }
+
             const response = await fetch(withBase(`/companies/${company.id}`), {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ [field]: editValue.trim() || undefined }),
+                body: JSON.stringify(bodyPayload),
             });
 
             if (!response.ok) {
@@ -341,6 +379,105 @@ export const CompanyDetailsPage = () => {
 
     const closePopup = () => {
         setShowPopup(false);
+    };
+
+    // --- Thailand helpers: fetch hierarchy + inference/parsing ---
+    const inferPartsByLookup = (addr?: string) => {
+        if (!addr || !Array.isArray(thailandHierarchy)) return { tambon: '', amphoe: '', province: '' };
+        const s = addr.replace(/\s+/g, '');
+        for (const prov of thailandHierarchy) {
+            const pname = (prov.name || prov.province || prov.province_name || '').toString();
+            const provClean = pname.replace(/\s+/g, '');
+            if (provClean && s.includes(provClean)) {
+                if (Array.isArray(prov.amphoes)) {
+                    for (const a of prov.amphoes) {
+                        const aname = (a.name || a.amphoe || '').toString().replace(/\s+/g, '');
+                        if (aname && s.includes(aname)) {
+                            if (Array.isArray(a.tambons)) {
+                                for (const t of a.tambons) {
+                                    const tname = (typeof t === 'string' ? t : (t.name || t.tambon || '')).toString().replace(/\s+/g, '');
+                                    if (tname && s.includes(tname)) {
+                                        return { tambon: (typeof t === 'string' ? t : t.name || t.tambon || '') as string, amphoe: a.name || a.amphoe || '', province: pname };
+                                    }
+                                }
+                            }
+                            return { tambon: '', amphoe: a.name || a.amphoe || '', province: pname };
+                        }
+                    }
+                }
+                return { tambon: '', amphoe: '', province: pname };
+            }
+        }
+        return { tambon: '', amphoe: '', province: '' };
+    };
+
+    const extractThaiPartsFromAddress = (addr?: string) => {
+        if (!addr || typeof addr !== 'string') return { tambon: '', amphoe: '', province: '' };
+        const s = addr.replace(/\s+/g, ' ').trim();
+        const tambonMatch = s.match(/(?:ต(?:\.|ำบล)?\s*)([ก-๙\-\s\u0E00-\u0E7F]+)/);
+        const amphoeMatch = s.match(/(?:อ(?:\.|ำเภอ)?\s*)([ก-๙\-\s\u0E00-\u0E7F]+)/);
+        const provinceMatch = s.match(/(?:จ(?:\.|ังหวัด)?\s*)([ก-๙\-\s\u0E00-\u0E7F]+)/);
+        const clean = (m?: RegExpMatchArray | null) => (m && m[1] ? m[1].trim().replace(/\s+/g, ' ') : '');
+        return { tambon: clean(tambonMatch), amphoe: clean(amphoeMatch), province: clean(provinceMatch) };
+    };
+
+    const fetchThailandHierarchy = async () => {
+        setThailandHierarchy(null);
+        try {
+            const res = await fetch(withBase('/thailand/hierarchy'));
+            if (!res.ok) {
+                let fallback: any = Array.isArray(fullThailandHierarchy) ? fullThailandHierarchy : (Array.isArray(localThailandHierarchy) ? localThailandHierarchy : provincesFallback);
+                if (Array.isArray(fallback) && fallback.length > 0 && fallback[0].province && fallback[0].amphoe && fallback[0].district) {
+                    const map: any = {};
+                    fallback.forEach((r: any) => {
+                        const prov = r.province;
+                        const amph = r.amphoe;
+                        const tamb = r.district;
+                        if (!map[prov]) map[prov] = { name: prov, amphoes: {} };
+                        if (!map[prov].amphoes[amph]) map[prov].amphoes[amph] = { name: amph, tambons: [] };
+                        if (tamb && !map[prov].amphoes[amph].tambons.includes(tamb)) map[prov].amphoes[amph].tambons.push(tamb);
+                    });
+                    fallback = Object.values(map).map((pv: any) => ({ name: pv.name, amphoes: Object.values(pv.amphoes) }));
+                }
+                setThailandHierarchy(fallback);
+                return;
+            }
+            const data = await res.json();
+            if (Array.isArray(data) && data.length > 0) {
+                setThailandHierarchy(data);
+                return;
+            }
+            setThailandHierarchy(Array.isArray(fullThailandHierarchy) ? fullThailandHierarchy : (Array.isArray(localThailandHierarchy) ? localThailandHierarchy : provincesFallback));
+        } catch (err) {
+            setThailandHierarchy(Array.isArray(fullThailandHierarchy) ? fullThailandHierarchy : (Array.isArray(localThailandHierarchy) ? localThailandHierarchy : provincesFallback));
+        }
+    };
+
+    useEffect(() => { fetchThailandHierarchy(); }, []);
+
+    const renderAddressSegments = (comp: Company | null) => {
+        const addrText = (comp as any)?.address || '';
+        let tambon = (comp as any)?.tambon || '';
+        let amphoe = (comp as any)?.amphoe || '';
+        let province = (comp as any)?.province || '';
+        if (!tambon || !amphoe || !province) {
+            const parsed = extractThaiPartsFromAddress(addrText);
+            tambon = tambon || parsed.tambon;
+            amphoe = amphoe || parsed.amphoe;
+            province = province || parsed.province;
+        }
+        if ((!tambon || !amphoe || !province) && thailandHierarchy) {
+            const inferred = inferPartsByLookup(addrText);
+            tambon = tambon || inferred.tambon;
+            amphoe = amphoe || inferred.amphoe;
+            province = province || inferred.province;
+        }
+        const segments: string[] = [];
+        if (addrText) segments.push(String(addrText).trim());
+        if (tambon) segments.push(`ต.${String(tambon).trim()}`);
+        if (amphoe) segments.push(`อ.${String(amphoe).trim()}`);
+        if (province) segments.push(`จ.${String(province).trim()}`);
+        return <div className="fw-medium">{segments.length ? segments.join(' ') : '-'}</div>;
     };
 
     if (loading) return <div className="p-4">Loading...</div>;
@@ -563,30 +700,36 @@ export const CompanyDetailsPage = () => {
                                 <h6 className="m-0 font-weight-bold text-dark">Billing</h6>
                             </div>
                             <div className="card-body">
-                                <p className="mb-2">Manage billing records for this company. Below are the company's bills with inline actions.</p>
                                 <div style={{ overflowX: 'auto' }}>
-                                    <table className="table table-striped table-sm">
+                                    <table className="table table-striped table-sm table-borderless">
                                         <thead>
                                             <tr>
-                                                <th>วันที่แจ้ง</th>
-                                                <th>ยอดรวม</th>
-                                                <th>รอบ</th>
-                                                <th>แจ้งวันนี้</th>
-                                                <th>สถานะ</th>
+                                                <th>Date of this contract</th>
+                                                <th>Amount</th>
+                                                <th>Billing interval</th>
+                                                <th>Notification date</th>
+
+                                                
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {billingLoading && (
                                                 <tr>
-                                                    <td colSpan={5} className="text-center">Loading...</td>
+                                                    <td colSpan={6} className="text-center">Loading...</td>
                                                 </tr>
                                             )}
                                             {!billingLoading && billingRecords.length === 0 && (
                                                 <tr>
-                                                    <td colSpan={5} className="text-center">No billing records found.</td>
+                                                    <td colSpan={6} className="text-center">No billing records found.</td>
                                                 </tr>
                                             )}
                                             {!billingLoading && billingRecords.map((r: any) => {
+                                                const contractDate = r.contractStartDate || r.contractEndDate
+                                                    ? `${r.contractStartDate || '-'}${r.contractEndDate ? ` - ${r.contractEndDate}` : ''}`
+                                                    : (r.contractDate || '-');
+                                                const billingIntervalText = r.billingIntervalMonths
+                                                    ? `ทุกๆ ${r.billingIntervalMonths} เดือน`
+                                                    : (r.billingCycle || '-');
                                                 const now = new Date();
                                                 const bangkokToday = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
                                                 const bangkokTodayIso = bangkokToday.toISOString().split('T')[0];
@@ -595,11 +738,11 @@ export const CompanyDetailsPage = () => {
 
                                                 return (
                                                     <tr key={r.id || `${r.companyId}-${r.billingDate}-${r.amount}`}>
-                                                        <td>{r.billingDate || '-'}</td>
+                                                        <td>{contractDate}</td>
                                                         <td>{typeof r.amount === 'number' ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(r.amount) : (r.amount ?? '-')}</td>
-                                                        <td>{r.billingCycle || '-'}</td>
-                                                        <td>{isNotifyToday ? <span className="badge bg-success">แจ้งวันนี้</span> : '-'}</td>
-                                                        <td>{r.status || '-'}</td>
+                                                        <td>{billingIntervalText}</td>
+                                                        <td>{r.billingDate || '-'}</td>
+                                                        
                                                         {/* actions removed in company details view */}
                                                     </tr>
                                                 );
@@ -608,8 +751,13 @@ export const CompanyDetailsPage = () => {
                                     </table>
                                 </div>
                                 <div className="mt-2">
-                                    <button className="btn btn-link p-0" onClick={() => navigate(`/billing?companyId=${company.id}`)}>
-                                        Open full Billing page
+                                    <button
+                                        className="btn btn-sm btn-primary d-inline-flex align-items-center"
+                                        style={{ gap: 8 }}
+                                        onClick={() => navigate(`/billing?companyId=${company.id}`)}
+                                    >
+                                        <FaExternalLinkAlt />
+                                        <span>Open full Billing</span>
                                     </button>
                                 </div>
                             </div>
@@ -641,44 +789,136 @@ export const CompanyDetailsPage = () => {
                                                 <div className="flex-grow-1">
                                                     <div className="text-muted small mb-1">{label}</div>
                                                     {isEditing ? (
-                                                        <div className="d-flex align-items-center gap-2">
-                                                            {inputType === 'select' && options ? (
-                                                                <select
-                                                                    className="form-select form-select-sm"
-                                                                    value={editValue}
-                                                                    onChange={(e) => setEditValue(e.target.value)}
-                                                                    autoFocus
+                                                        fieldKey === 'address' ? (
+                                                            <div style={{ width: '100%' }}>
+                                                                <div>
+                                                                    <textarea
+                                                                        className="form-control form-control-sm mb-2"
+                                                                        value={editValue}
+                                                                        onChange={(e) => setEditValue(e.target.value)}
+                                                                        rows={3}
+                                                                        autoFocus
+                                                                    />
+                                                                    <div className="row gx-2 mb-2">
+                                                                        <div className="col-12 col-md-4">
+                                                                            <select
+                                                                                className="form-select form-select-sm"
+                                                                                value={editedProvince}
+                                                                                onChange={(e) => { setEditedProvince(e.target.value || ''); setEditedAmphoe(''); setEditedTambon(''); }}
+                                                                            >
+                                                                                {thailandHierarchy === null ? (
+                                                                                    <option value="">Loading provinces...</option>
+                                                                                ) : Array.isArray(thailandHierarchy) && thailandHierarchy.length === 0 ? (
+                                                                                    <option value="">No provinces loaded</option>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <option value="">Select province</option>
+                                                                                        {Array.isArray(thailandHierarchy) && thailandHierarchy.map((p: any) => (
+                                                                                            <option key={p.name || p.province} value={p.name || p.province}>{p.name || p.province}</option>
+                                                                                        ))}
+                                                                                    </>
+                                                                                )}
+                                                                            </select>
+                                                                        </div>
+                                                                        <div className="col-12 col-md-4">
+                                                                            <select
+                                                                                className="form-select form-select-sm"
+                                                                                value={editedAmphoe}
+                                                                                onChange={(e) => { setEditedAmphoe(e.target.value || ''); setEditedTambon(''); }}
+                                                                                disabled={!editedProvince}
+                                                                            >
+                                                                                <option value="">Select amphoe</option>
+                                                                                {Array.isArray(thailandHierarchy) && editedProvince && (() => {
+                                                                                    const prov = thailandHierarchy.find((x: any) => (x.name || x.province) === editedProvince);
+                                                                                    if (!prov || !Array.isArray(prov.amphoes)) return null;
+                                                                                    return prov.amphoes.map((a: any) => (
+                                                                                        <option key={a.name || a.amphoe} value={a.name || a.amphoe}>{a.name || a.amphoe}</option>
+                                                                                    ));
+                                                                                })()}
+                                                                            </select>
+                                                                        </div>
+                                                                        <div className="col-12 col-md-4">
+                                                                            <select
+                                                                                className="form-select form-select-sm"
+                                                                                value={editedTambon}
+                                                                                onChange={(e) => setEditedTambon(e.target.value || '')}
+                                                                                disabled={!editedAmphoe}
+                                                                            >
+                                                                                <option value="">Select tambon</option>
+                                                                                {Array.isArray(thailandHierarchy) && editedProvince && editedAmphoe && (() => {
+                                                                                    const prov = thailandHierarchy.find((x: any) => (x.name || x.province) === editedProvince);
+                                                                                    if (!prov || !Array.isArray(prov.amphoes)) return null;
+                                                                                    const amph = prov.amphoes.find((a: any) => (a.name || a.amphoe) === editedAmphoe);
+                                                                                    if (!amph || !Array.isArray(amph.tambons)) return null;
+                                                                                    return amph.tambons.map((t: any) => (
+                                                                                        <option key={typeof t === 'string' ? t : (t.name || t.tambon)} value={typeof t === 'string' ? t : (t.name || t.tambon)}>{typeof t === 'string' ? t : (t.name || t.tambon)}</option>
+                                                                                    ));
+                                                                                })()}
+                                                                            </select>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="d-flex gap-2">
+                                                                        <button
+                                                                            className="btn btn-sm btn-secondary"
+                                                                            onClick={cancelEditing}
+                                                                            disabled={saving}
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                        <button
+                                                                            className="btn btn-sm btn-primary"
+                                                                            onClick={() => saveField(fieldKey)}
+                                                                            disabled={saving}
+                                                                        >
+                                                                            {saving ? 'Saving...' : 'Save'}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="d-flex align-items-center gap-2">
+                                                                {inputType === 'select' && options ? (
+                                                                    <select
+                                                                        className="form-select form-select-sm"
+                                                                        value={editValue}
+                                                                        onChange={(e) => setEditValue(e.target.value)}
+                                                                        autoFocus
+                                                                    >
+                                                                        {options.map(opt => (
+                                                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                ) : (
+                                                                    <input
+                                                                        type={inputType}
+                                                                        className="form-control form-control-sm"
+                                                                        value={editValue}
+                                                                        onChange={(e) => setEditValue(e.target.value)}
+                                                                        autoFocus
+                                                                    />
+                                                                )}
+                                                                <button
+                                                                    className="btn btn-sm btn-secondary"
+                                                                    onClick={cancelEditing}
+                                                                    disabled={saving}
                                                                 >
-                                                                    {options.map(opt => (
-                                                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                                                    ))}
-                                                                </select>
-                                                            ) : (
-                                                                <input
-                                                                    type={inputType}
-                                                                    className="form-control form-control-sm"
-                                                                    value={editValue}
-                                                                    onChange={(e) => setEditValue(e.target.value)}
-                                                                    autoFocus
-                                                                />
-                                                            )}
-                                                            <button
-                                                                className="btn btn-sm btn-secondary"
-                                                                onClick={cancelEditing}
-                                                                disabled={saving}
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                            <button
-                                                                className="btn btn-sm btn-primary"
-                                                                onClick={() => saveField(fieldKey)}
-                                                                disabled={saving}
-                                                            >
-                                                                {saving ? 'Saving...' : 'Save'}
-                                                            </button>
-                                                        </div>
+                                                                    Cancel
+                                                                </button>
+                                                                <button
+                                                                    className="btn btn-sm btn-primary"
+                                                                    onClick={() => saveField(fieldKey)}
+                                                                    disabled={saving}
+                                                                >
+                                                                    {saving ? 'Saving...' : 'Save'}
+                                                                </button>
+                                                            </div>
+                                                        )
                                                     ) : (
-                                                        <div className="fw-medium text-capitalize">{value || '-'}</div>
+                                                        fieldKey === 'address' ? (
+                                                            renderAddressSegments(company)
+                                                        ) : (
+                                                            <div className="fw-medium text-capitalize">{value || '-'}</div>
+                                                        )
                                                     )}
                                                 </div>
                                                 {!isEditing && (

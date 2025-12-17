@@ -79,6 +79,16 @@ export class BillingSchedulerService {
         const billingDateIso = (record.billingDate || '').split('T')[0];
         if (!billingDateIso) continue;
 
+        // Skip if this record was already notified today (safety to avoid duplicates)
+        try {
+          if (record.lastNotifiedDate && record.lastNotifiedDate === todayIso) {
+            this.logger.debug(`Skipping record ${doc.id} — already notified today (${todayIso})`);
+            continue;
+          }
+        } catch (skipErr) {
+          // proceed if any unexpected shape
+        }
+
         const daysUntil = this.daysBetweenDates(bangkokTime, new Date(billingDateIso + 'T00:00:00'));
 
         // Check contract period: prefer record-level contractDates, otherwise consider record without contract
@@ -126,14 +136,43 @@ export class BillingSchedulerService {
                 doc.id,
               );
 
-              // Optionally mark that notification was sent for this record (not required but helpful)
+              // Build update payload: mark lastNotifiedDate and increment count
+              const updates: any = {
+                lastNotifiedDate: todayIso,
+                lastNotificationAt: new Date().toISOString(),
+                lastNotificationStatus: 'sent',
+                notificationsSentCount: (record.notificationsSentCount || 0) + 1,
+              };
+
+              // If this is the actual billing date (not just an advance notice) and there is an interval, advance billingDate
+              if (shouldOnBillingDate && billingIntervalMonths && Number(billingIntervalMonths) > 0) {
+                try {
+                  const nextBilling = this.addMonthsToIsoDate(billingDateIso, Number(billingIntervalMonths));
+                  updates.billingDate = nextBilling;
+                  this.logger.log(`Auto-advanced billingDate for record ${doc.id} to ${nextBilling}`);
+                } catch (advErr) {
+                  this.logger.debug(`Failed to compute next billing date for ${doc.id}`, advErr);
+                }
+              }
+
               try {
-                await this.db.collection('billing-records').doc(doc.id).update({ notificationsSent: true });
+                await this.db.collection('billing-records').doc(doc.id).update(updates);
               } catch (updErr) {
-                this.logger.debug(`Failed to update notificationsSent for record ${doc.id}`, updErr);
+                this.logger.debug(`Failed to update notification metadata for record ${doc.id}`, updErr);
               }
             } catch (sendErr) {
               this.logger.error(`Failed to send notification for record ${doc.id}`, sendErr);
+              try {
+                await this.db.collection('billing-records').doc(doc.id).update({
+                  lastNotifiedDate: todayIso,
+                  lastNotificationAt: new Date().toISOString(),
+                  lastNotificationStatus: 'failed',
+                  lastNotificationError: String(sendErr),
+                  notificationsSentCount: (record.notificationsSentCount || 0) + 1,
+                });
+              } catch (errUpd) {
+                this.logger.debug(`Failed to update failed-notification metadata for record ${doc.id}`, errUpd);
+              }
             }
           }
         }
@@ -150,6 +189,17 @@ export class BillingSchedulerService {
     const utc2 = Date.UTC(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
     const diff = Math.floor((utc2 - utc1) / (1000 * 60 * 60 * 24));
     return diff;
+  }
+
+  // Add months to an ISO date string (YYYY-MM-DD) and return as YYYY-MM-DDT00:00:00
+  private addMonthsToIsoDate(isoDate: string, months: number): string {
+    const d = new Date(isoDate + 'T00:00:00');
+    const dt = new Date(d.getTime());
+    dt.setMonth(dt.getMonth() + months);
+    const yyyy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    const dd = String(dt.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}T00:00:00`;
   }
 }
 

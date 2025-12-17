@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { FiEdit2, FiTrash2, FiFilter } from 'react-icons/fi';
 import '../App.css';
 import { API_BASE_URL } from '../config';
+import provincesFallback from '../data/thailand-provinces.json';
+import localThailandHierarchy from '../data/thailand-hierarchy.json';
+import fullThailandHierarchy from '../data/thailand-hierarchy-full.json';
 import { useAuth } from '../context/AuthContext';
 import { formatDateTime } from '../utils/formatDate';
 import { getAvatarColor } from '../utils/avatarColor';
@@ -15,6 +18,9 @@ type Contact = {
   email: string;
   phone: string;
   address: string;
+  province?: string;
+  amphoe?: string;
+  tambon?: string;
   photo?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -29,6 +35,9 @@ const emptyContact: Contact = {
   email: '',
   phone: '',
   address: '',
+  province: '',
+  amphoe: '',
+  tambon: '',
   photo: '',
 };
 
@@ -42,9 +51,57 @@ type FilterState = {
 };
 
 export const ContactsPage = () => {
+  // Helper: extract tambon/amphoe/province from free-text address if explicit fields are missing.
+  const extractThaiPartsFromAddress = (addr?: string) => {
+    if (!addr || typeof addr !== 'string') return { tambon: '', amphoe: '', province: '' };
+    const s = addr.replace(/\s+/g, ' ').trim();
+    // Patterns: ต. / ตำบล ; อ. / อำเภอ ; จ. / จังหวัด
+    const tambonMatch = s.match(/(?:ต(?:\.|ำบล)?\s*)([ก-๙\-\s\u0E00-\u0E7F]+)/);
+    const amphoeMatch = s.match(/(?:อ(?:\.|ำเภอ)?\s*)([ก-๙\-\s\u0E00-\u0E7F]+)/);
+    const provinceMatch = s.match(/(?:จ(?:\.|ังหวัด)?\s*)([ก-๙\-\s\u0E00-\u0E7F]+)/);
+    const clean = (m?: RegExpMatchArray | null) => (m && m[1] ? m[1].trim().replace(/\s+/g, ' ') : '');
+    return { tambon: clean(tambonMatch), amphoe: clean(amphoeMatch), province: clean(provinceMatch) };
+  };
+
+  // Try to infer tambon/amphoe/province by looking up known names in the loaded hierarchy
+  const inferPartsByLookup = (addr?: string) => {
+    if (!addr || !Array.isArray(thailandHierarchy)) return { tambon: '', amphoe: '', province: '' };
+    const s = addr.replace(/\s+/g, ''); // remove spaces for matching
+    for (const prov of thailandHierarchy) {
+      const pname = (prov.name || prov.province || prov.province_name || '').toString();
+      const provClean = pname.replace(/\s+/g, '');
+      if (provClean && s.includes(provClean)) {
+        // try amphoe / tambon inside this province
+        if (Array.isArray(prov.amphoes)) {
+          for (const a of prov.amphoes) {
+            const aname = (a.name || a.amphoe || '').toString().replace(/\s+/g, '');
+            if (aname && s.includes(aname)) {
+              if (Array.isArray(a.tambons)) {
+                for (const t of a.tambons) {
+                  const tname = (typeof t === 'string' ? t : (t.name || t.tambon || '')).toString().replace(/\s+/g, '');
+                  if (tname && s.includes(tname)) {
+                    return { tambon: (typeof t === 'string' ? t : t.name || t.tambon || '') as string, amphoe: a.name || a.amphoe || '', province: pname };
+                  }
+                }
+              }
+              return { tambon: '', amphoe: a.name || a.amphoe || '', province: pname };
+            }
+          }
+        }
+        return { tambon: '', amphoe: '', province: pname };
+      }
+    }
+    return { tambon: '', amphoe: '', province: '' };
+  };
   const { token, user, logout } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
+  const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]);
+  const [companyDropdownOpen, setCompanyDropdownOpen] = useState(false);
+  const companyDropdownRef = useRef<HTMLDivElement | null>(null);
+  const companyToggleRef = useRef<HTMLButtonElement | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ left: number; top: number; width: number } | null>(null);
+  const [hoveredCompanyId, setHoveredCompanyId] = useState<string | null>(null);
   const [openCompaniesFor, setOpenCompaniesFor] = useState<string | null>(null);
   const popupRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
@@ -52,6 +109,7 @@ export const ContactsPage = () => {
   const [popupPosition, setPopupPosition] = useState<{ x: number; y: number } | null>(null);
   const [popupCompanies, setPopupCompanies] = useState<any[] | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [thailandHierarchy, setThailandHierarchy] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -116,10 +174,50 @@ export const ContactsPage = () => {
     }
   }, [token]);
 
+  const fetchThailandHierarchy = useCallback(async () => {
+    setThailandHierarchy(null); // loading
+    try {
+      const response = await fetch(withBase('/thailand/hierarchy'));
+      if (!response.ok) {
+        console.warn('thailand/hierarchy fetch failed', response.status, '— falling back to embedded full hierarchy');
+        // If the embedded full hierarchy is a flat array, convert it to hierarchical form
+        let fallback: any = Array.isArray(fullThailandHierarchy) ? fullThailandHierarchy : (Array.isArray(localThailandHierarchy) ? localThailandHierarchy : provincesFallback);
+        if (Array.isArray(fallback) && fallback.length > 0 && fallback[0].province && fallback[0].amphoe && fallback[0].district) {
+          // convert flat to hierarchical
+          const map: any = {};
+          fallback.forEach((r: any) => {
+            const prov = r.province;
+            const amph = r.amphoe;
+            const tamb = r.district;
+            if (!map[prov]) map[prov] = { name: prov, amphoes: {} };
+            if (!map[prov].amphoes[amph]) map[prov].amphoes[amph] = { name: amph, tambons: [] };
+            if (tamb && !map[prov].amphoes[amph].tambons.includes(tamb)) map[prov].amphoes[amph].tambons.push(tamb);
+          });
+          fallback = Object.values(map).map((pv: any) => ({ name: pv.name, amphoes: Object.values(pv.amphoes) }));
+        }
+        setThailandHierarchy(fallback);
+        return;
+      }
+      const data = await response.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setThailandHierarchy(data);
+        console.log('Loaded thailand hierarchy from backend, provinces:', data.length);
+        return;
+      }
+      // Backend returned empty -> try embedded full hierarchy
+      setThailandHierarchy(Array.isArray(fullThailandHierarchy) ? fullThailandHierarchy : (Array.isArray(localThailandHierarchy) ? localThailandHierarchy : provincesFallback));
+      console.log('Backend returned empty hierarchy — used embedded fallback');
+    } catch (err) {
+      console.error('thailand/hierarchy fetch error', err, '— using embedded fallback');
+      setThailandHierarchy(Array.isArray(fullThailandHierarchy) ? fullThailandHierarchy : (Array.isArray(localThailandHierarchy) ? localThailandHierarchy : provincesFallback));
+    }
+  }, []);
+
   useEffect(() => {
     fetchContacts();
     fetchCompanies();
-  }, [fetchContacts, fetchCompanies]);
+    fetchThailandHierarchy();
+  }, [fetchContacts, fetchCompanies, fetchThailandHierarchy]);
 
   // Close popup when clicking outside or pressing Escape
   useEffect(() => {
@@ -141,6 +239,59 @@ export const ContactsPage = () => {
     };
   }, [openCompaniesFor]);
 
+  // Close company dropdown in modal when clicking outside or pressing Escape
+  // Also compute a fixed position so dropdown can open upwards when needed
+  useEffect(() => {
+    if (!companyDropdownOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      const el = companyDropdownRef.current;
+      const btn = companyToggleRef.current;
+      if (el && !el.contains(e.target as Node) && btn && !btn.contains(e.target as Node)) {
+        setCompanyDropdownOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCompanyDropdownOpen(false);
+    };
+
+    // compute position for fixed dropdown
+    const btn = companyToggleRef.current;
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      const maxHeight = 260;
+      const estimatedHeight = Math.min(maxHeight, (companies.length * 44) + 12);
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      let top = rect.bottom + 8;
+      if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
+        // open upwards
+        top = rect.top - estimatedHeight - 8;
+      }
+      setDropdownPos({ left: rect.left, top, width: rect.width });
+    }
+
+    document.addEventListener('click', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('click', onDocClick);
+      document.removeEventListener('keydown', onKey);
+      setDropdownPos(null);
+    };
+  }, [companyDropdownOpen, companies.length]);
+
+  const toggleCompany = (id: string) => {
+    setSelectedCompanyIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const renderSelectedCompaniesLabel = () => {
+    if (selectedCompanyIds.length === 0) return 'Select companies';
+    const found = companies.filter(c => selectedCompanyIds.includes(c.id));
+    if (found.length === 0) return `${selectedCompanyIds.length} selected`;
+    if (found.length === 1) return found[0].name || found[0].branchName || found[0].id;
+    if (found.length === 2) return `${found[0].name || found[0].branchName || found[0].id}, ${found[1].name || found[1].branchName || found[1].id}`;
+    return `${found[0].name || found[0].branchName || found[0].id} +${found.length - 1}`;
+  };
+
   const handleChange = (key: keyof Contact, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
@@ -149,6 +300,7 @@ export const ContactsPage = () => {
     setEditingId(null);
     setFormData(emptyContact);
     setPhotoPreview('');
+    setSelectedCompanyIds([]);
   };
 
   const openAddModal = () => {
@@ -167,13 +319,36 @@ export const ContactsPage = () => {
     setSubmitting(true);
     setError(null);
 
+    // Build payload and infer missing address parts from free-text address when necessary
+    const inferredFromText = (() => {
+      const addrText = (formData.address || '').trim();
+      const explicit = { tambon: formData.tambon || '', amphoe: formData.amphoe || '', province: formData.province || '' };
+      // If explicit fields exist, prefer them. Otherwise try parser and lookup.
+      if (explicit.tambon && explicit.amphoe && explicit.province) return explicit;
+      const parsed = extractThaiPartsFromAddress(addrText);
+      let tambon = explicit.tambon || parsed.tambon;
+      let amphoe = explicit.amphoe || parsed.amphoe;
+      let province = explicit.province || parsed.province;
+      if ((!tambon || !amphoe || !province) && thailandHierarchy) {
+        const inferred = inferPartsByLookup(addrText);
+        tambon = tambon || inferred.tambon;
+        amphoe = amphoe || inferred.amphoe;
+        province = province || inferred.province;
+      }
+      return { tambon: tambon || '', amphoe: amphoe || '', province: province || '' };
+    })();
+
     const payload = {
       firstName: formData.firstName.trim(),
       lastName: formData.lastName.trim(),
       email: formData.email.trim(),
       phone: formData.phone.trim(),
       address: formData.address.trim(),
+      province: formData.province || inferredFromText.province || '',
+      amphoe: formData.amphoe || inferredFromText.amphoe || '',
+      tambon: formData.tambon || inferredFromText.tambon || '',
       photo: formData.photo || '',
+      companyIds: selectedCompanyIds,
     };
 
     if (!payload.firstName || !payload.lastName || !payload.email || !payload.phone || !payload.address) {
@@ -237,10 +412,44 @@ export const ContactsPage = () => {
       const saved = (await response.json()) as Contact;
       console.log('Saved contact:', saved);
 
+      // Ensure UI shows the selected address parts even if backend didn't return them
+      try {
+        if (saved) {
+          (saved as any).province = (saved as any).province || payload.province || '';
+          (saved as any).amphoe = (saved as any).amphoe || payload.amphoe || '';
+          (saved as any).tambon = (saved as any).tambon || payload.tambon || '';
+          (saved as any).address = (saved as any).address || payload.address || '';
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      // Update contacts list
       if (isEdit) {
         setContacts((prev) => prev.map((item) => (item.id === saved.id ? saved : item)));
       } else {
         setContacts((prev) => [saved, ...prev]);
+      }
+
+      // Optimistically update companies state so selected companies reflect the saved contact immediately
+      try {
+        const contactId = saved.id;
+        if (contactId) {
+          setCompanies((prev) => prev.map((c) => {
+            const contactsArr: string[] = Array.isArray(c.contacts) ? [...c.contacts] : [];
+            const shouldInclude = selectedCompanyIds.includes(c.id);
+            const currentlyIncludes = contactsArr.includes(contactId);
+            if (shouldInclude && !currentlyIncludes) {
+              return { ...c, contacts: [...contactsArr, contactId] };
+            }
+            if (!shouldInclude && currentlyIncludes) {
+              return { ...c, contacts: contactsArr.filter((x) => x !== contactId) };
+            }
+            return c;
+          }));
+        }
+      } catch (e) {
+        // ignore optimistic update errors
       }
       resetForm();
       setShowModal(false);
@@ -260,10 +469,20 @@ export const ContactsPage = () => {
       email: contact.email,
       phone: contact.phone,
       address: contact.address,
+      province: (contact as any).province || '',
+      amphoe: (contact as any).amphoe || '',
+      tambon: (contact as any).tambon || '',
       photo: contact.photo,
       id: contact.id,
     });
     setPhotoPreview(contact.photo || '');
+    // prefill selected companies that include this contact
+    try {
+      const ids = companies.filter(c => Array.isArray(c.contacts) && c.contacts.includes(contact.id)).map(c => c.id);
+      setSelectedCompanyIds(ids);
+    } catch (e) {
+      setSelectedCompanyIds([]);
+    }
     setShowModal(true);
   };
 
@@ -493,7 +712,7 @@ export const ContactsPage = () => {
           <h1 className="h3 mb-0 text-gray-800">Contacts</h1>
           <div>
             <button className="btn btn-add me-2" onClick={openAddModal}>+ Add New Contact</button>
-            <button className="btn btn-outline-secondary" onClick={fetchContacts} disabled={loading}>
+            <button className="btn-refresh" onClick={fetchContacts} disabled={loading}>
               {loading ? 'Loading...' : 'Refresh'}
             </button>
           </div>
@@ -547,7 +766,7 @@ export const ContactsPage = () => {
                           {renderFilterDropdown('address', 'Address')}
                         </th>
                         <th className="border-0 py-3 px-4" style={{ fontWeight: 500, color: '#374151' }}>
-                          บริษัท
+                          Company
                         </th>
                         <th className="border-0 py-3 px-4" style={{ fontWeight: 500, color: '#374151' }}>
                           Last Updated
@@ -601,7 +820,32 @@ export const ContactsPage = () => {
                               {contact.phone ?? '-'}
                             </td>
                             <td className="py-3 px-4 border-0" style={{ color: '#6b7280' }}>
-                              {contact.address ?? '-'}
+                              {(() => {
+                                // prefer explicit fields; if missing, try to parse from free-text address
+                                const addrText = contact.address ?? '';
+                                let tambon = (contact as any).tambon || (contact as any).subdistrict || '';
+                                let amphoe = (contact as any).amphoe || (contact as any).district || '';
+                                let province = (contact as any).province || (contact as any).province_name || '';
+                                if (!tambon || !amphoe || !province) {
+                                  const parsed = extractThaiPartsFromAddress(addrText);
+                                  tambon = tambon || parsed.tambon;
+                                  amphoe = amphoe || parsed.amphoe;
+                                  province = province || parsed.province;
+                                }
+                                // If still missing, attempt lookup against loaded hierarchy
+                                if ((!tambon || !amphoe || !province) && thailandHierarchy) {
+                                  const inferred = inferPartsByLookup(addrText);
+                                  tambon = tambon || inferred.tambon;
+                                  amphoe = amphoe || inferred.amphoe;
+                                  province = province || inferred.province;
+                                }
+                                const segments: string[] = [];
+                                if (addrText) segments.push(String(addrText).trim());
+                                if (tambon) segments.push(`ต.${String(tambon).trim()}`);
+                                if (amphoe) segments.push(`อ.${String(amphoe).trim()}`);
+                                if (province) segments.push(`จ.${String(province).trim()}`);
+                                return segments.length ? segments.join(' ') : '-';
+                              })()}
                             </td>
                             <td className="py-3 px-4 border-0" style={{ color: '#6b7280', position: 'relative' }}>
                               {(() => {
@@ -814,15 +1058,168 @@ export const ContactsPage = () => {
                         onChange={(e) => handleChange('phone', e.target.value)}
                       />
                     </div>
-                    <div className="col-md-12 mb-3">
+                    {/* Address moved below Companies dropdown (per UX request) */}
+                    {/* Thailand cascading selects: Province -> Amphoe -> Tambon */}
+                    {/* Address label above the cascading selects */}
+                    <div className="col-md-12 mb-2">
                       <label className="form-label">Address</label>
                       <textarea
-                        className="form-control"
+                        className="form-control mb-2"
                         value={formData.address}
                         onChange={(e) => handleChange('address', e.target.value)}
                         rows={3}
                       />
                     </div>
+                    <div className="col-md-4 mb-3">
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <select
+                          className="form-select"
+                          value={formData.province || ''}
+                          onChange={(e) => {
+                            const prov = e.target.value;
+                            handleChange('province', prov);
+                            // reset lower levels
+                            handleChange('amphoe', '');
+                            handleChange('tambon', '');
+                          }}
+                          style={{ flex: 1 }}
+                        >
+                          {thailandHierarchy === null ? (
+                            <option value="">Loading provinces...</option>
+                          ) : Array.isArray(thailandHierarchy) && thailandHierarchy.length === 0 ? (
+                            <option value="">No provinces loaded</option>
+                          ) : (
+                            <>
+                              <option value="">Select province</option>
+                              {Array.isArray(thailandHierarchy) && thailandHierarchy.map((p: any) => (
+                                <option key={p.id || p.code || p.province || p.name} value={p.name || p.province || p.name_th || p.province_name || p.code}>
+                                  {p.name || p.province || p.name_th || p.province_name || p.code}
+                                </option>
+                              ))}
+                            </>
+                          )}
+                        </select>
+                        {Array.isArray(thailandHierarchy) && thailandHierarchy.length === 0 && (
+                          <button type="button" className="btn btn-outline-secondary" onClick={() => fetchThailandHierarchy()} style={{ whiteSpace: 'nowrap' }}>Retry</button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="col-md-4 mb-3">
+                      <select
+                        className="form-select"
+                        value={formData.amphoe || ''}
+                        onChange={(e) => { handleChange('amphoe', e.target.value); handleChange('tambon', ''); }}
+                        disabled={!formData.province || !Array.isArray(thailandHierarchy)}
+                      >
+                        <option value="">Select amphoe</option>
+                        {Array.isArray(thailandHierarchy) && formData.province && (() => {
+                          const prov = thailandHierarchy.find((x: any) => (x.name || x.province || x.province_name || x.name_th) === formData.province);
+                          const amphoes = prov && Array.isArray(prov.amphoes) ? prov.amphoes : (prov && Array.isArray(prov.districts) ? prov.districts : []);
+                          return amphoes.map((a: any) => (
+                            <option key={a.id || a.code || a.amphoe || a.name} value={a.name || a.amphoe || a.name_th || a.code}>
+                              {a.name || a.amphoe || a.name_th || a.code}
+                            </option>
+                          ));
+                        })()}
+                      </select>
+                    </div>
+                    <div className="col-md-4 mb-3">
+                      <select
+                        className="form-select"
+                        value={formData.tambon || ''}
+                        onChange={(e) => handleChange('tambon', e.target.value)}
+                        disabled={!formData.amphoe || !Array.isArray(thailandHierarchy)}
+                      >
+                        <option value="">Select tambon</option>
+                        {Array.isArray(thailandHierarchy) && formData.province && formData.amphoe && (() => {
+                          const prov = thailandHierarchy.find((x: any) => (x.name || x.province || x.province_name || x.name_th) === formData.province);
+                          const amphoes = prov && Array.isArray(prov.amphoes) ? prov.amphoes : (prov && Array.isArray(prov.districts) ? prov.districts : []);
+                          const a = amphoes && amphoes.find((aa: any) => (aa.name || aa.amphoe || aa.name_th) === formData.amphoe);
+                          const tambons = a && Array.isArray(a.tambons) ? a.tambons : (a && Array.isArray(a.subdistricts) ? a.subdistricts : []);
+                          return (tambons || []).map((t: any) => {
+                            const display = (typeof t === 'string') ? t : (t.name || t.tambon || t.name_th || t.code || '');
+                            const key = (typeof t === 'string') ? display : (t.id || t.code || t.tambon || t.name || display);
+                            const value = display;
+                            return (
+                              <option key={key} value={value}>{display}</option>
+                            );
+                          });
+                        })()}
+                      </select>
+                    </div>
+                  </div>
+                  {/* Companies block moved to bottom of form */}
+                  <div className="col-md-12 mb-3 position-relative">
+                    <label className="form-label">Companies</label>
+                    <div>
+                      <button
+                        ref={companyToggleRef}
+                        type="button"
+                        className="btn"
+                        onClick={(e) => { e.stopPropagation(); setCompanyDropdownOpen(prev => !prev); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 8,
+                          width: '100%',
+                          padding: '8px 12px',
+                          borderRadius: 6,
+                          border: '1px solid #d1d5db',
+                          background: '#fff',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <div style={{ color: selectedCompanyIds.length ? '#111827' : '#6b7280' }}>{renderSelectedCompaniesLabel()}</div>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: companyDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 120ms' }}>
+                            <path d="M6 9l6 6 6-6" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                      </button>
+                    </div>
+                    {companyDropdownOpen && (
+                      <div
+                        ref={companyDropdownRef}
+                        onClick={(e) => e.stopPropagation()}
+                        className="shadow-sm bg-white rounded"
+                        style={(() => {
+                          const base: any = { position: 'fixed', zIndex: 2000, maxHeight: 260, overflow: 'auto', border: '1px solid #e5e7eb', padding: 6, borderRadius: 6 };
+                          if (dropdownPos) {
+                            return { ...base, left: dropdownPos.left, top: dropdownPos.top, width: dropdownPos.width };
+                          }
+                          // fallback to absolute inside modal
+                          return { ...base, position: 'absolute', left: 0, top: '46px', width: '100%' };
+                        })()}
+                      >
+                        {companies.length === 0 ? (
+                          <div className="text-muted px-2">No companies available</div>
+                        ) : (
+                          companies.map((c) => {
+                            const checked = selectedCompanyIds.includes(c.id);
+                            const hovered = hoveredCompanyId === c.id;
+                            return (
+                              <label
+                                key={c.id}
+                                className="d-flex align-items-center gap-2 w-100 px-2 py-2"
+                                style={{ cursor: 'pointer', background: hovered ? '#f3e8ff' : (checked ? '#eef2ff' : 'transparent'), borderRadius: 6, marginBottom: 4 }}
+                                onMouseEnter={() => setHoveredCompanyId(c.id)}
+                                onMouseLeave={() => setHoveredCompanyId(null)}
+                                onClick={() => toggleCompany(c.id)}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  readOnly
+                                  style={{ width: 16, height: 16 }}
+                                />
+                                <div style={{ flex: 1 }}>{c.name || c.branchName || c.id}</div>
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
                   </div>
                   {error && <div className="alert alert-danger">{error}</div>}
                   <div className="d-flex gap-2">

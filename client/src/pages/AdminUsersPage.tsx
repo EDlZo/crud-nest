@@ -307,7 +307,7 @@ export const AdminUsersPage = () => {
         <div className="card-header py-3 d-flex flex-row align-items-center justify-content-between">
           <h6 className="m-0 font-weight-bold text-primary">Users and Roles</h6>
           <div>
-              <button className="btn btn-sm btn-secondary me-2" onClick={fetchUsers} disabled={loading}>
+              <button className="btn-refresh me-2" onClick={fetchUsers} disabled={loading}>
               {loading ? 'Loading...' : 'Refresh'}
             </button>
             {canManageRoles && hasPendingChanges() && (

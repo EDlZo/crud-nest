@@ -161,24 +161,20 @@ export class EmailService {
             
             <div class="card">
               <div class="info-row">
-                <span class="label">Company</span>
-                <span class="value">${companyName}</span>
+                <span class="label">Company : </span>
+                <span class="value">&nbsp;${companyName}</span>
               </div>
               <div class="info-row">
-                <span class="label">Billing Date</span>
-                <span class="value">${billingDate}</span>
+                <span class="label">Billing Date : </span>
+                <span class="value">&nbsp;${billingDate}</span>
               </div>
               <div class="info-row">
-                <span class="label">Cycle</span>
-                <span class="value" style="text-transform: capitalize;">${billingCycle}</span>
+                <span class="label">Status : </span>
+                <span class="value" style="color: ${primaryColor}">&nbsp;${isDueToday ? 'Due Today' : 'Upcoming'}</span>
               </div>
               <div class="info-row">
-                <span class="label">Status</span>
-                <span class="value" style="color: ${primaryColor}">${isDueToday ? 'Due Today' : 'Upcoming'}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Amount Due</span>
-                <span class="value">${amountStr}</span>
+                <span class="label">Amount Due : </span>
+                <span class="value">&nbsp;${amountStr}</span>
               </div>
             </div>
 

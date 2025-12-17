@@ -428,7 +428,7 @@ export const ActivitiesPage = () => {
               className="px-4 py-2 rounded-lg bg-[#3869a9] text-white font-medium shadow hover:bg-[#2c5282] transition-colors flex items-center gap-2"
               onClick={openAddModal}
             >
-              <FaPlus /> Add New Activity
+              + Add New Activity
             </button>
             <button
               className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium shadow-sm hover:bg-gray-50 transition-colors"

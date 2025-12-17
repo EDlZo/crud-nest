@@ -1,0 +1,59 @@
+[
+  {
+    "name": "Bangkok",
+    "amphoes": [
+      {
+        "name": "Phra Nakhon",
+        "tambons": [
+          { "name": "Phra Borom Maha Ratchawang" },
+          { "name": "Wang Burapha Phirom" }
+        ]
+      },
+      {
+        "name": "Dusit",
+        "tambons": [
+          { "name": "Dusit" },
+          { "name": "Wachiraphayaban" }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Chiang Mai",
+    "amphoes": [
+      {
+        "name": "Mueang Chiang Mai",
+        "tambons": [
+          { "name": "Si Phum" },
+          { "name": "Phra Sing" }
+        ]
+      },
+      {
+        "name": "Hang Dong",
+        "tambons": [
+          { "name": "Ban Waen" },
+          { "name": "San Phak Wan" }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Chon Buri",
+    "amphoes": [
+      {
+        "name": "Mueang Chon Buri",
+        "tambons": [
+          { "name": "Bang Pla Soi" },
+          { "name": "Bang Sai" }
+        ]
+      },
+      {
+        "name": "Si Racha",
+        "tambons": [
+          { "name": "Si Racha" },
+          { "name": "Surasak" }
+        ]
+      }
+    ]
+  }
+]

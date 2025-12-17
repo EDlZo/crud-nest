@@ -402,7 +402,7 @@ export const DealsPage = () => {
                 Add New Deal
               </button>
               <button
-                className="btn btn-sm btn-info shadow-sm"
+                className="btn-refresh"
                 onClick={fetchDeals}
                 disabled={loading}
               >
