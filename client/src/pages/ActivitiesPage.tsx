@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FaCheck, FaClock, FaExclamationTriangle, FaPlus, FaEllipsisV, FaChevronDown } from 'react-icons/fa';
 import { FiEye } from 'react-icons/fi';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
@@ -41,6 +42,14 @@ const withBase = (path: string) => `${API_BASE_URL}${path}`;
 
 export const ActivitiesPage = () => {
   const { token, user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  // If not authenticated, redirect to login immediately
+  useEffect(() => {
+    if (token === null) {
+      navigate('/login', { replace: true });
+    }
+  }, [token, navigate]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [formData, setFormData] = useState<Activity>(emptyActivity);
   const [showModal, setShowModal] = useState(false);

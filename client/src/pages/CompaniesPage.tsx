@@ -113,6 +113,12 @@ export const CompaniesPage = () => {
   };
   const { token, user, logout } = useAuth();
   const navigate = useNavigate();
+  // If not authenticated, force landing to login
+  useEffect(() => {
+    if (token === null) {
+      navigate('/login', { replace: true });
+    }
+  }, [token, navigate]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [formData, setFormData] = useState<Company>(emptyCompany);
   const [showModal, setShowModal] = useState(false);
