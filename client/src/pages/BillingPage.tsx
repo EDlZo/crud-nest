@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FiEdit2, FiTrash2, FiFilter } from 'react-icons/fi';
 import { FaPaperPlane } from 'react-icons/fa';
 import { API_BASE_URL } from '../config';
+import formatToDDMMYYYY from '../utils/formatDate';
 // read token directly to avoid circular import/runtime issues
 
 export const BillingPage: React.FC = () => {
@@ -11,6 +12,7 @@ export const BillingPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<{ company: string; amount: string; status: string }>({ company: '', amount: '', status: '' });
+  const [sendingIds, setSendingIds] = useState<Record<string, boolean>>({});
   const [activeFilter, setActiveFilter] = useState<keyof typeof filters | null>(null);
   const dropdownRef = React.useRef<HTMLDivElement | null>(null);
   const headerRef = React.useRef<HTMLDivElement | null>(null);
@@ -67,6 +69,47 @@ export const BillingPage: React.FC = () => {
     if (!id) return;
     // navigate to preview page where user can inspect and send
     navigate(`/billing/preview/${id}`);
+  };
+
+  const handleSendDirect = async (id?: string) => {
+    if (!id) return;
+    const confirmed = window.confirm('Confirm send billing email for this invoice now?');
+    if (!confirmed) return;
+    const tokenLocal = typeof window !== 'undefined' ? localStorage.getItem('crud-token') : null;
+    if (!tokenLocal) {
+      alert('Please login to perform this action');
+      return;
+    }
+    try {
+      setSendingIds(prev => ({ ...prev, [id]: true }));
+      const res = await fetch(`${API_BASE_URL}/billing-records/${id}/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokenLocal}`,
+        },
+        body: JSON.stringify({ type: 'manual' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = data?.message || (await res.text()).slice(0, 200);
+        alert(`Send failed: ${res.status} ${msg}`);
+        return;
+      }
+      alert(data?.message || 'Send requested. Check server logs.');
+
+      // optimistic update: mark lastNotifiedDate locally so UI reflects change
+      try {
+        const now = new Date();
+        const bangkokToday = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+        const todayIso = bangkokToday.toISOString().split('T')[0];
+        setRecords(prev => prev.map(r => r.id === id ? { ...r, lastNotifiedDate: todayIso, notificationsSentCount: (r.notificationsSentCount || 0) + 1 } : r));
+      } catch (e) { /* ignore */ }
+    } catch (err: any) {
+      alert(err.message || 'Failed to send billing reminder');
+    } finally {
+      setSendingIds(prev => ({ ...prev, [id || '']: false }));
+    }
   };
 
   useEffect(() => {
@@ -276,13 +319,15 @@ export const BillingPage: React.FC = () => {
                   </tr>
                 )}
                 {displayedRecords.map((r: any) => {
-                  const contractDate = r.contractStartDate || r.contractEndDate
-                    ? `${r.contractStartDate || '-'}${r.contractEndDate ? ` - ${r.contractEndDate}` : ''}`
-                    : (r.contractDate || '-');
+                  const fmt = formatToDDMMYYYY;
+                  const contractDate = (r.contractStartDate || r.contractEndDate)
+                    ? `${r.contractStartDate ? fmt(r.contractStartDate) : '-'}${r.contractEndDate ? ` - ${fmt(r.contractEndDate)}` : ''}`
+                    : (r.contractDate ? fmt(r.contractDate) : '-');
                   const billingIntervalText = r.billingIntervalMonths
                     ? `ทุกๆ ${r.billingIntervalMonths} เดือน`
                     : (r.billingCycle || '-');
-                  const notifyDate = r.notificationDate || r.notificationDay || r.notificationTime || r.billingDate || '-';
+                  const rawNotify = r.notificationDate ?? r.notificationDay ?? r.notificationTime ?? r.billingDate ?? '-';
+                  const notifyDate = rawNotify === '-' ? '-' : fmt(rawNotify);
 
                   // Determine Bangkok today and whether billingDate matches today
                   const now = new Date();
@@ -301,17 +346,16 @@ export const BillingPage: React.FC = () => {
                       <td>
                         <div className="d-flex align-items-center gap-2">
                           {/* keep send-now button even if we don't show a "notify today" column */}
-                          {isNotifyToday && (
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-success"
-                              title="กระดาษจรวด"
-                              aria-label="กระดาษจรวด"
-                              onClick={() => handleSendNow(r.id)}
-                            >
-                              <FaPaperPlane />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-success"
+                            title="กระดาษจรวด"
+                            aria-label="กระดาษจรวด"
+                            onClick={() => handleSendDirect(r.id)}
+                            disabled={!!sendingIds[r.id]}
+                          >
+                            {sendingIds[r.id] ? 'Sending...' : <FaPaperPlane />}
+                          </button>
                           <button
                             type="button"
                             className="icon-btn edit"

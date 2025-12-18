@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatToDDMMYYYY } from '../utils/formatDate';
 import { FaBuilding, FaUsers, FaTasks, FaDollarSign, FaChartLine } from 'react-icons/fa';
 import '../App.css';
 import { API_BASE_URL } from '../config';
@@ -116,24 +117,43 @@ export const DashboardPage = () => {
       const nowBangkok = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
       const todayStr = nowBangkok.toISOString().split('T')[0];
 
+      // (no-op)
+
       const billingDueToday = Array.isArray(billingRecords)
         ? billingRecords.filter((rec: any) => {
             if (!rec) return false;
-            // If billingDate is an ISO-ish string or a timestamp, try parsing to YYYY-MM-DD
-            try {
-              const maybeDate = new Date(rec.billingDate);
-              if (!isNaN(maybeDate.getTime())) {
-                const iso = maybeDate.toISOString().split('T')[0];
-                if (iso === todayStr) return true;
-              }
-            } catch (err) {
-              // ignore
-            }
 
-            // Fallback: if billingDate is a day-of-month number (1..31), compare day only
-            const dayNum = Number(String(rec.billingDate));
-            if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) {
-              return dayNum === nowBangkok.getDate();
+            // Helper: compare an ISO-ish date string against today (Asia/Bangkok)
+            const isSameIsoDay = (value: any) => {
+              try {
+                if (!value) return false;
+                const maybeDate = new Date(value);
+                if (!isNaN(maybeDate.getTime())) {
+                  const iso = maybeDate.toISOString().split('T')[0];
+                  return iso === todayStr;
+                }
+              } catch (err) {
+                // ignore
+              }
+              return false;
+            };
+
+            // 1) If a notification-specific date exists, use it first
+            if (isSameIsoDay(rec.notificationDate)) return true;
+
+            // 2) Otherwise check billingDate (ISO or timestamp)
+            if (isSameIsoDay(rec.billingDate)) return true;
+
+            // 2.5) If the record was already notified today (scheduler or manual send), include it
+            if (isSameIsoDay(rec.lastNotifiedDate)) return true;
+
+            // 3) Fallback: check numeric day-of-month fields (notificationDay then billingDate if numeric)
+            const dayNumCandidates = [rec.notificationDay, rec.billingDate, rec.notificationDayOverride];
+            for (const cand of dayNumCandidates) {
+              const dayNum = Number(String(cand));
+              if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) {
+                if (dayNum === nowBangkok.getDate()) return true;
+              }
             }
 
             return false;
@@ -166,6 +186,8 @@ export const DashboardPage = () => {
       setLoading(false);
     }
   };
+
+  // use shared formatter from utils
 
   if (loading) {
     return (
@@ -236,14 +258,16 @@ export const DashboardPage = () => {
           <div className="card shadow mb-4 dashboard-gray">
             <div className="card-header py-3 d-flex flex-row align-items-center justify-content-between">
               <h6 className="m-0 font-weight-bold text-primary">Billing Due Today</h6>
-              <Link to="/billing" className="btn btn-sm btn-primary">
-                View All
-              </Link>
+                <Link to="/billing" className="btn btn-sm btn-primary">
+                  View All
+                </Link>
             </div>
             <div className="card-body">
-              {stats.billingDueToday.length === 0 ? (
-                <p className="text-center text-muted">No billing due today</p>
-              ) : (
+                {stats.billingDueToday.length === 0 ? (
+                  <div>
+                    <p className="text-center text-muted">No billing due today</p>
+                  </div>
+                ) : (
                 <div className="list-group">
                   {stats.billingDueToday.map((rec: any) => (
                     <div key={rec.id} className="list-group-item clean">
@@ -253,19 +277,39 @@ export const DashboardPage = () => {
                             {rec.companyName || 'Unknown Company'}
                           </Link>
                         </h6>
-                        <div className="text-muted small">Bill ID: <span className="fw-bold">{rec.id}</span></div>
+                        <div className="text-muted small">Date of this contract: <span className="fw-bold">{
+                          (rec.contractStartDate || rec.contractEndDate)
+                            ? `${rec.contractStartDate ? formatToDDMMYYYY(rec.contractStartDate) : '-'}${rec.contractEndDate ? ` - ${formatToDDMMYYYY(rec.contractEndDate)}` : ''}`
+                            : (rec.contractDate ? formatToDDMMYYYY(rec.contractDate) : '-')
+                        }</span></div>
                         <div className="text-muted small">Amount Due: <span className="fw-bold">฿{typeof rec.amount === 'number'
                           ? rec.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                           : (rec.amount ? Number(rec.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00')}</span></div>
+
+                        {/* Show billing date or day-of-month */}
+                        <div className="text-muted small">Billing Date: <span className="fw-bold">{
+                          (() => {
+                            try {
+                              if (!rec.billingDate) return '-';
+                              const maybeDate = new Date(rec.billingDate);
+                              if (!isNaN(maybeDate.getTime())) return formatToDDMMYYYY(rec.billingDate);
+                              const dayNum = Number(String(rec.billingDate));
+                              if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) return `Day ${dayNum} of month`;
+                              return String(rec.billingDate);
+                            } catch (e) { return String(rec.billingDate || '-'); }
+                          })()
+                        }</span></div>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-                        <span className="muted-badge">Due Today</span>
+                        <span className="muted-badge" style={{  color: '#0D6EFD' }}>Due Today</span>
                         <Link to={`/billing/preview/${rec.id}`} className="btn btn-sm btn-outline-primary">Preview</Link>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
+
+              {/* debug view removed */}
             </div>
           </div>
         </div>
@@ -288,7 +332,7 @@ export const DashboardPage = () => {
                     <div key={activity.id} className="list-group-item d-flex justify-content-between align-items-center">
                       <div>
                         <h6 className="mb-1">{activity.title}</h6>
-                        <small className="text-muted">{activity.type} • {new Date(activity.createdAt).toLocaleDateString()}</small>
+                        <small className="text-muted">{activity.type} • {formatToDDMMYYYY(activity.createdAt)}</small>
                       </div>
                       <span className={`badge rounded-pill ${activity.status === 'completed' ? 'bg-success' :
                         activity.status === 'in_progress' ? 'bg-info text-white' :

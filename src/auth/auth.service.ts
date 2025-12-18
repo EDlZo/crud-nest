@@ -74,7 +74,7 @@ export class AuthService {
   private async ensureEmailAvailable(email: string) {
     const existing = await this.findByEmail(email);
     if (existing) {
-      throw new BadRequestException('อีเมลนี้ถูกใช้งานแล้ว');
+      throw new BadRequestException('This email address is already in use');
     }
   }
 

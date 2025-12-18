@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatToDDMMYYYY } from '../utils/formatDate';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 
@@ -9,7 +10,7 @@ const formatCurrency = (v: number | undefined | null) => {
 
 const formatDate = (d?: string | null) => {
   if (!d) return '-';
-  try { return new Date(d).toLocaleDateString('th-TH'); } catch { return d; }
+  return formatToDDMMYYYY(d);
 };
 
 export const BillingPreviewPage: React.FC = () => {

@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { FiEdit2, FiTrash2, FiFilter } from 'react-icons/fi';
+import { FaPen } from 'react-icons/fa';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import provincesFallback from '../data/thailand-provinces.json';
@@ -116,6 +117,7 @@ export const ContactsPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string>('');
+  const [avatarHover, setAvatarHover] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(12);
   const [filters, setFilters] = useState<FilterState>({ name: '', email: '', phone: '', address: '' });
@@ -955,13 +957,59 @@ export const ContactsPage = () => {
                     {/* Photo Upload */}
                     <div className="col-md-12 mb-4 text-center">
                       <label className="form-label d-block">Profile Photo</label>
-                      <div className="mb-3">
+                      <div
+                        style={{ display: 'inline-block', marginBottom: 8, position: 'relative' }}
+                        onMouseEnter={() => setAvatarHover(true)}
+                        onMouseLeave={() => setAvatarHover(false)}
+                      >
+                        <input
+                          id="contact-photo-input"
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                const img = new Image();
+                                img.onload = () => {
+                                  const canvas = document.createElement('canvas');
+                                  const MAX_WIDTH = 400;
+                                  const MAX_HEIGHT = 400;
+                                  let width = img.width;
+                                  let height = img.height;
+                                  if (width > height) {
+                                    if (width > MAX_WIDTH) {
+                                      height *= MAX_WIDTH / width;
+                                      width = MAX_WIDTH;
+                                    }
+                                  } else {
+                                    if (height > MAX_HEIGHT) {
+                                      width *= MAX_HEIGHT / height;
+                                      height = MAX_HEIGHT;
+                                    }
+                                  }
+                                  canvas.width = width;
+                                  canvas.height = height;
+                                  const ctx = canvas.getContext('2d');
+                                  ctx?.drawImage(img, 0, 0, width, height);
+                                  const base64String = canvas.toDataURL('image/jpeg', 0.7);
+                                  handleChange('photo', base64String);
+                                  setPhotoPreview(base64String);
+                                };
+                                img.src = event.target?.result as string;
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
                         {photoPreview ? (
                           <img
                             src={photoPreview}
                             alt="Preview"
                             className="rounded-circle"
-                            style={{ width: 100, height: 100, objectFit: 'cover', border: '2px solid #ddd' }}
+                            style={{ width: 100, height: 100, objectFit: 'cover', border: '2px solid #ddd', display: 'block' }}
                           />
                         ) : (
                           <div
@@ -971,56 +1019,28 @@ export const ContactsPage = () => {
                             {formData.firstName?.charAt(0).toUpperCase() || (formData.email ? formData.email.charAt(0).toUpperCase() : 'C')}
                           </div>
                         )}
+                        <label
+                          htmlFor="contact-photo-input"
+                          aria-label="Change profile photo"
+                          style={{
+                            position: 'absolute',
+                            right: -6,
+                            top: -6,
+                            width: 34,
+                            height: 34,
+                            borderRadius: 8,
+                            background: '#ffffff',
+                            display: avatarHover ? 'inline-flex' : 'none',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 4px 12px rgba(2,6,23,0.12)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <FaPen size={14} />
+                        </label>
                       </div>
-                      <input
-                        type="file"
-                        className="form-control"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            // Compress and convert to base64
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              const img = new Image();
-                              img.onload = () => {
-                                // Create canvas to resize image
-                                const canvas = document.createElement('canvas');
-                                const MAX_WIDTH = 400;
-                                const MAX_HEIGHT = 400;
-                                let width = img.width;
-                                let height = img.height;
-
-                                // Calculate new dimensions
-                                if (width > height) {
-                                  if (width > MAX_WIDTH) {
-                                    height *= MAX_WIDTH / width;
-                                    width = MAX_WIDTH;
-                                  }
-                                } else {
-                                  if (height > MAX_HEIGHT) {
-                                    width *= MAX_HEIGHT / height;
-                                    height = MAX_HEIGHT;
-                                  }
-                                }
-
-                                canvas.width = width;
-                                canvas.height = height;
-                                const ctx = canvas.getContext('2d');
-                                ctx?.drawImage(img, 0, 0, width, height);
-
-                                // Convert to base64 with compression
-                                const base64String = canvas.toDataURL('image/jpeg', 0.7);
-                                handleChange('photo', base64String);
-                                setPhotoPreview(base64String);
-                              };
-                              img.src = event.target?.result as string;
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                      />
-                      <small className="text-muted">Upload a photo from your device (JPG, PNG, etc.)</small>
+                      
                     </div>
                     <div className="col-md-6 mb-3">
                       <label className="form-label">First Name</label>

@@ -127,10 +127,35 @@ export class BillingRecordsController {
         id,
       );
 
-      // mark notificationsSent flag (use provided type or infer)
+      // mark notification metadata similarly to scheduler to avoid duplicate sends
       const notifyType = type === 'onDate' ? 'onDate' : type === 'advance' ? 'advance' : daysUntil === 0 ? 'onDate' : 'advance';
-      const sentFlags = (rec.notificationsSent as any) || {};
-      await db.collection(process.env.FIREBASE_BILLING_COLLECTION ?? 'billing-records').doc(id).set({ notificationsSent: { ...(sentFlags || {}), [notifyType]: true } }, { merge: true });
+      const todayIso = bangkok.toISOString().split('T')[0];
+      const updates: any = {
+        lastNotifiedDate: todayIso,
+        lastNotificationAt: new Date().toISOString(),
+        lastNotificationStatus: ok ? 'sent' : 'failed',
+        notificationsSentCount: (rec.notificationsSentCount || 0) + 1,
+      };
+
+      // If sending on the billing date and there is an interval, advance billingDate
+      try {
+        if (notifyType === 'onDate' && billingIntervalMonths && Number(billingIntervalMonths) > 0) {
+          const d = new Date(billingIso + 'T00:00:00');
+          d.setMonth(d.getMonth() + Number(billingIntervalMonths));
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          updates.billingDate = `${yyyy}-${mm}-${dd}T00:00:00`;
+        }
+      } catch (advErr) {
+        console.error('Failed to compute next billing date for', id, advErr);
+      }
+
+      try {
+        await db.collection(process.env.FIREBASE_BILLING_COLLECTION ?? 'billing-records').doc(id).set(updates, { merge: true });
+      } catch (updErr) {
+        console.error('Failed to update notification metadata for record', id, updErr);
+      }
 
       return { success: ok };
     } catch (err) {

@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { formatToDDMMYYYY } from '../utils/formatDate';
 import { FaDollarSign, FaEye, FaClock } from 'react-icons/fa';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import '../App.css';
@@ -475,13 +476,13 @@ export const DealsPage = () => {
                           <td>{deal.probability ? `${deal.probability}%` : '-'}</td>
                           <td>
                             {deal.expectedCloseDate
-                              ? new Date(deal.expectedCloseDate).toLocaleDateString()
+                              ? formatToDDMMYYYY(deal.expectedCloseDate)
                               : '-'}
                           </td>
                           <td>{deal.assignedToEmail || '-'}</td>
                           <td>
                             {deal.createdAt
-                              ? new Date(deal.createdAt).toLocaleDateString()
+                              ? formatToDDMMYYYY(deal.createdAt)
                               : '-'}
                           </td>
                           <td>
@@ -785,7 +786,7 @@ export const DealsPage = () => {
                         <FaClock className="text-warning me-2" />
                         <strong style={{ color: '#856404' }}>Expected Close</strong>
                       </div>
-                      <p style={{ margin: 0, color: '#856404', fontWeight: 500 }}>{viewingDeal.expectedCloseDate ? new Date(viewingDeal.expectedCloseDate).toLocaleDateString() : '-'}</p>
+                      <p style={{ margin: 0, color: '#856404', fontWeight: 500 }}>{viewingDeal.expectedCloseDate ? formatToDDMMYYYY(viewingDeal.expectedCloseDate) : '-'}</p>
                     </div>
                   </div>
                   <div className="col-md-6">

@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUser, FaImage, FaFacebook, FaInstagram } from 'react-icons/fa';
+import { FaUser, FaImage, FaFacebook, FaInstagram, FaPen } from 'react-icons/fa';
 import { SiLine } from 'react-icons/si';
 import '../App.css';
 import { API_BASE_URL } from '../config';
@@ -265,7 +265,7 @@ export const ProfilePage = () => {
               {error && <div className="alert alert-danger">{error}</div>}
               
               <form onSubmit={handleSubmit}>
-                {/* Avatar Upload */}
+                {/* Avatar Upload (hidden input + overlay) */}
                 <div className="mb-4">
                   <label className="form-label d-flex align-items-center">
                     <FaImage className="me-2" />
@@ -273,53 +273,73 @@ export const ProfilePage = () => {
                   </label>
                   <div className="mb-3">
                     <input
+                      id="profile-photo-input"
                       type="file"
-                      className="form-control"
                       accept="image/*"
+                      style={{ display: 'none' }}
                       onChange={handleAvatarChange}
                     />
-                    <small className="form-text text-muted">
-                     
-                    </small>
                   </div>
-                  {avatarPreview && (
-                    <div className="mt-3 position-relative d-inline-block">
-                      <img
-                        src={avatarPreview}
-                        alt="Avatar Preview"
-                        style={{ 
-                          width: '180px',
-                          height: '180px',
-                          borderRadius: '50%', 
-                          objectFit: 'cover',
-                          border: '4px solid #dee2e6',
-                          boxShadow: '0 10px 25px rgba(15, 23, 42, 0.12)',
-                        }}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-danger position-absolute"
-                        style={{
-                          top: '10px',
-                          right: '10px',
-                          borderRadius: '50%',
-                          width: '36px',
-                          height: '36px',
-                          padding: 0,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                        onClick={handleRemoveAvatar}
-                        title="ลบรูปภาพ"
-                      >
-                        ×
-                      </button>
+
+                  <div className="mt-3 text-center">
+                    <div className="position-relative d-inline-block">
+                      {avatarPreview ? (
+                        <img
+                          src={avatarPreview}
+                          alt="Avatar Preview"
+                          style={{
+                            width: '180px',
+                            height: '180px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            border: '4px solid #dee2e6',
+                            boxShadow: '0 10px 25px rgba(15, 23, 42, 0.12)',
+                          }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div
+                          className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                          style={{
+                            width: '180px',
+                            height: '180px',
+                            fontSize: 48,
+                            backgroundColor: getAvatarColor((profile as any)?.firstName || (user as any)?.firstName || user?.email || ''),
+                          }}
+                        >
+                          {(((profile as any)?.firstName || (user as any)?.firstName) ? ((profile as any)?.firstName || (user as any)?.firstName).charAt(0) : (user?.email ? user.email.charAt(0) : 'U')).toUpperCase()}
+                        </div>
+                      )}
+
+                      <label htmlFor="profile-photo-input" style={{ position: 'absolute', right: -6, bottom: -6, width: 36, height: 36, borderRadius: 8, background: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(2,6,23,0.12)', cursor: 'pointer' }}>
+                        <FaPen />
+                      </label>
+
+                      {avatarPreview && (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-danger position-absolute"
+                          style={{
+                            top: '10px',
+                            right: '10px',
+                            borderRadius: '50%',
+                            width: '36px',
+                            height: '36px',
+                            padding: 0,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                          onClick={handleRemoveAvatar}
+                          title="ลบรูปภาพ"
+                        >
+                          ×
+                        </button>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Social Links */}
