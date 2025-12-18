@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt, FaChevronDown, FaChevronRight, FaCubes, FaTasks, FaEllipsisV, FaBell } from 'react-icons/fa';
+import { FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt, FaChevronDown, FaChevronRight, FaFileAlt, FaTasks, FaEllipsisV, FaBell } from 'react-icons/fa';
 import { PiAddressBookFill } from 'react-icons/pi';
 import { Dropdown } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
@@ -236,13 +236,13 @@ const Sidebar = () => {
             {/* Billing (Bill) - always visible */}
             <li className="nav-item accordion-section">
                 <div className="accordion-card">
-                    <Link
+                        <Link
                         className={`nav-link accordion-header ${isActive('/billing') ? 'active' : ''}`}
                         to="/billing"
                         onClick={() => setMobileOpen(false)}
                     >
-                        <FaCubes className="me-2" />
-                        <span>Bill</span>
+                        <FaFileAlt className="me-2" />
+                        <span>Invoice</span>
                     </Link>
                 </div>
             </li>
