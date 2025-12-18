@@ -64,25 +64,20 @@ async function bootstrap() {
   if (existsSync(clientDistPath)) {
     app.use(express.static(clientDistPath));
 
-    // สำหรับ API route ที่คุณสร้างไว้ จะยังทำงานปกติ
-    // ถ้า route ไม่ตรง API ให้ React handle SPA routing
-    // Use an Express-compatible middleware so TypeScript typings stay happy
+    // For SPA routing: if the request looks like a browser navigation (Accepts HTML),
+    // serve `index.html` so the React router can handle the route client-side.
+    // If the request expects JSON (typical for API calls), pass through to API handlers.
     app.use((req, res, next) => {
-      // skip API routes - check for /api prefix or known API endpoints
-      if (
-        req.path.startsWith('/api') ||
-        req.path.startsWith('/cruds') ||
-        req.path.startsWith('/auth') ||
-        req.path.startsWith('/companies') ||
-        req.path.startsWith('/billing-records') ||
-        req.path.startsWith('/activities') ||
-        req.path.startsWith('/deals') ||
-        req.path.startsWith('/notification-settings') ||
-        req.path.startsWith('/email')
-      ) {
-        return next();
+      const accept = req.headers.accept || '';
+      const wantsHtml = typeof accept === 'string' && accept.includes('text/html');
+
+      if (wantsHtml) {
+        // Serve SPA shell for browser navigations (so /companies or /activities load the client)
+        return res.sendFile(join(clientDistPath, 'index.html'));
       }
-      res.sendFile(join(clientDistPath, 'index.html'));
+
+      // Otherwise assume API call (e.g., Accept: application/json) and continue to API routes
+      return next();
     });
   }
 
