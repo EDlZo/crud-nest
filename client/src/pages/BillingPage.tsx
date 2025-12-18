@@ -8,6 +8,7 @@ import formatToDDMMYYYY from '../utils/formatDate';
 
 export const BillingPage: React.FC = () => {
   const [records, setRecords] = useState<any[]>([]);
+  const [contactsById, setContactsById] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -114,6 +115,27 @@ export const BillingPage: React.FC = () => {
 
   useEffect(() => {
     fetchRecords();
+    // also fetch contacts once so we can display contact names in the list
+    const fetchContacts = async () => {
+      try {
+        const headers: any = {};
+        const tokenLocal = typeof window !== 'undefined' ? localStorage.getItem('crud-token') : null;
+        if (tokenLocal) headers.Authorization = `Bearer ${tokenLocal}`;
+        const res = await fetch(`${API_BASE_URL}/cruds`, { credentials: 'include', headers });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!Array.isArray(data)) return;
+        const map: Record<string, any> = {};
+        data.forEach((c: any) => {
+          const id = c.id || c._id || c._ref || c._key || c.contactId;
+          if (id) map[String(id)] = c;
+        });
+        setContactsById(map);
+      } catch (e) {
+        // ignore
+      }
+    };
+    fetchContacts();
   }, []);
 
   // Close active filter dropdown when clicking outside or pressing Escape
@@ -304,6 +326,7 @@ export const BillingPage: React.FC = () => {
               <thead>
                 <tr>
                     <th>{renderFilterDropdown('company', 'Company')}</th>
+                    <th>Contact</th>
                     <th>{renderFilterDropdown('amount', 'Amount')}</th>
                     
                     <th>Date of this contract</th>
@@ -315,7 +338,7 @@ export const BillingPage: React.FC = () => {
               <tbody>
                 {displayedRecords.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={6} className="text-center">No billing records found.</td>
+                    <td colSpan={7} className="text-center">No billing records found.</td>
                   </tr>
                 )}
                 {displayedRecords.map((r: any) => {
@@ -336,9 +359,41 @@ export const BillingPage: React.FC = () => {
                   const billingDateIso = r.billingDate ? (r.billingDate + '').split('T')[0] : null;
                   const isNotifyToday = billingDateIso === bangkokTodayIso;
 
-                  return (
+                    return (
                     <tr key={r.id || `${r.companyId}-${r.billingDate}-${r.amount}`}>
                       <td>{r.companyName || r.companyId || '-'}</td>
+                      <td>{
+                        (() => {
+                          // prefer explicit fields on the record
+                          const nameFromCombined = r.contactName;
+                          const first = r.contactFirstName || r.contactFirst || r.firstName;
+                          const last = r.contactLastName || r.contactLast || r.lastName;
+                          if (nameFromCombined) return nameFromCombined;
+                          if (first || last) return `${(first || '').trim()} ${(last || '').trim()}`.trim();
+
+                          // also check nested contact object on the record (r.contact)
+                          const nested = r.contact || r.contactObj || null;
+                          if (nested) {
+                            const nFirst = nested.firstName || nested.firstname || nested.givenName;
+                            const nLast = nested.lastName || nested.lastname || nested.familyName;
+                            const nName = nested.name || nested.fullName || nested.displayName || nested.email;
+                            if (nFirst || nLast) return `${(nFirst || '').trim()} ${(nLast || '').trim()}`.trim();
+                            if (nName) return nName;
+                          }
+
+                          // then try to resolve from contactsById fetched from /cruds
+                          const contactObj = (r.contactId && contactsById[String(r.contactId)]) || (r.contact && (contactsById[String(r.contact?.id || r.contact?._id || r.contact?._ref)])) || null;
+                          if (contactObj) {
+                            const cFirst = contactObj.firstName || contactObj.firstname || contactObj.givenName;
+                            const cLast = contactObj.lastName || contactObj.lastname || contactObj.familyName;
+                            const cName = contactObj.name || contactObj.fullName || contactObj.displayName || contactObj.email;
+                            if (cFirst || cLast) return `${(cFirst || '').trim()} ${(cLast || '').trim()}`.trim();
+                            if (cName) return cName;
+                          }
+
+                          return r.contactId || (r.contact && (r.contact.id || r.contact._id || r.contact._ref)) || '-';
+                        })()
+                      }</td>
                       <td>{typeof r.amount === 'number' ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(r.amount) : (r.amount ?? '-')}</td>
                      <td>{contractDate}</td>
                       <td>{billingIntervalText}</td>

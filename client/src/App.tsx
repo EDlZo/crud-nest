@@ -16,10 +16,30 @@ import { BillingCreatePage } from './pages/BillingCreatePage';
 import { BillingPreviewPage } from './pages/BillingPreviewPage';
 // import { DealsPage } from './pages/DealsPage'; // Hidden temporarily
 import Layout from './components/Layout';
+import { useEffect } from 'react';
+import { useAuth } from './context/AuthContext';
+import { useLocation, useNavigate } from 'react-router-dom';
+
+const RequireAuthRedirect = () => {
+  const { token } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const publicPaths = ['/login', '/register'];
+    if (!token && !publicPaths.includes(location.pathname)) {
+      // if not authenticated and trying to access a protected path, redirect to login
+      navigate('/login', { replace: true });
+    }
+  }, [token, location.pathname, navigate]);
+
+  return null;
+};
 
 function App() {
   return (
     <BrowserRouter>
+      <RequireAuthRedirect />
       <Routes>
         <Route
           path="/"

@@ -1,0 +1,4 @@
+flowchart TD
+    M1[ผู้ใช้กดปุ่มส่งในหน้า Bill] --> M2[ยืนยันการส่ง]
+    M2 --> M3[เรียก API /billing-records/:id/send]
+    M3 --> M4[ระบบส่งอีเมลและอัปเดต metadata]

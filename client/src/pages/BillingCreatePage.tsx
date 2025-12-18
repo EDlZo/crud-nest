@@ -12,11 +12,14 @@ export const BillingCreatePage: React.FC = () => {
   const editId = searchParams.get('editId');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [contactsForCompany, setContactsForCompany] = useState<any[]>([]);
+  const [loadingContactsForCompany, setLoadingContactsForCompany] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState<any>({
     companyId: '',
+    contactId: '',
     companyName: '',
     billingDate: new Date().toISOString().split('T')[0],
     contractStartDate: new Date().toISOString().split('T')[0],
@@ -27,6 +30,8 @@ export const BillingCreatePage: React.FC = () => {
     items: [{ name: '', description: '', quantity: 1, price: 0 }],
     status: 'pending',
   });
+  const [loadedRecord, setLoadedRecord] = useState<any | null>(null);
+  
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -58,10 +63,14 @@ export const BillingCreatePage: React.FC = () => {
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         // Fill form with data
+        setLoadedRecord(data);
         setForm((f: any) => ({
           ...f,
-          companyId: data.companyId || f.companyId,
-          companyName: data.companyName || f.companyName,
+          companyId: data.companyId || data.company?.id || data.company?._id || f.companyId,
+          contactId: data.contactId || data.contact?.id || data.contact?._id || data.contact?._ref || f.contactId,
+          companyName: data.companyName || (data.company && (data.company.name || data.company.companyName)) || f.companyName,
+          // also capture contactName for display
+          ...(data.contact && data.contact.name ? { contactName: data.contact.name } : {}),
           billingDate: data.billingDate ? data.billingDate.split('T')[0] : f.billingDate,
           contractStartDate: data.contractStartDate || f.contractStartDate,
           contractEndDate: data.contractEndDate || f.contractEndDate,
@@ -71,6 +80,27 @@ export const BillingCreatePage: React.FC = () => {
           amount: data.amount ?? computeAmount(),
           status: data.status || f.status,
         }));
+        // If the loaded record references a contact id, fetch that contact specifically
+        try {
+          const cid = data.contactId || data.contact?.id || data.contact?._id || data.contact?._ref;
+          if (cid) {
+            const cRes = await fetch(`${API_BASE_URL}/cruds/${cid}`, {
+              headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+            });
+            if (cRes.ok) {
+              const contactObj = await cRes.json();
+              if (contactObj) {
+                setContactsForCompany((prev) => {
+                  // ensure we include the contact in the list shown for the select
+                  const exists = prev.some((p) => String(p.id) === String(contactObj.id));
+                  return exists ? prev : [contactObj, ...prev];
+                });
+              }
+            }
+          }
+        } catch (e) {
+          // ignore contact fetch errors
+        }
       } catch (err) {
         console.error('Failed to load billing record for edit', err);
       }
@@ -78,6 +108,53 @@ export const BillingCreatePage: React.FC = () => {
     loadRecord();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId]);
+
+  // fetch contacts for selected company
+  useEffect(() => {
+    const fetchContactsForCompany = async () => {
+      const cid = form.companyId;
+      if (!cid) {
+        setContactsForCompany([]);
+        return;
+      }
+      // wait until companies are loaded so name-based matching works
+      if (!companies || companies.length === 0) return;
+      setLoadingContactsForCompany(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/cruds`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        // fetched contacts
+        if (!Array.isArray(data)) {
+          setContactsForCompany([]);
+        } else {
+          // primary: id-based matches and company.contacts association
+          let filtered = data.filter((c: any) => {
+            if (!c) return false;
+            if (c.companyId && String(c.companyId) === String(cid)) return true;
+            if (c.company && (c.company === cid || c.company.id === cid || c.company._id === cid)) return true;
+            if (c.company_id && String(c.company_id) === String(cid)) return true;
+            if (c.companyRef && (typeof c.companyRef === 'string' ? c.companyRef === cid : c.companyRef?.id === cid)) return true;
+            const companyObj = companies.find((co: any) => String(co.id) === String(cid));
+            if (companyObj && Array.isArray(companyObj.contacts) && companyObj.contacts.includes(c.id)) return true;
+            return false;
+          });
+          console.debug && console.debug('BillingCreatePage: contacts after id-based filter', filtered.length);
+
+          // Only related contacts should be shown. Do not fall back to unrelated contacts in edit mode.
+          setContactsForCompany(filtered);
+        }
+      } catch (err) {
+        console.error('Failed to fetch contacts for company', err);
+        setContactsForCompany([]);
+      } finally {
+        setLoadingContactsForCompany(false);
+      }
+    };
+    fetchContactsForCompany();
+  }, [form.companyId, token, companies]);
 
   const setItem = (index: number, key: string, value: any) => {
     setForm((f: any) => {
@@ -110,6 +187,8 @@ export const BillingCreatePage: React.FC = () => {
       const payload = {
         companyId: form.companyId,
         companyName: companies.find((c) => c.id === form.companyId)?.name || form.companyName,
+        contactId: form.contactId || undefined,
+        contactName: contactsForCompany.find((c) => c.id === form.contactId)?.name || undefined,
         billingDate: form.billingDate,
         contractStartDate: form.contractStartDate || undefined,
         contractEndDate: form.contractEndDate || undefined,
@@ -165,7 +244,7 @@ export const BillingCreatePage: React.FC = () => {
         <div className="card-body">
           <form onSubmit={handleSubmit}>
             <div className="row mb-3">
-              <div className="col-md-6">
+              <div className="col-md-4">
                 <label className="form-label">Customer</label>
                 <select className="form-select" value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })}>
                   <option value="">-- Select customer --</option>
@@ -174,11 +253,35 @@ export const BillingCreatePage: React.FC = () => {
                   ))}
                 </select>
               </div>
-              <div className="col-md-3">
+              <div className="col-md-4">
+                <label className="form-label">Contact</label>
+                <select
+                  className="form-select"
+                  value={form.contactId}
+                  onChange={(e) => setForm({ ...form, contactId: e.target.value })}
+                  disabled={!form.companyId || loadingContactsForCompany}
+                >
+                  <option value="">-- Select contact --</option>
+                  {loadingContactsForCompany && <option>Loading...</option>}
+                  {!loadingContactsForCompany && contactsForCompany.map((ct: any) => (
+                    <option
+                      key={ct.id}
+                      value={ct.id}
+                    >{
+                      ((ct.firstName || ct.lastName) ? `${(ct.firstName || '').trim()} ${(ct.lastName || '').trim()}`.trim() : ct.name)
+                        || ct.fullName
+                        || ct.email
+                        || ct.displayName
+                        || ct.id
+                    }</option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-md-2">
                 <label className="form-label">Billing date</label>
                 <input type="date" className="form-control" value={form.billingDate} onChange={(e) => setForm({ ...form, billingDate: e.target.value })} />
               </div>
-              <div className="col-md-3">
+              <div className="col-md-2">
                 <label className="form-label">Billing interval (months)</label>
                 <select className="form-select" value={form.billingIntervalMonths} onChange={(e) => setForm({ ...form, billingIntervalMonths: Number(e.target.value) })}>
                   {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
@@ -187,6 +290,8 @@ export const BillingCreatePage: React.FC = () => {
                 </select>
               </div>
             </div>
+
+            
 
             <div className="row mb-3">
               <div className="col-md-6">

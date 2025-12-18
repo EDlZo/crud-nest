@@ -1,0 +1,6 @@
+flowchart TD
+    S1[Scheduler เริ่มทำงาน (cron)] --> S2[ดึง billing records ที่ถึงกำหนด]
+    S2 --> S3[ตรวจสอบ lastNotifiedDate]
+    S3 -->|ยังไม่แจ้งวันนี้| S4[ส่งอีเมล]
+    S4 --> S5[อัปเดต lastNotifiedDate, notificationsSentCount]
+    S3 -->|แจ้งแล้ววันนี้| S6[ข้าม]
