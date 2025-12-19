@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 import formatToDDMMYYYY from '../utils/formatDate';
@@ -32,9 +32,11 @@ export const BillingCreatePage: React.FC = () => {
     status: 'pending',
   });
   const [loadedRecord, setLoadedRecord] = useState<any | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Inline month-style picker for create/edit invoice form
-  const InlineMonthPicker: React.FC<{ value: string; onChange: (v: string) => void }> = ({ value, onChange }) => {
+  const InlineMonthPicker: React.FC<{ value: string; onChange: (v: string) => void; error?: string }>
+    = ({ value, onChange, error }) => {
     const [open, setOpen] = useState(false);
     const instanceIdRef = React.useRef<string>(Math.random().toString(36).slice(2));
     const wrapperRef = React.useRef<HTMLDivElement | null>(null);
@@ -179,6 +181,7 @@ export const BillingCreatePage: React.FC = () => {
             )}
           </div>
         )}
+        {/* per-field inline error text intentionally omitted to avoid layout shift; outline remains */}
       </div>
     );
   };
@@ -323,10 +326,65 @@ export const BillingCreatePage: React.FC = () => {
     return total;
   };
 
+  // Form validation: require company, contact, billing date, contract start, and at least one item with a name
+  const isFormValid = useMemo(() => {
+    if (!form) return false;
+    if (!form.companyId || String(form.companyId).trim() === '') return false;
+    if (!form.contactId || String(form.contactId).trim() === '') return false;
+    if (!form.billingDate || String(form.billingDate).trim() === '') return false;
+    if (!form.contractStartDate || String(form.contractStartDate).trim() === '') return false;
+    if (!Array.isArray(form.items) || form.items.length === 0) return false;
+    // ensure every item has a non-empty name
+    for (const it of form.items) {
+      if (!it || !String(it.name || '').trim()) return false;
+    }
+    return true;
+  }, [form]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
+    // Clear previous field errors
+    setFieldErrors({});
     setError(null);
+
+    // Validate and show field-level errors if any
+    if (!isFormValid) {
+      const errs: Record<string, string> = {};
+      if (!form.companyId) errs.companyId = 'Customer is required';
+      if (!form.contactId) errs.contactId = 'Contact is required';
+      if (!form.billingDate) errs.billingDate = 'Billing date is required';
+      if (!form.contractStartDate) errs.contractStartDate = 'Contract start date is required';
+      if (!Array.isArray(form.items) || form.items.length === 0) errs.items = 'At least one item is required';
+      if (Array.isArray(form.items)) {
+        form.items.forEach((it: any, idx: number) => {
+          const nameTrim = String(it?.name || '').trim();
+          if (!nameTrim) {
+            // If the user just typed but React state hasn't flushed yet, check the DOM input value
+            try {
+              const el = typeof document !== 'undefined' ? document.querySelector<HTMLInputElement>(`input[name="item_name_${idx}"]`) : null;
+              const domVal = el ? String(el.value || '').trim() : '';
+              if (domVal) {
+                // update form with the DOM value so UI stays in sync
+                setForm((prev: any) => {
+                  const items = Array.isArray(prev.items) ? [...prev.items] : [];
+                  items[idx] = { ...(items[idx] || {}), name: domVal };
+                  return { ...prev, items };
+                });
+                return; // treat as valid
+              }
+            } catch (e) {
+              // ignore DOM read errors
+            }
+            errs[`item_${idx}`] = 'Item name is required';
+          }
+        });
+      }
+      setFieldErrors(errs);
+      setError('Please fill out all fields');
+      return;
+    }
+
+    setSaving(true);
     try {
       // Determine billingCycle name from months: 1->monthly, 3->quarterly, 12->yearly, otherwise 'custom'
       const months = Number(form.billingIntervalMonths || 1);
@@ -397,7 +455,20 @@ export const BillingCreatePage: React.FC = () => {
             <div className="row mb-3">
               <div className="col-md-4">
                 <label className="form-label">Customer</label>
-                <select className="form-select" value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })}>
+                <select
+                  className={`form-select ${fieldErrors.companyId ? 'is-invalid' : ''}`}
+                  value={form.companyId}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setForm((f: any) => ({ ...f, companyId: v }));
+                    setFieldErrors((prev) => {
+                      const p = { ...prev };
+                      delete p.companyId;
+                      delete p.items;
+                      return p;
+                    });
+                  }}
+                >
                   <option value="">-- Select customer --</option>
                   {companies.map((c: any) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -407,9 +478,17 @@ export const BillingCreatePage: React.FC = () => {
               <div className="col-md-4">
                 <label className="form-label">Contact</label>
                 <select
-                  className="form-select"
+                  className={`form-select ${fieldErrors.contactId ? 'is-invalid' : ''}`}
                   value={form.contactId}
-                  onChange={(e) => setForm({ ...form, contactId: e.target.value })}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setForm((f: any) => ({ ...f, contactId: v }));
+                    setFieldErrors((prev) => {
+                      const p = { ...prev };
+                      delete p.contactId;
+                      return p;
+                    });
+                  }}
                   disabled={!form.companyId || loadingContactsForCompany}
                 >
                   <option value="">-- Select contact --</option>
@@ -430,7 +509,18 @@ export const BillingCreatePage: React.FC = () => {
               </div>
               <div className="col-md-2">
                 <label className="form-label">Billing date</label>
-                <InlineMonthPicker value={form.billingDate} onChange={(v) => setForm({ ...form, billingDate: v })} />
+                <InlineMonthPicker
+                  value={form.billingDate}
+                  onChange={(v) => {
+                    setForm((f: any) => ({ ...f, billingDate: v }));
+                    setFieldErrors((prev) => {
+                      const p = { ...prev };
+                      delete p.billingDate;
+                      return p;
+                    });
+                  }}
+                  error={fieldErrors.billingDate}
+                />
               </div>
               <div className="col-md-2">
                 <label className="form-label">Billing interval (months)</label>
@@ -447,7 +537,18 @@ export const BillingCreatePage: React.FC = () => {
             <div className="row mb-3">
               <div className="col-md-6">
                 <label className="form-label">Contract start date</label>
-                <InlineMonthPicker value={form.contractStartDate} onChange={(v) => setForm({ ...form, contractStartDate: v })} />
+                <InlineMonthPicker
+                  value={form.contractStartDate}
+                  onChange={(v) => {
+                    setForm((f: any) => ({ ...f, contractStartDate: v }));
+                    setFieldErrors((prev) => {
+                      const p = { ...prev };
+                      delete p.contractStartDate;
+                      return p;
+                    });
+                  }}
+                  error={fieldErrors.contractStartDate}
+                />
               </div>
               <div className="col-md-6">
                 <label className="form-label">Contract end date</label>
@@ -471,12 +572,37 @@ export const BillingCreatePage: React.FC = () => {
                   <tbody>
                     {form.items.map((it: any, idx: number) => (
                       <tr key={idx}>
-                        <td><input className="form-control" value={it.name} onChange={(e) => setItem(idx, 'name', e.target.value)} /></td>
+                                <td>
+                                  <input
+                                    name={`item_name_${idx}`}
+                                    className={`form-control ${fieldErrors[`item_${idx}`] ? 'is-invalid' : ''}`}
+                                    value={it.name}
+                                    onChange={(e) => {
+                                      const v = e.target.value;
+                                      setItem(idx, 'name', v);
+                                      setFieldErrors((prev) => {
+                                        const p = { ...prev };
+                                        delete p[`item_${idx}`];
+                                        delete p.items;
+                                        return p;
+                                      });
+                                    }}
+                                  />
+                                  {/* inline item error text removed to prevent layout shift; outline remains */}
+                                </td>
                         <td><input className="form-control" value={it.description} onChange={(e) => setItem(idx, 'description', e.target.value)} /></td>
                         <td><input type="number" className="form-control" value={it.quantity} onChange={(e) => setItem(idx, 'quantity', Number(e.target.value))} /></td>
                         <td><input type="number" className="form-control" value={it.price} onChange={(e) => setItem(idx, 'price', Number(e.target.value))} /></td>
                         <td>
-                          <button type="button" className="btn btn-sm btn-danger" onClick={() => removeItem(idx)}>✕</button>
+                          <button type="button" className="icon-btn delete" onClick={() => removeItem(idx)} aria-label="Remove item">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                              <path d="M10 11v6" />
+                              <path d="M14 11v6" />
+                              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                            </svg>
+                          </button>
                         </td>
                       </tr>
                     ))}
