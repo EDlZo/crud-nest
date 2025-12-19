@@ -14,7 +14,7 @@ export class BillingSchedulerService {
     @Inject(forwardRef(() => EmailService))
     private readonly emailService: EmailService,
     private readonly settingsService: NotificationSettingsService,
-  ) {}
+  ) { }
 
   // Run every minute and check if it's time to execute notification job
   @Cron('* * * * *')
@@ -124,7 +124,7 @@ export class BillingSchedulerService {
 
           if (!dryRun) {
             try {
-              await this.emailService.sendBillingReminder(
+              const sent = await this.emailService.sendBillingReminder(
                 allRecipients,
                 companyName,
                 companyId,
@@ -135,6 +135,10 @@ export class BillingSchedulerService {
                 settings.emailTemplate,
                 doc.id,
               );
+
+              if (!sent) {
+                throw new Error('Email sending failed for all recipients or no transport configured');
+              }
 
               // Build update payload: mark lastNotifiedDate and increment count
               const updates: any = {
@@ -164,7 +168,7 @@ export class BillingSchedulerService {
               this.logger.error(`Failed to send notification for record ${doc.id}`, sendErr);
               try {
                 await this.db.collection('billing-records').doc(doc.id).update({
-                  lastNotifiedDate: todayIso,
+                  // Note: we DON'T set lastNotifiedDate here so it can retry today if it failed completely
                   lastNotificationAt: new Date().toISOString(),
                   lastNotificationStatus: 'failed',
                   lastNotificationError: String(sendErr),
@@ -202,4 +206,3 @@ export class BillingSchedulerService {
     return `${yyyy}-${mm}-${dd}T00:00:00`;
   }
 }
-

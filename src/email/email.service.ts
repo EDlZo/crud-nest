@@ -52,8 +52,9 @@ export class EmailService {
 
     // Prefer Postmark if available
     if (this.client) {
-      try {
-        for (const recipient of recipients) {
+      let atLeastOneSent = false;
+      for (const recipient of recipients) {
+        try {
           const result = await this.client.sendEmail({
             From: this.fromEmail,
             To: recipient,
@@ -61,12 +62,14 @@ export class EmailService {
             HtmlBody: html,
           });
           this.logger.log(`Postmark: Email sent to ${recipient}. MessageID: ${result.MessageID}`);
+          atLeastOneSent = true;
+        } catch (error) {
+          this.logger.error(`Postmark send failed for ${recipient}:`, error);
+          // continue to next recipient
         }
-        return true;
-      } catch (error) {
-        this.logger.error('Postmark send failed:', error);
-        // fall through to try transporter
       }
+      if (atLeastOneSent) return true;
+      // if all failed or no recipients, we might fall through to transporter
     }
 
     // Fallback to nodemailer if configured

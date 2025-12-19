@@ -23,7 +23,7 @@ export class AuthService {
   // single doc under `settings/visibility` to hold role -> page visibility mapping
   private readonly settingsCollection = db.collection(process.env.FIREBASE_SETTINGS_COLLECTION ?? 'settings');
 
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(private readonly jwtService: JwtService) { }
 
   async register(dto: RegisterAuthDto): Promise<{ token: string }> {
     const normalizedEmail = dto.email.trim().toLowerCase();
@@ -122,6 +122,9 @@ export class AuthService {
   }
 
   async deleteUser(userId: string) {
+    if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+      throw new BadRequestException('User ID is required');
+    }
     const docRef = this.collection.doc(userId);
     const doc = await docRef.get();
     if (!doc.exists) throw new BadRequestException('User not found');
@@ -209,7 +212,7 @@ export class AuthService {
       const docRef = this.collection.doc(userId);
       const doc = await docRef.get();
       if (!doc.exists) throw new BadRequestException('User not found');
-      
+
       const updatePayload: any = {};
       // Handle avatarUrl: if empty string, remove it; if provided, set it
       if (updateData.avatarUrl !== undefined) {
@@ -226,7 +229,7 @@ export class AuthService {
           updatePayload.socials = updateData.socials;
         }
       }
-      
+
       console.log('AuthService.updateProfile - updatePayload:', updatePayload);
       await docRef.update(updatePayload);
       const updatedDoc = await docRef.get();
