@@ -19,6 +19,7 @@ type DashboardStats = {
   recentActivities: any[];
   billingDueToday: any[];
   totalBills: number;
+  totalBillAmount: number;
 };
 
 export const DashboardPage = () => {
@@ -35,6 +36,7 @@ export const DashboardPage = () => {
 
     billingDueToday: [],
     totalBills: 0,
+    totalBillAmount: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -167,6 +169,12 @@ export const DashboardPage = () => {
       const wonDeals = deals.filter((d: any) => d.stage === 'won').length;
 
       const totalBills = Array.isArray(billingRecords) ? billingRecords.length : 0;
+      const totalBillAmount = Array.isArray(billingRecords)
+        ? billingRecords.reduce((sum: number, r: any) => {
+            const amt = typeof r.amount === 'number' ? r.amount : (r.amount ? Number(r.amount) : 0);
+            return sum + (isNaN(amt) ? 0 : amt);
+          }, 0)
+        : 0;
 
       setStats({
         totalCompanies: Array.isArray(companies) ? companies.length : 0,
@@ -179,6 +187,7 @@ export const DashboardPage = () => {
         recentActivities: activities.slice(0, 5),
         billingDueToday,
         totalBills,
+        totalBillAmount,
       });
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -188,6 +197,94 @@ export const DashboardPage = () => {
   };
 
   // use shared formatter from utils
+
+  /* Calendar widget: month view with Monday-first week, month navigation, and today highlight */
+  const CalendarWidget = () => {
+    const [viewDate, setViewDate] = useState(() => new Date());
+    const [showYearPicker, setShowYearPicker] = useState(false);
+    const [decadeStart, setDecadeStart] = useState(() => Math.floor((new Date().getFullYear()) / 12) * 12);
+
+    const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
+
+    const prevMonth = () => setViewDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+    const nextMonth = () => setViewDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+
+    const today = new Date();
+
+    // produce 6 weeks x 7 days grid starting Monday
+    const weeks: Array<Array<{ date: Date; currentMonth: boolean }>> = [];
+    const firstOfMonth = startOfMonth(viewDate);
+    // JS getDay(): 0=Sun,1=Mon... convert to Monday-first index (0=Mon)
+    const weekdayOfFirst = (firstOfMonth.getDay() + 6) % 7; // 0..6 where 0=Mon
+    const gridStart = new Date(firstOfMonth);
+    gridStart.setDate(firstOfMonth.getDate() - weekdayOfFirst);
+
+    for (let week = 0; week < 6; week++) {
+      const row: Array<{ date: Date; currentMonth: boolean }> = [];
+      for (let day = 0; day < 7; day++) {
+        const cell = new Date(gridStart);
+        cell.setDate(gridStart.getDate() + week * 7 + day);
+        row.push({ date: cell, currentMonth: cell.getMonth() === viewDate.getMonth() });
+      }
+      weeks.push(row);
+    }
+
+    const monthLabel = `${viewDate.toLocaleString('default', { month: 'long' })} ${viewDate.getFullYear()}`;
+
+    const isSameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+    return (
+      <div className="card shadow mb-4 calendar-card">
+        <div className="card-body p-3">
+          <div className="calendar">
+            <div className="calendar-header d-flex align-items-center justify-content-between">
+              <button className="cal-nav btn" onClick={prevMonth} aria-label="Previous month">‹</button>
+              <div className="calendar-title clickable" onClick={() => { setShowYearPicker(s => !s); setDecadeStart(Math.floor(viewDate.getFullYear() / 12) * 12); }}>{monthLabel}</div>
+              <button className="cal-nav btn" onClick={nextMonth} aria-label="Next month">›</button>
+            </div>
+
+            {showYearPicker ? (
+              <div>
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <button className="btn btn-sm btn-iconless" onClick={() => setDecadeStart(s => s - 12)}>‹</button>
+                  <div className="fw-bold text-center">{decadeStart} - {decadeStart + 11}</div>
+                  <button className="btn btn-sm btn-iconless" onClick={() => setDecadeStart(s => s + 12)}>›</button>
+                </div>
+                <div className="inline-year-grid mb-2">
+                  {Array.from({ length: 12 }).map((_, i) => {
+                    const y = decadeStart + i;
+                    return (
+                      <div key={y} className={`inline-year-cell ${y === viewDate.getFullYear() ? 'active' : ''}`} onClick={() => { setViewDate(d => new Date(y, d.getMonth(), 1)); setShowYearPicker(false); }}>
+                        {y}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="calendar-grid">
+                <div className="calendar-weekdays">
+                  {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d) => (
+                    <div key={d} className="calendar-weekday">{d}</div>
+                  ))}
+                </div>
+                <div className="calendar-days">
+                  {weeks.flat().map((cell, idx) => (
+                    <div
+                      key={idx}
+                      className={`calendar-day ${cell.currentMonth ? '' : 'muted'} ${isSameDay(cell.date, today) ? 'today' : ''}`}
+                    >
+                      {cell.date.getDate()}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -244,10 +341,17 @@ export const DashboardPage = () => {
         <div className="stat-card">
           <div className="stat-icon"><FaDollarSign /></div>
           <div className="stat-body">
-            <div className="stat-title">Bill</div>
-            <div className="stat-value">{new Intl.NumberFormat().format(stats.totalBills)}</div>
+            <div className="stat-title">Invoice</div>
+            <div className="stat-value">{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(stats.totalBillAmount || 0)}</div>
           </div>
-          <div className="muted-badge">Bill</div>
+          <div className="muted-badge">{new Intl.NumberFormat().format(stats.totalBills)} Bill</div>
+        </div>
+      </div>
+
+      {/* Calendar */}
+      <div className="row">
+        <div className="col-md-4">
+          <CalendarWidget />
         </div>
       </div>
 
@@ -371,7 +475,7 @@ export const DashboardPage = () => {
                 <div className="col-md-3 mb-3">
                   <Link to="/billing" className="btn btn-warning w-100 quick-action-btn">
                     <FaDollarSign className="btn-icon" />
-                    Bill
+                    Invoice
                   </Link>
                 </div>
                 <div className="col-md-3 mb-3">

@@ -799,6 +799,122 @@ table th:last-child .btn {
   transform: none;
 }
 
+/* Calendar styles */
+.calendar-card { max-width: 320px; margin: 0 auto; border-radius: 12px; }
+.calendar { background: #fff; border-radius: 12px; padding: 8px; }
+.calendar-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; }
+.calendar-title { font-weight: 700; text-align: center; flex: 1; color: #0f172a; }
+.cal-nav { background: transparent; border: none; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; color: #6b7280; border-radius: 8px; }
+.cal-nav:hover { background: rgba(54,98,159,0.06); color: #36629f; }
+.calendar-grid { padding: 8px; }
+.calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px; }
+.calendar-weekday { text-align: center; font-size: 12px; color: #64748b; font-weight: 700; }
+.calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.calendar-day { height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: 600; color: #0f172a; background: transparent; }
+.calendar-day.muted { color: #9aa6bb; opacity: 0.85; }
+.calendar-day.today { background: #36629f; color: #fff; box-shadow: 0 6px 18px rgba(54,98,159,0.18); }
+.calendar-day:hover { background: rgba(54,98,159,0.06); }
+
+@media (max-width: 768px) {
+  .calendar-card { max-width: 100%; }
+}
+
+/* Inline calendar used in small dropdowns */
+.inline-calendar-dropdown { width: 320px; min-width: 280px; box-shadow: 0 8px 30px rgba(15,23,42,0.08); box-sizing: border-box; }
+/* When right-aligned, ensure dropdown doesn't overflow the viewport on small screens */
+.inline-calendar-dropdown { max-width: calc(100vw - 32px); }
+.inline-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.inline-cal-weekday { font-size: 11px; font-weight: 700; color: #64748b; }
+.inline-cal-day { height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.inline-cal-day.muted { color: #9aa6bb; opacity: 0.9; }
+.inline-cal-day.today { background: #36629f; color: #fff; box-shadow: 0 6px 16px rgba(54,98,159,0.18); }
+.inline-cal-day:hover { background: rgba(54,98,159,0.06); }
+
+/* Trigger that looks like a small pill / input */
+.inline-date-trigger {
+  /* make the trigger look like a regular form input */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.45rem 0.75rem;
+  height: 38px;
+  min-width: 120px;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #d1d5db; /* match form-control border */
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.inline-date-trigger:hover { background: #ffffff; }
+
+/* when used as a real input, leave space for the calendar icon on the right */
+.inline-date-trigger.form-control {
+  padding-right: 40px;
+  width: 100%;
+  display: block;
+  box-sizing: border-box;
+}
+
+/* small icon button positioned over the input's right side */
+.inline-date-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #475569;
+  cursor: pointer;
+}
+.inline-date-btn:focus { outline: none; }
+.inline-date-icon { display: block; width: 14px; height: 14px; color: currentColor; }
+
+/* Prevent global button hover/transform from moving the small calendar icon */
+.inline-date-btn,
+.inline-date-btn:hover,
+.inline-date-btn:active,
+.inline-date-btn:focus {
+  transform: translateY(-50%) !important;
+  box-shadow: none !important;
+}
+
+/* Remove focus halo / shadow for the inline date input specifically */
+.inline-date-trigger.form-control:focus {
+  outline: none;
+  box-shadow: none !important;
+  border-color: #d1d5db;
+}
+
+/* Remove any accidental visual elevation on icon hover */
+.inline-date-btn:hover { background: transparent; }
+
+/* full-width when placed in form column */
+.inline-date-trigger.w-100, .inline-date-trigger.full { width: 100%; }
+.btn-iconless { background: transparent; border: none; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; }
+.inline-cal-title { font-size: 14px; color: #344155; }
+
+/* Year picker grid used by both inline and dashboard calendars */
+.inline-year-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; justify-items: center; align-items: center; padding: 4px 6px; }
+.inline-year-cell { padding: 8px 12px; min-width: 52px; border-radius: 8px; text-align: center; cursor: pointer; color: #455569; background: transparent; border: 1px solid transparent; font-weight: 600; }
+.inline-year-cell:hover { background: rgba(54,98,159,0.06); }
+.inline-year-cell.active { background: #36629f; color: white; box-shadow: 0 8px 20px rgba(54,98,159,0.12); }
+
+/* calendar header tweaks to align arrows and title */
+.calendar-header { display: flex; align-items: center; gap: 12px; }
+.calendar-title { flex: 1; text-align: center; font-weight: 700; }
+.cal-nav { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background: transparent; border: none; color: #64748b; }
+.cal-nav:hover { background: rgba(54,98,159,0.06); color: #36629f; }
+
+.inline-cal-header .inline-cal-title { cursor: pointer; }
+.clickable { cursor: pointer; }
+
 .spinner {
   width: 18px;
   height: 18px;

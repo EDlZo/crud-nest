@@ -563,7 +563,7 @@ export const CompanyDetailsPage = () => {
                                         <circle cx="25" cy="25" r="20" stroke="#666" strokeWidth="4" fill="none" strokeDasharray="31.4 31.4">
                                         </circle>
                                     </svg>
-                                ) : (
+                                    ) : (
                                     <FaPen size={14} />
                                 )}
                             </label>

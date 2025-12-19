@@ -895,7 +895,7 @@ export const ContactsPage = () => {
                               {canModify ? (
                                 <div className="d-flex justify-content-center gap-1">
                                   <button className="icon-btn edit" aria-label="edit" title="Edit" onClick={() => handleEdit(contact)}>
-                                    <FiEdit2 />
+                                    <FiEdit2 className="action-pencil" />
                                   </button>
                                   <button className="icon-btn delete" aria-label="delete" title="Delete" onClick={() => handleDelete(contact.id)}>
                                     <FiTrash2 />
@@ -1037,7 +1037,7 @@ export const ContactsPage = () => {
                             cursor: 'pointer',
                           }}
                         >
-                          <FaPen size={14} />
+                          <FaPen size={14} className="action-pencil" />
                         </label>
                       </div>
                       

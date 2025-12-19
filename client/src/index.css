@@ -79,3 +79,15 @@ body {
   transform: translateY(0);
 }
 
+/* Action pencil icons (edit) — subtle gray */
+.action-pencil {
+  color: #6b7280; /* gray-500 */
+}
+
+/* Stronger override when parent buttons set a different color (table action buttons) */
+.icon-btn .action-pencil,
+.icon-btn.edit .action-pencil,
+.btn .action-pencil {
+  color: #6b7280 !important;
+}
+

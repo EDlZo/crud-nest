@@ -13,10 +13,162 @@ export const BillingPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<{ company: string; amount: string; status: string }>({ company: '', amount: '', status: '' });
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  // Separate date ranges for contract date and notification/billing date
+  const [contractDateFrom, setContractDateFrom] = useState<string>('');
+  const [contractDateTo, setContractDateTo] = useState<string>('');
+  const [notifyDateFrom, setNotifyDateFrom] = useState<string>('');
+  const [notifyDateTo, setNotifyDateTo] = useState<string>('');
   const [sendingIds, setSendingIds] = useState<Record<string, boolean>>({});
-  const [activeFilter, setActiveFilter] = useState<keyof typeof filters | null>(null);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const dropdownRef = React.useRef<HTMLDivElement | null>(null);
   const headerRef = React.useRef<HTMLDivElement | null>(null);
+  // Inline month-style date picker (small) used inside filter dropdowns
+  const InlineMonthPicker: React.FC<{ value: string; onChange: (v: string) => void; }> = ({ value, onChange }) => {
+    const [open, setOpen] = useState(false);
+    const instanceIdRef = React.useRef<string>(Math.random().toString(36).slice(2));
+    const wrapperRef = React.useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+      const handler = (e: Event) => {
+        try {
+          const detail = (e as CustomEvent).detail;
+          if (detail !== instanceIdRef.current) setOpen(false);
+        } catch (err) { /* ignore */ }
+      };
+      window.addEventListener('inline-month-picker-open', handler as EventListener);
+
+      const onDocClick = (ev: MouseEvent) => {
+        const t = ev.target as Node | null;
+        if (wrapperRef.current && t && !wrapperRef.current.contains(t)) {
+          setOpen(false);
+        }
+      };
+      const onKey = (ev: KeyboardEvent) => {
+        if (ev.key === 'Escape') setOpen(false);
+      };
+      document.addEventListener('click', onDocClick);
+      document.addEventListener('keydown', onKey);
+
+      return () => {
+        window.removeEventListener('inline-month-picker-open', handler as EventListener);
+        document.removeEventListener('click', onDocClick);
+        document.removeEventListener('keydown', onKey);
+      };
+    }, []);
+    const parseLocalIso = (iso: string) => {
+      try {
+        const parts = iso.split('T')[0].split('-');
+        if (parts.length >= 3) {
+          const y = Number(parts[0]);
+          const m = Number(parts[1]) - 1;
+          const d = Number(parts[2]);
+          return new Date(y, m, d);
+        }
+      } catch (e) { /* ignore */ }
+      return new Date(iso);
+    };
+
+    const [viewDate, setViewDate] = useState<Date>(() => value ? parseLocalIso(value) : new Date());
+    const [showYearPicker, setShowYearPicker] = useState(false);
+    const [decadeStart, setDecadeStart] = useState(() => Math.floor((viewDate.getFullYear()) / 12) * 12);
+
+    const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
+    const weekdayOfFirst = (d: Date) => (startOfMonth(d).getDay() + 6) % 7; // Monday-first
+
+    const buildGrid = (d: Date) => {
+      const first = startOfMonth(d);
+      const wf = weekdayOfFirst(d);
+      const gridStart = new Date(first);
+      gridStart.setDate(first.getDate() - wf);
+      const cells: Date[] = [];
+      for (let i = 0; i < 42; i++) {
+        const c = new Date(gridStart);
+        c.setDate(gridStart.getDate() + i);
+        cells.push(c);
+      }
+      return cells;
+    };
+
+    const cells = buildGrid(viewDate);
+    const today = new Date();
+    const isSameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+    const toLocalIso = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    const setIso = (d: Date) => {
+      const iso = toLocalIso(d);
+      onChange(iso);
+      setOpen(false);
+    };
+
+    return (
+      <div ref={wrapperRef} style={{ position: 'relative', display: 'inline-block' }}>
+        <button type="button" className="inline-date-trigger" onClick={() => {
+          if (!open) {
+            window.dispatchEvent(new CustomEvent('inline-month-picker-open', { detail: instanceIdRef.current }));
+            setOpen(true);
+          } else setOpen(false);
+        }}>
+          {value ? formatToDDMMYYYY(value) : 'dd/mm/yyyy'}
+        </button>
+        {open && (
+          <div className="inline-calendar-dropdown card p-3" onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 1200 }}>
+            <div className="inline-cal-header d-flex align-items-center justify-content-between mb-2">
+              <button type="button" className="btn btn-sm btn-iconless" onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}>‹</button>
+              <div className="inline-cal-title clickable" onClick={() => { setShowYearPicker(s => !s); setDecadeStart(Math.floor(viewDate.getFullYear() / 12) * 12); }}>
+                {viewDate.toLocaleString('default', { month: 'long' })} {viewDate.getFullYear()}
+              </div>
+              <button className="btn btn-sm btn-iconless" onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}>›</button>
+            </div>
+
+            {showYearPicker ? (
+              <div>
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <button type="button" className="btn btn-sm btn-iconless" onClick={() => setDecadeStart(s => s - 12)}>‹</button>
+                  <div className="fw-bold">{decadeStart} - {decadeStart + 11}</div>
+                  <button type="button" className="btn btn-sm btn-iconless" onClick={() => setDecadeStart(s => s + 12)}>›</button>
+                </div>
+                <div className="inline-year-grid">
+                  {Array.from({ length: 12 }).map((_, i) => {
+                    const y = decadeStart + i;
+                    return (
+                      <div key={y} className={`inline-year-cell ${y === viewDate.getFullYear() ? 'active' : ''}`} onClick={() => { setViewDate(d => new Date(y, d.getMonth(), 1)); setShowYearPicker(false); }}>
+                        {y}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="inline-cal-grid">
+                  {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d) => (
+                    <div key={d} className="inline-cal-weekday small text-muted text-center">{d}</div>
+                  ))}
+                  {cells.map((c, i) => (
+                    <div key={i} className={`inline-cal-day text-center ${c.getMonth() !== viewDate.getMonth() ? 'muted' : ''} ${isSameDay(c, today) ? 'today' : ''}`} onClick={() => setIso(c)}>
+                      {c.getDate()}
+                    </div>
+                  ))}
+                </div>
+                <div className="d-flex gap-2 mt-3">
+                  <button type="button" className="btn btn-sm btn-outline-secondary w-100" onClick={() => { onChange(''); setOpen(false); }}>Clear</button>
+                  <button type="button" className="btn btn-sm btn-primary w-100" onClick={() => setOpen(false)}>Done</button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
     const navigate = useNavigate();
     const token = typeof window !== 'undefined' ? localStorage.getItem('crud-token') : null;
 
@@ -64,6 +216,55 @@ export const BillingPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const renderDateRangeDropdown = (label: string, key: 'contract' | 'notify') => {
+    const isActive = activeFilter === key;
+    const hasValue = key === 'contract' ? (contractDateFrom || contractDateTo) : (notifyDateFrom || notifyDateTo);
+
+    const getFrom = () => (key === 'contract' ? contractDateFrom : notifyDateFrom);
+    const getTo = () => (key === 'contract' ? contractDateTo : notifyDateTo);
+    const setFrom = (v: string) => { if (key === 'contract') setContractDateFrom(v); else setNotifyDateFrom(v); };
+    const setTo = (v: string) => { if (key === 'contract') setContractDateTo(v); else setNotifyDateTo(v); };
+
+    return (
+      <div className="position-relative d-inline-block">
+        <div
+          className="d-flex align-items-center gap-2"
+          style={{ cursor: 'pointer' }}
+          onClick={(e) => {
+            e.stopPropagation();
+            headerRef.current = e.currentTarget as HTMLDivElement;
+            setActiveFilter(isActive ? null : key);
+          }}
+        >
+          {label}
+          <FiFilter
+            size={14}
+            className={hasValue ? 'text-primary' : 'text-muted'}
+            style={{ cursor: 'pointer' }}
+          />
+        </div>
+        {isActive && (
+          <div
+            ref={dropdownRef}
+            className="position-fixed bg-white shadow-lg rounded p-3"
+            style={{ zIndex: 9999, minWidth: 260, border: '1px solid #e5e7eb', marginTop: 8 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-2 d-flex align-items-center gap-2">
+              <InlineMonthPicker value={getFrom()} onChange={setFrom} />
+              <span className="text-muted">to</span>
+              <InlineMonthPicker value={getTo()} onChange={setTo} />
+            </div>
+            <div className="d-flex justify-content-between">
+              <button className="btn btn-sm btn-outline-secondary" onClick={() => { setFrom(''); setTo(''); setActiveFilter(null); }}>Clear</button>
+              <button className="btn btn-sm btn-primary" onClick={() => setActiveFilter(null)}>Apply</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const handleSendNow = async (id?: string) => {
@@ -171,9 +372,35 @@ export const BillingPage: React.FC = () => {
       if (filters.amount && !amount.includes(String(filters.amount).toLowerCase())) return false;
       if (filters.status && !status.includes(String(filters.status).toLowerCase())) return false;
 
+      // contract date range filter — match if the selected range overlaps the contract period
+      if (contractDateFrom || contractDateTo) {
+        const startIso = r.contractStartDate ? String(r.contractStartDate).split('T')[0] : (r.contractDate ? String(r.contractDate).split('T')[0] : null);
+        const endIso = r.contractEndDate ? String(r.contractEndDate).split('T')[0] : (r.contractStartDate ? String(r.contractStartDate).split('T')[0] : (r.contractDate ? String(r.contractDate).split('T')[0] : null));
+        // if we have no contract dates at all, don't match
+        if (!startIso && !endIso) return false;
+
+        const recordStart = startIso || endIso;
+        const recordEnd = endIso || startIso;
+
+        // If the record ends before the filter start, no overlap
+        if (contractDateFrom && recordEnd && recordEnd < contractDateFrom) return false;
+        // If the record starts after the filter end, no overlap
+        if (contractDateTo && recordStart && recordStart > contractDateTo) return false;
+        // otherwise there is overlap (or filter bounds missing)
+      }
+
+      // notification/billing date range filter — use notificationDate if present, otherwise billingDate
+      if (notifyDateFrom || notifyDateTo) {
+        const rawNotify = r.notificationDate || r.billingDate || null;
+        const notifyIso = rawNotify ? String(rawNotify).split('T')[0] : null;
+        if (!notifyIso) return false;
+        if (notifyDateFrom && notifyIso < notifyDateFrom) return false;
+        if (notifyDateTo && notifyIso > notifyDateTo) return false;
+      }
+
       return true;
     });
-  }, [records, search, filters]);
+  }, [records, search, filters, dateFrom, dateTo, contractDateFrom, contractDateTo, notifyDateFrom, notifyDateTo]);
 
   const handleFilterChange = (key: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -235,7 +462,7 @@ export const BillingPage: React.FC = () => {
   return (
     <div className="container-fluid">
       <div className="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 className="h3 mb-0 text-gray-800">Bill</h1>
+        <h1 className="h3 mb-0 text-gray-800">Invoice</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div className="d-flex align-items-center" style={{ gap: 8 }}>
             <button
@@ -296,7 +523,7 @@ export const BillingPage: React.FC = () => {
       </div>
 
       {/* Active Filters Display (moved directly under header) */}
-      { (filters.company || filters.amount || filters.status) && (
+      { (filters.company || filters.amount || filters.status || search || contractDateFrom || contractDateTo || notifyDateFrom || notifyDateTo) && (
         <div className="mb-3 d-flex align-items-center gap-2 flex-wrap">
           <span className="text-muted">Filters:</span>
           {Object.entries(filters).map(([key, value]) =>
@@ -311,11 +538,38 @@ export const BillingPage: React.FC = () => {
               </span>
             )
           )}
-          <button className="btn btn-sm btn-outline-secondary" onClick={() => { setFilters({ company: '', amount: '', status: '' }); setActiveFilter(null); }}>
+
+          {/* global search shown as name: */}
+          {search && (
+            <span className="badge bg-primary d-flex align-items-center gap-1" style={{ fontSize: '0.85rem', padding: '0.5rem 0.75rem' }}>
+              name: {search}
+              <button className="btn-close btn-close-white" style={{ fontSize: '0.6rem', marginLeft: '0.25rem' }} onClick={() => setSearch('')} />
+            </span>
+          )}
+
+          {/* contract date range badge */}
+          {(contractDateFrom || contractDateTo) && (
+            <span className="badge bg-primary d-flex align-items-center gap-1" style={{ fontSize: '0.85rem', padding: '0.5rem 0.75rem' }}>
+              contract: {contractDateFrom ? formatToDDMMYYYY(contractDateFrom) : ''}{(contractDateFrom && contractDateTo) ? ` - ${formatToDDMMYYYY(contractDateTo)}` : (contractDateTo ? formatToDDMMYYYY(contractDateTo) : '')}
+              <button className="btn-close btn-close-white" style={{ fontSize: '0.6rem', marginLeft: '0.25rem' }} onClick={() => { setContractDateFrom(''); setContractDateTo(''); setActiveFilter(null); }} />
+            </span>
+          )}
+
+          {/* notification/billing date range badge */}
+          {(notifyDateFrom || notifyDateTo) && (
+            <span className="badge bg-primary d-flex align-items-center gap-1" style={{ fontSize: '0.85rem', padding: '0.5rem 0.75rem' }}>
+              notification: {notifyDateFrom ? formatToDDMMYYYY(notifyDateFrom) : ''}{(notifyDateFrom && notifyDateTo) ? ` - ${formatToDDMMYYYY(notifyDateTo)}` : (notifyDateTo ? formatToDDMMYYYY(notifyDateTo) : '')}
+              <button className="btn-close btn-close-white" style={{ fontSize: '0.6rem', marginLeft: '0.25rem' }} onClick={() => { setNotifyDateFrom(''); setNotifyDateTo(''); setActiveFilter(null); }} />
+            </span>
+          )}
+
+          <button className="btn btn-sm btn-outline-secondary" onClick={() => { setFilters({ company: '', amount: '', status: '' }); setSearch(''); setContractDateFrom(''); setContractDateTo(''); setNotifyDateFrom(''); setNotifyDateTo(''); setActiveFilter(null); }}>
             Clear All
           </button>
         </div>
       ) }
+
+      {/* (date range filter moved into table header) */}
 
       <div className="card shadow-lg border-0">
         <div className="card-body">
@@ -329,9 +583,9 @@ export const BillingPage: React.FC = () => {
                     <th>Contact</th>
                     <th>{renderFilterDropdown('amount', 'Amount')}</th>
                     
-                    <th>Date of this contract</th>
+                    <th>{renderDateRangeDropdown('Date of this contract', 'contract')}</th>
                     <th>Billing interval</th>
-                    <th>Notification date</th>
+                    <th>{renderDateRangeDropdown('Notification date', 'notify')}</th>
                     <th>Action</th>
                 </tr>
               </thead>
@@ -418,7 +672,7 @@ export const BillingPage: React.FC = () => {
                             aria-label="ดินสอ"
                             onClick={() => navigate(`/billing/create?editId=${r.id}`)}
                           >
-                            <FiEdit2 />
+                            <FiEdit2 className="action-pencil" />
                           </button>
                           <button
                             type="button"
