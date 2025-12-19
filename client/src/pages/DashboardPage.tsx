@@ -119,10 +119,29 @@ export const DashboardPage = () => {
       const nowBangkok = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
       const todayStr = nowBangkok.toISOString().split('T')[0];
 
-      // (no-op)
+      // Enrich billing records with a contact display name (from record or fetched contacts)
+      const enrichedBilling = Array.isArray(billingRecords) ? billingRecords.map((rec: any) => {
+        const copy = { ...rec };
+        // prefer contactName stored on the billing record
+        if (!copy.contactName) {
+          try {
+            const cid = copy.contactId || (copy.contact && (copy.contact.id || copy.contact._id || copy.contact)) || null;
+            if (cid && Array.isArray(contacts)) {
+              const found = contacts.find((c: any) => String(c.id) === String(cid) || String(c._id) === String(cid));
+              if (found) {
+                copy.contactName = ((found.firstName || found.lastName) ? `${(found.firstName||'').trim()} ${(found.lastName||'').trim()}`.trim() :
+                  found.name || found.fullName || found.displayName || found.email || String(found.id));
+              }
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+        return copy;
+      }) : [];
 
-      const billingDueToday = Array.isArray(billingRecords)
-        ? billingRecords.filter((rec: any) => {
+      const billingDueToday = Array.isArray(enrichedBilling)
+        ? enrichedBilling.filter((rec: any) => {
             if (!rec) return false;
 
             // Helper: compare an ISO-ish date string against today (Asia/Bangkok)
@@ -159,7 +178,7 @@ export const DashboardPage = () => {
             }
 
             return false;
-          })
+            })
         : [];
 
       const pipelineValue = deals
@@ -295,6 +314,9 @@ export const DashboardPage = () => {
                             ? `${rec.contractStartDate ? formatToDDMMYYYY(rec.contractStartDate) : '-'}${rec.contractEndDate ? ` - ${formatToDDMMYYYY(rec.contractEndDate)}` : ''}`
                             : (rec.contractDate ? formatToDDMMYYYY(rec.contractDate) : '-')
                         }</span></div>
+                        { (rec.contactName) && (
+                          <div className="text-muted small">Contact: <span className="fw-bold">{rec.contactName}</span></div>
+                        ) }
                         <div className="text-muted small">Amount Due: <span className="fw-bold">฿{typeof rec.amount === 'number'
                           ? rec.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                           : (rec.amount ? Number(rec.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00')}</span></div>
@@ -315,7 +337,6 @@ export const DashboardPage = () => {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
                         <span className="muted-badge" style={{  color: '#0D6EFD' }}>Due Today</span>
-                        <Link to={`/billing/preview/${rec.id}`} className="btn btn-sm btn-outline-primary">Preview</Link>
                       </div>
                     </div>
                   ))}
