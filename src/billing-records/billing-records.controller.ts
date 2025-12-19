@@ -11,7 +11,7 @@ export class BillingRecordsController {
     private readonly svc: BillingRecordsService,
     @Inject(forwardRef(() => EmailService)) private readonly emailService: EmailService,
     private readonly settingsService: NotificationSettingsService,
-  ) {}
+  ) { }
 
   @Get()
   async findAll() {
@@ -100,10 +100,33 @@ export class BillingRecordsController {
       const billingIso = rec.billingDate ? (rec.billingDate + '').split('T')[0] : null;
       if (!billingIso) return { success: false, error: 'Record has no billingDate' };
 
-      const toDate = new Date(billingIso + 'T00:00:00');
-      const utc1 = Date.UTC(bangkok.getFullYear(), bangkok.getMonth(), bangkok.getDate());
-      const utc2 = Date.UTC(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
-      const daysUntil = Math.floor((utc2 - utc1) / (1000 * 60 * 60 * 24));
+      let effectiveBillingIso = billingIso;
+      let toDate = new Date(billingIso + 'T00:00:00');
+      let utc1 = Date.UTC(bangkok.getFullYear(), bangkok.getMonth(), bangkok.getDate());
+      let utc2 = Date.UTC(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+      let daysUntil = Math.floor((utc2 - utc1) / (1000 * 60 * 60 * 24));
+
+      const billingIntervalMonths = rec.billingIntervalMonths || rec.billingInterval || null;
+
+      // If billing date passed and it's recurring, calculate next occurrence for display
+      if (daysUntil < 0 && billingIntervalMonths && Number(billingIntervalMonths) > 0) {
+        try {
+          // Keep jumping forward by interval until we hit today or future
+          let nextDate = new Date(toDate.getTime());
+          while (nextDate.getTime() < bangkok.setHours(0, 0, 0, 0)) {
+            nextDate.setMonth(nextDate.getMonth() + Number(billingIntervalMonths));
+          }
+          const yyyy = nextDate.getFullYear();
+          const mm = String(nextDate.getMonth() + 1).padStart(2, '0');
+          const dd = String(nextDate.getDate()).padStart(2, '0');
+          effectiveBillingIso = `${yyyy}-${mm}-${dd}`;
+
+          const nextUtc2 = Date.UTC(nextDate.getFullYear(), nextDate.getMonth(), nextDate.getDate());
+          daysUntil = Math.floor((nextUtc2 - utc1) / (1000 * 60 * 60 * 24));
+        } catch (calcErr) {
+          console.error('Error calculating next effective billing date', calcErr);
+        }
+      }
 
       const recipients = await this.settingsService.getAllRecipients();
       if (!recipients || recipients.length === 0) return { success: false, error: 'No recipients configured' };
@@ -111,19 +134,22 @@ export class BillingRecordsController {
       const companyName = rec.companyName || '(Unknown)';
       const companyId = rec.companyId || '';
       const amountDue = typeof rec.amount === 'number' ? rec.amount : rec.amount ? Number(rec.amount) : 0;
-      const billingIntervalMonths = rec.billingIntervalMonths || rec.billingInterval || null;
+      // billingIntervalMonths is already declared above
       const billingCycleText = billingIntervalMonths ? `ทุกๆ ${billingIntervalMonths} เดือน` : rec.billingCycle || '-';
+
+      const settings = await this.settingsService.getSettings();
+      const customTemplate = settings?.emailTemplate;
 
       // Send email
       const ok = await this.emailService.sendBillingReminder(
         recipients,
         companyName,
         companyId,
-        billingIso,
+        effectiveBillingIso,
         billingCycleText,
         daysUntil,
         amountDue,
-        undefined,
+        customTemplate,
         id,
       );
 
