@@ -46,6 +46,11 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
       return;
     }
 
+    if (mode === 'register' && (!formData.firstName || !formData.lastName)) {
+      setError('Please enter both your first name and last name');
+      return;
+    }
+
     if (mode === 'register' && formData.password !== formData.confirmPassword) {
       setError('Password confirmation does not match');
       return;
@@ -71,8 +76,8 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
 
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-          const message =
-            (payload as { message?: string | string[] } | null)?.message ?? 'Unable to complete request';
+        const message =
+          (payload as { message?: string | string[] } | null)?.message ?? 'Unable to complete request';
         throw new Error(Array.isArray(message) ? message[0] : message);
       }
 
@@ -110,11 +115,11 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
             <FaUserCircle className="auth-icon" />
           </div>
           <h1>{mode === 'login' ? 'Welcome' : 'Create Account'}</h1>
-        <p className="auth-description">
-          {mode === 'login'
+          <p className="auth-description">
+            {mode === 'login'
               ? 'Sign in to manage your data'
               : 'Fill in your information to create a new account'}
-        </p>
+          </p>
         </div>
 
         <form className="form" onSubmit={handleSubmit}>
@@ -130,6 +135,7 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
                   placeholder="Enter your first name"
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  required
                 />
               </div>
               <div className="form-group">
@@ -142,39 +148,44 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
                   placeholder="Enter your last name"
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  required
                 />
               </div>
             </div>
           )}
           <div className="form-group">
-          <label>
+            <label>
               <FaEnvelope className="input-icon" />
-            Email
+              Email
             </label>
             <input
               type="email"
               placeholder="example@email.com"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onKeyDown={(e) => { if (e.key === ' ') e.preventDefault(); }}
+              required
             />
           </div>
           <div className="form-group">
-          <label>
+            <label>
               <FaLock className="input-icon" />
-            Password
+              Password
             </label>
             <input
               type="password"
               placeholder="••••••••"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              onKeyDown={(e) => { if (e.key === ' ') e.preventDefault(); }}
+              required
             />
           </div>
           {mode === 'register' && (
             <div className="form-group">
-            <label>
+              <label>
                 <FaLock className="input-icon" />
-              Confirm Password
+                Confirm Password
               </label>
               <input
                 type="password"
@@ -183,6 +194,8 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, confirmPassword: e.target.value })
                 }
+                onKeyDown={(e) => { if (e.key === ' ') e.preventDefault(); }}
+                required
               />
             </div>
           )}
@@ -199,7 +212,7 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
                 <span>Processing...</span>
               </>
             ) : (
-              <span>{mode === 'login' ? 'Sign In' : 'Register'}</span>
+              <span>{mode === 'login' ? 'Login' : 'Register'}</span>
             )}
           </button>
 
@@ -292,7 +305,7 @@ export const AuthPage = ({ mode }: { mode: AuthMode }) => {
             </>
           ) : (
             <>
-              Already have an account? <Link to="/login">Sign In</Link>
+              Already have an account? <Link to="/login">Login</Link>
             </>
           )}
         </p>

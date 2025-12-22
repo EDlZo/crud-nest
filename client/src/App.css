@@ -398,6 +398,60 @@ table th:last-child .btn {
 .muted-text {
   color: #94a3b8;
   font-size: 0.85rem;
+
+/* Contacts modal / companies picker styles to match Add Activities */
+.companies-toggle {
+  padding: 0.7rem 1rem !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  border: 1px solid #e6eef8 !important;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+}
+
+.companies-dropdown {
+  box-shadow: 0 20px 40px rgba(2,6,23,0.08);
+  border-radius: 10px;
+  border: 1px solid #e6eef8;
+  padding: 8px;
+}
+
+.companies-item {
+  transition: background-color 0.12s ease, transform 0.08s ease;
+  padding: 8px;
+  border-radius: 8px;
+}
+.companies-item:hover {
+  background: rgba(243, 232, 255, 0.6);
+}
+.companies-item.checked {
+  background: rgba(238, 242, 255, 0.9);
+}
+
+/* Ensure the modal form fields look like the Add Activity form */
+.form label {
+  font-weight: 600;
+  color: #111827;
+}
+.form .form-control,
+.form .form-select,
+.form textarea {
+  border-radius: 12px !important;
+  padding: 0.75rem 0.9rem !important;
+  box-shadow: none !important;
+  border: 1px solid #e6eef8 !important;
+}
+
+.form .btn-primary {
+  background: #2563eb !important;
+  border-radius: 999px !important;
+  padding: 0.6rem 1.25rem !important;
+}
+
+.form .btn-secondary {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid #e6eef8 !important;
+}
 }
 
 .auth-container {

@@ -117,9 +117,9 @@ export const BillingCreatePage: React.FC = () => {
         <div ref={wrapperRef} style={{ position: 'relative', display: 'block', width: '100%' }}>
           <input
             readOnly
-            className="form-control inline-date-trigger"
+            className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
             value={value ? formatToDDMMYYYY(value) : 'dd/mm/yyyy'}
-            style={{ width: '100%' }}
+            style={{ width: '100%', paddingRight: '40px', boxSizing: 'border-box' }}
             onClick={() => {
               if (!open) {
                 window.dispatchEvent(new CustomEvent('inline-month-picker-open', { detail: instanceIdRef.current }));
@@ -127,12 +127,17 @@ export const BillingCreatePage: React.FC = () => {
               } else setOpen(false);
             }}
           />
-          <button type="button" className="inline-date-btn" onClick={(e) => { e.stopPropagation(); if (!open) { window.dispatchEvent(new CustomEvent('inline-month-picker-open', { detail: instanceIdRef.current })); setOpen(true); } else setOpen(false); }} aria-label="Open calendar">
-            <svg className="inline-date-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <span
+            role="button"
+            aria-label="Open calendar"
+            onClick={(e) => { e.stopPropagation(); if (!open) { window.dispatchEvent(new CustomEvent('inline-month-picker-open', { detail: instanceIdRef.current })); setOpen(true); } else setOpen(false); }}
+            style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: 'rgba(55,65,81,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <svg className="inline-date-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.2" fill="none" />
               <path d="M16 3v4M8 3v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
             </svg>
-          </button>
+          </span>
           {open && (
             <div className="inline-calendar-dropdown card p-3" style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 1200 }} onClick={(e) => e.stopPropagation()}>
               <div className="inline-cal-header d-flex align-items-center justify-content-between mb-2">
@@ -458,7 +463,7 @@ export const BillingCreatePage: React.FC = () => {
               <div className="col-md-4">
                 <label className="form-label">Customer</label>
                 <select
-                  className={`form-select ${fieldErrors.companyId ? 'is-invalid' : ''}`}
+                  className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${fieldErrors.companyId ? 'ring-2 ring-red-200' : ''}`}
                   value={form.companyId}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -480,7 +485,7 @@ export const BillingCreatePage: React.FC = () => {
               <div className="col-md-4">
                 <label className="form-label">Contact</label>
                 <select
-                  className={`form-select ${fieldErrors.contactId ? 'is-invalid' : ''}`}
+                  className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${fieldErrors.contactId ? 'ring-2 ring-red-200' : ''} ${(!form.companyId || loadingContactsForCompany) ? 'opacity-70' : ''}`}
                   value={form.contactId}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -510,7 +515,7 @@ export const BillingCreatePage: React.FC = () => {
                 </select>
               </div>
               <div className="col-md-2">
-                <label className="form-label">Billing date</label>
+                <label className="form-label">Notification date</label>
                 <InlineMonthPicker
                   value={form.billingDate}
                   onChange={(v) => {
@@ -526,7 +531,7 @@ export const BillingCreatePage: React.FC = () => {
               </div>
               <div className="col-md-2">
                 <label className="form-label">Billing interval (months)</label>
-                <select className="form-select" value={form.billingIntervalMonths} onChange={(e) => setForm({ ...form, billingIntervalMonths: Number(e.target.value) })}>
+                <select className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all" value={form.billingIntervalMonths} onChange={(e) => setForm({ ...form, billingIntervalMonths: Number(e.target.value) })}>
                   {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
                     <option key={n} value={n}>{`ทุกๆ ${n} เดือน`}</option>
                   ))}
@@ -564,10 +569,10 @@ export const BillingCreatePage: React.FC = () => {
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Item</th>
+                      <th>Name</th>
                       <th>Description</th>
                       <th style={{ width: 120 }}>Qty</th>
-                      <th style={{ width: 140 }}>Price</th>
+                      <th style={{ width: 120 }}>Price</th>
                       <th style={{ width: 60 }}></th>
                     </tr>
                   </thead>
@@ -577,7 +582,7 @@ export const BillingCreatePage: React.FC = () => {
                         <td>
                           <input
                             name={`item_name_${idx}`}
-                            className={`form-control ${fieldErrors[`item_${idx}`] ? 'is-invalid' : ''}`}
+                            className={`w-full px-3 py-2 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${fieldErrors[`item_${idx}`] ? 'ring-2 ring-red-200' : ''}`}
                             value={it.name}
                             onChange={(e) => {
                               const v = e.target.value;
@@ -592,9 +597,9 @@ export const BillingCreatePage: React.FC = () => {
                           />
                           {/* inline item error text removed to prevent layout shift; outline remains */}
                         </td>
-                        <td><input className="form-control" value={it.description} onChange={(e) => setItem(idx, 'description', e.target.value)} /></td>
-                        <td><input type="number" className="form-control" value={it.quantity} onChange={(e) => setItem(idx, 'quantity', Number(e.target.value))} /></td>
-                        <td><input type="number" className="form-control" value={it.price} onChange={(e) => setItem(idx, 'price', Number(e.target.value))} /></td>
+                        <td><input className="w-full px-3 py-2 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all" value={it.description} onChange={(e) => setItem(idx, 'description', e.target.value)} /></td>
+                        <td><input type="number" className="w-full px-3 py-2 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all" value={it.quantity} onChange={(e) => setItem(idx, 'quantity', Number(e.target.value))} /></td>
+                        <td><input type="number" className="w-full px-3 py-2 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all" value={it.price} onChange={(e) => setItem(idx, 'price', Number(e.target.value))} /></td>
                         <td>
                           <button type="button" className="icon-btn delete" onClick={() => removeItem(idx)} aria-label="Remove item">
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
