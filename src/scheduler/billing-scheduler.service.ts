@@ -32,7 +32,7 @@ export class BillingSchedulerService {
         .getMinutes()
         .toString()
         .padStart(2, '0')}`;
-      const todayDate = bangkokTime.toISOString().split('T')[0];
+      const todayDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(now);
 
       this.logger.debug(`Scheduler check: currentTime=${currentTime}, settingsTime=${settings.notificationTime}, lastRunDate=${this.lastRunDate}, todayDate=${todayDate}`);
 
@@ -56,10 +56,10 @@ export class BillingSchedulerService {
       return;
     }
 
-    // Use Asia/Bangkok timezone for consistency with scheduler checks
+    // Standardize today date in Bangkok
     const now = new Date();
     const bangkokTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
-    const todayIso = bangkokTime.toISOString().split('T')[0]; // YYYY-MM-DD
+    const todayIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(now);
 
     try {
       const allRecipients = await this.settingsService.getAllRecipients();
@@ -68,59 +68,112 @@ export class BillingSchedulerService {
         return;
       }
 
-      this.logger.log(`Sending to ${allRecipients.length} recipients: ${allRecipients.join(', ')}`);
+      this.logger.log(`Billing Check: date=${todayIso}, time=${now.toLocaleTimeString()}, recipients=${allRecipients.length}`);
 
       const recordsSnapshot = await this.db.collection('billing-records').get();
+      this.logger.log(`Found ${recordsSnapshot.docs.length} billing records to check`);
 
       for (const doc of recordsSnapshot.docs) {
         const record = doc.data() as any;
-        if (!record || !record.billingDate) continue;
+        if (!record) continue;
 
-        const billingDateIso = (record.billingDate || '').split('T')[0];
-        if (!billingDateIso) continue;
+        const companyName = record.companyName || '(Unknown)';
+        const recordId = doc.id;
 
-        // Skip if this record was already notified today (safety to avoid duplicates)
-        try {
-          if (record.lastNotifiedDate && record.lastNotifiedDate === todayIso) {
-            this.logger.debug(`Skipping record ${doc.id} — already notified today (${todayIso})`);
-            continue;
-          }
-        } catch (skipErr) {
-          // proceed if any unexpected shape
+        if (!record.billingDate) {
+          this.logger.debug(`Skipping record ${recordId} for "${companyName}": billingDate is missing`);
+          continue;
         }
 
-        const daysUntil = this.daysBetweenDates(bangkokTime, new Date(billingDateIso + 'T00:00:00'));
+        // Standardize format: split by T if ISO, but also handle just YYYY-MM-DD
+        let currentBillingDateIso = String(record.billingDate).split('T')[0];
+        const billingIntervalMonths = Number(record.billingIntervalMonths || record.billingInterval || 0);
+
+        this.logger.debug(`Checking record ${recordId} ("${companyName}"): anchor=${currentBillingDateIso}, interval=${billingIntervalMonths}`);
+
+        // Bi-directional Sequence Alignment: Find the first occurrence in the sequence that is >= today
+        if (billingIntervalMonths > 0) {
+          const originalAnchor = currentBillingDateIso;
+          // Forward catch-up
+          if (currentBillingDateIso < todayIso) {
+            while (currentBillingDateIso < todayIso) {
+              currentBillingDateIso = this.addMonthsToIsoDate(currentBillingDateIso, billingIntervalMonths).split('T')[0];
+            }
+            if (currentBillingDateIso !== originalAnchor) {
+              this.logger.log(`Record ${recordId} ("${companyName}"): Advanced anchor ${originalAnchor} -> ${currentBillingDateIso} to catch up`);
+            }
+          }
+          // Backward alignment (if user set a future anchor that represents an ongoing series)
+          else if (currentBillingDateIso > todayIso) {
+            let prevDate = this.addMonthsToIsoDate(currentBillingDateIso, -billingIntervalMonths).split('T')[0];
+            while (prevDate >= todayIso) {
+              currentBillingDateIso = prevDate;
+              prevDate = this.addMonthsToIsoDate(currentBillingDateIso, -billingIntervalMonths).split('T')[0];
+            }
+            if (currentBillingDateIso !== originalAnchor) {
+              this.logger.log(`Record ${recordId} ("${companyName}"): Aligned future anchor ${originalAnchor} -> ${currentBillingDateIso} to current cycle`);
+            }
+          }
+
+          // Update DB if the aligned date differs from stored date to avoid repeated logic
+          if (currentBillingDateIso + 'T00:00:00' !== record.billingDate) {
+            try {
+              await this.db.collection('billing-records').doc(recordId).update({
+                billingDate: currentBillingDateIso + 'T00:00:00',
+                lastAlignmentAt: new Date().toISOString()
+              });
+            } catch (updErr) {
+              this.logger.debug(`Failed to update aligned date for ${recordId}`, updErr);
+            }
+          }
+        }
+
+        // Final check against today
+        const daysUntil = this.daysBetweenDates(bangkokTime, new Date(currentBillingDateIso + 'T00:00:00'));
+        this.logger.debug(`Result for ${recordId} ("${companyName}"): nextBilling=${currentBillingDateIso}, daysUntil=${daysUntil}`);
+
+        // Skip if this record was already notified today for THIS SPECIFIC billing date
+        // This allows re-notifying if the billingDate has advanced (i.e. a new cycle/catch-up)
+        if (record.lastNotifiedDate === todayIso && (record.lastNotifiedBillingDate || '').split('T')[0] === currentBillingDateIso) {
+          this.logger.debug(`Skipping record ${recordId} ("${companyName}") — already notified for cycle ${currentBillingDateIso} today`);
+          continue;
+        }
 
         // Check contract period: prefer record-level contractDates, otherwise consider record without contract
         let inContract = true;
         try {
-          const start = record.contractStartDate;
-          const end = record.contractEndDate;
-          if (start && end) {
-            inContract = !(todayIso < start || todayIso > end);
-          } else if (start && !end) {
-            inContract = !(todayIso < start);
-          } else if (!start && end) {
-            inContract = !(todayIso > end);
+          // contract dates might be empty or ISO strings
+          const startStr = record.contractStartDate ? String(record.contractStartDate).split('T')[0] : null;
+          const endStr = record.contractEndDate ? String(record.contractEndDate).split('T')[0] : null;
+
+          if (startStr && endStr) {
+            inContract = !(todayIso < startStr || todayIso > endStr);
+            if (!inContract) this.logger.debug(`Record ${recordId} ("${companyName}") OUT OF RANGE: ${todayIso} not in ${startStr} to ${endStr}`);
+          } else if (startStr) {
+            inContract = !(todayIso < startStr);
+            if (!inContract) this.logger.debug(`Record ${recordId} ("${companyName}") NOT STARTED: ${todayIso} < ${startStr}`);
+          } else if (endStr) {
+            inContract = !(todayIso > endStr);
+            if (!inContract) this.logger.debug(`Record ${recordId} ("${companyName}") EXPIRED: ${todayIso} > ${endStr}`);
           }
         } catch (err) {
-          this.logger.debug('Error checking contract dates for record', err);
+          this.logger.debug(`Error checking contract dates for record ${recordId}`, err);
           inContract = true;
         }
 
-        if (!inContract) continue;
+        if (!inContract) {
+          continue;
+        }
 
         const shouldAdvanceNotify = settings.advanceNotification && typeof settings.advanceDays === 'number' && daysUntil === settings.advanceDays;
         const shouldOnBillingDate = settings.onBillingDate && daysUntil === 0;
 
         if (shouldAdvanceNotify || shouldOnBillingDate) {
-          const companyName = record.companyName || '(Unknown)';
           const companyId = record.companyId || '';
           const amountDue = typeof record.amount === 'number' ? record.amount : record.amount ? Number(record.amount) : 0;
-          const billingIntervalMonths = record.billingIntervalMonths || record.billingInterval || null;
           const billingCycleText = billingIntervalMonths ? `ทุกๆ ${billingIntervalMonths} เดือน` : record.billingCycle || '-';
 
-          this.logger.log(`Record ${doc.id} for company "${companyName}" matches notify condition (daysUntil=${daysUntil}).` + (dryRun ? ' (dry-run)' : ' Sending...'));
+          this.logger.log(`Record ${recordId} matches notify condition (daysUntil=${daysUntil}). Sending email...`);
 
           if (!dryRun) {
             try {
@@ -128,7 +181,7 @@ export class BillingSchedulerService {
                 allRecipients,
                 companyName,
                 companyId,
-                billingDateIso,
+                currentBillingDateIso,
                 billingCycleText,
                 daysUntil,
                 amountDue,
@@ -140,9 +193,10 @@ export class BillingSchedulerService {
                 throw new Error('Email sending failed for all recipients or no transport configured');
               }
 
-              // Build update payload: mark lastNotifiedDate and increment count
+              // Build update payload: mark lastNotifiedDate/BillingDate and increment count
               const updates: any = {
                 lastNotifiedDate: todayIso,
+                lastNotifiedBillingDate: currentBillingDateIso + 'T00:00:00',
                 lastNotificationAt: new Date().toISOString(),
                 lastNotificationStatus: 'sent',
                 notificationsSentCount: (record.notificationsSentCount || 0) + 1,
@@ -151,7 +205,7 @@ export class BillingSchedulerService {
               // If this is the actual billing date (not just an advance notice) and there is an interval, advance billingDate
               if (shouldOnBillingDate && billingIntervalMonths && Number(billingIntervalMonths) > 0) {
                 try {
-                  const nextBilling = this.addMonthsToIsoDate(billingDateIso, Number(billingIntervalMonths));
+                  const nextBilling = this.addMonthsToIsoDate(currentBillingDateIso, Number(billingIntervalMonths));
                   updates.billingDate = nextBilling;
                   this.logger.log(`Auto-advanced billingDate for record ${doc.id} to ${nextBilling}`);
                 } catch (advErr) {

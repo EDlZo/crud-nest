@@ -5,6 +5,7 @@ export class Company {
   type?: 'individual' | 'company';
   name: string;
   address?: string;
+  zipcode?: string;
   province?: string;
   amphoe?: string;
   tambon?: string;

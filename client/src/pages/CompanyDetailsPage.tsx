@@ -8,6 +8,7 @@ import '../App.css';
 import provincesFallback from '../data/thailand-provinces.json';
 import localThailandHierarchy from '../data/thailand-hierarchy.json';
 import fullThailandHierarchy from '../data/thailand-hierarchy-full.json';
+import thailandFlat from '../data/thailand-hierarchy-full.flat.json';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
 import { getAvatarColor } from '../utils/avatarColor';
@@ -19,6 +20,7 @@ type Company = {
     type: 'individual' | 'company';
     name: string;
     address?: string;
+    zipcode?: string;
     phone?: string;
     fax?: string;
     taxId?: string;
@@ -55,6 +57,7 @@ const emptyCompany: Company = {
     type: 'company',
     name: '',
     address: '',
+    zipcode: '',
     phone: '',
     fax: '',
     taxId: '',
@@ -175,21 +178,21 @@ export const CompanyDetailsPage = () => {
             const companyData = await companyRes.json();
             setCompany(companyData);
 
-                    // Fetch billing records for this company
-                    try {
-                        const billingRes = await fetch(withBase(`/billing-records/company/${id}`), {
-                            headers: { Authorization: `Bearer ${token}` },
-                        });
-                        if (billingRes.ok) {
-                            const billingData = await billingRes.json();
-                            setBillingRecords(Array.isArray(billingData) ? billingData : []);
-                            // keep for backwards compatibility with quick table
-                            (companyData as any).billingRecords = billingData;
-                            setCompany(companyData);
-                        }
-                    } catch (err) {
-                        // ignore billing fetch errors here
-                    }
+            // Fetch billing records for this company
+            try {
+                const billingRes = await fetch(withBase(`/billing-records/company/${id}`), {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (billingRes.ok) {
+                    const billingData = await billingRes.json();
+                    setBillingRecords(Array.isArray(billingData) ? billingData : []);
+                    // keep for backwards compatibility with quick table
+                    (companyData as any).billingRecords = billingData;
+                    setCompany(companyData);
+                }
+            } catch (err) {
+                // ignore billing fetch errors here
+            }
 
             // Fetch All Contacts (to filter by company's contact IDs)
             // Note: In a real app with many contacts, we should have an endpoint to fetch contacts by company ID.
@@ -279,6 +282,9 @@ export const CompanyDetailsPage = () => {
                 setEditedAmphoe(inferred.amphoe || '');
                 setEditedTambon(inferred.tambon || '');
             }
+            // Add zipcode to editValue context if we want to edit it specifically, 
+            // but address editing in this page seems to be a combined field.
+            // Wait, let's see how address is saved.
         }
     };
 
@@ -299,6 +305,8 @@ export const CompanyDetailsPage = () => {
                 if (editedProvince) bodyPayload.province = editedProvince;
                 if (editedAmphoe) bodyPayload.amphoe = editedAmphoe;
                 if (editedTambon) bodyPayload.tambon = editedTambon;
+                if ((company as any).zipcode) bodyPayload.zipcode = (company as any).zipcode;
+                // We should probably allow editing zipcode too.
                 if ((!editedProvince || !editedAmphoe) && editValue) {
                     const inferred = inferPartsByLookup(editValue);
                     if (!bodyPayload.province && inferred.province) bodyPayload.province = inferred.province;
@@ -477,6 +485,7 @@ export const CompanyDetailsPage = () => {
         if (tambon) segments.push(`ต.${String(tambon).trim()}`);
         if (amphoe) segments.push(`อ.${String(amphoe).trim()}`);
         if (province) segments.push(`จ.${String(province).trim()}`);
+        if (comp?.zipcode) segments.push(String(comp.zipcode).trim());
         return <div className="fw-medium">{segments.length ? segments.join(' ') : '-'}</div>;
     };
 
@@ -563,7 +572,7 @@ export const CompanyDetailsPage = () => {
                                         <circle cx="25" cy="25" r="20" stroke="#666" strokeWidth="4" fill="none" strokeDasharray="31.4 31.4">
                                         </circle>
                                     </svg>
-                                    ) : (
+                                ) : (
                                     <FaPen size={14} />
                                 )}
                             </label>
@@ -709,7 +718,7 @@ export const CompanyDetailsPage = () => {
                                                 <th>Billing interval</th>
                                                 <th>Notification date</th>
 
-                                                
+
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -742,7 +751,7 @@ export const CompanyDetailsPage = () => {
                                                         <td>{typeof r.amount === 'number' ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(r.amount) : (r.amount ?? '-')}</td>
                                                         <td>{billingIntervalText}</td>
                                                         <td>{r.billingDate || '-'}</td>
-                                                        
+
                                                         {/* actions removed in company details view */}
                                                     </tr>
                                                 );
@@ -800,11 +809,16 @@ export const CompanyDetailsPage = () => {
                                                                         autoFocus
                                                                     />
                                                                     <div className="row gx-2 mb-2">
-                                                                        <div className="col-12 col-md-4">
+                                                                        <div className="col-12 col-md-3 mb-2 mb-md-0">
                                                                             <select
                                                                                 className="form-select form-select-sm"
                                                                                 value={editedProvince}
-                                                                                onChange={(e) => { setEditedProvince(e.target.value || ''); setEditedAmphoe(''); setEditedTambon(''); }}
+                                                                                onChange={(e) => {
+                                                                                    setEditedProvince(e.target.value || '');
+                                                                                    setEditedAmphoe('');
+                                                                                    setEditedTambon('');
+                                                                                    setCompany(prev => prev ? ({ ...prev, zipcode: '' }) : null);
+                                                                                }}
                                                                             >
                                                                                 {thailandHierarchy === null ? (
                                                                                     <option value="">Loading provinces...</option>
@@ -820,11 +834,15 @@ export const CompanyDetailsPage = () => {
                                                                                 )}
                                                                             </select>
                                                                         </div>
-                                                                        <div className="col-12 col-md-4">
+                                                                        <div className="col-12 col-md-3 mb-2 mb-md-0">
                                                                             <select
                                                                                 className="form-select form-select-sm"
                                                                                 value={editedAmphoe}
-                                                                                onChange={(e) => { setEditedAmphoe(e.target.value || ''); setEditedTambon(''); }}
+                                                                                onChange={(e) => {
+                                                                                    setEditedAmphoe(e.target.value || '');
+                                                                                    setEditedTambon('');
+                                                                                    setCompany(prev => prev ? ({ ...prev, zipcode: '' }) : null);
+                                                                                }}
                                                                                 disabled={!editedProvince}
                                                                             >
                                                                                 <option value="">Select amphoe</option>
@@ -837,11 +855,25 @@ export const CompanyDetailsPage = () => {
                                                                                 })()}
                                                                             </select>
                                                                         </div>
-                                                                        <div className="col-12 col-md-4">
+                                                                        <div className="col-12 col-md-3 mb-2 mb-md-0">
                                                                             <select
                                                                                 className="form-select form-select-sm"
                                                                                 value={editedTambon}
-                                                                                onChange={(e) => setEditedTambon(e.target.value || '')}
+                                                                                onChange={(e) => {
+                                                                                    const val = e.target.value || '';
+                                                                                    setEditedTambon(val);
+                                                                                    // Auto-fill Zipcode
+                                                                                    if (val && editedAmphoe && editedProvince) {
+                                                                                        const match = (thailandFlat as any[]).find(r =>
+                                                                                            (r.district === val || r.name === val) &&
+                                                                                            (r.amphoe === editedAmphoe) &&
+                                                                                            (r.province === editedProvince)
+                                                                                        );
+                                                                                        if (match && match.zipcode) {
+                                                                                            setCompany(prev => prev ? ({ ...prev, zipcode: match.zipcode.toString() }) : null);
+                                                                                        }
+                                                                                    }
+                                                                                }}
                                                                                 disabled={!editedAmphoe}
                                                                             >
                                                                                 <option value="">Select tambon</option>
@@ -855,6 +887,26 @@ export const CompanyDetailsPage = () => {
                                                                                     ));
                                                                                 })()}
                                                                             </select>
+                                                                        </div>
+                                                                        <div className="col-12 col-md-3">
+                                                                            <input
+                                                                                type="text"
+                                                                                className="form-control form-control-sm"
+                                                                                value={(company as any).zipcode || ''}
+                                                                                placeholder="Zipcode"
+                                                                                onChange={(e) => {
+                                                                                    const zip = e.target.value;
+                                                                                    if (zip.length === 5) {
+                                                                                        const match = (thailandFlat as any[]).find((r) => r.zipcode.toString() === zip);
+                                                                                        if (match) {
+                                                                                            setEditedProvince(match.province);
+                                                                                            setEditedAmphoe(match.amphoe);
+                                                                                            setEditedTambon(match.district);
+                                                                                        }
+                                                                                    }
+                                                                                    setCompany(prev => prev ? ({ ...prev, zipcode: zip }) : null);
+                                                                                }}
+                                                                            />
                                                                         </div>
                                                                     </div>
                                                                     <div className="d-flex gap-2">
@@ -941,7 +993,6 @@ export const CompanyDetailsPage = () => {
                                             ])}
                                             {renderEditableField('address', 'Address', company.address)}
                                             {renderEditableField('taxId', 'Tax ID', company.taxId)}
-
                                             {company.type === 'company' && (
                                                 <>
                                                     {renderEditableField('branchName', 'Branch Name', company.branchName)}

@@ -8,6 +8,7 @@ import { API_BASE_URL } from '../config';
 import provincesFallback from '../data/thailand-provinces.json';
 import localThailandHierarchy from '../data/thailand-hierarchy.json';
 import fullThailandHierarchy from '../data/thailand-hierarchy-full.json';
+import thailandFlat from '../data/thailand-hierarchy-full.flat.json';
 import { useAuth } from '../context/AuthContext';
 import { formatDateTime } from '../utils/formatDate';
 import { getAvatarColor } from '../utils/avatarColor';
@@ -19,6 +20,7 @@ type Contact = {
   email: string;
   phone: string;
   address: string;
+  zipcode?: string;
   province?: string;
   amphoe?: string;
   tambon?: string;
@@ -36,6 +38,7 @@ const emptyContact: Contact = {
   email: '',
   phone: '',
   address: '',
+  zipcode: '',
   province: '',
   amphoe: '',
   tambon: '',
@@ -298,6 +301,22 @@ export const ContactsPage = () => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleZipcodeChange = (zip: string) => {
+    handleChange('zipcode', zip);
+    if (zip.length === 5) {
+      const match = (thailandFlat as any[]).find((r) => r.zipcode.toString() === zip);
+      if (match) {
+        setFormData((prev) => ({
+          ...prev,
+          province: match.province,
+          amphoe: match.amphoe,
+          tambon: match.district,
+          zipcode: zip,
+        }));
+      }
+    }
+  };
+
   const resetForm = () => {
     setEditingId(null);
     setFormData(emptyContact);
@@ -349,6 +368,7 @@ export const ContactsPage = () => {
       province: formData.province || inferredFromText.province || '',
       amphoe: formData.amphoe || inferredFromText.amphoe || '',
       tambon: formData.tambon || inferredFromText.tambon || '',
+      zipcode: formData.zipcode || '',
       photo: formData.photo || '',
       companyIds: selectedCompanyIds,
     };
@@ -474,6 +494,7 @@ export const ContactsPage = () => {
       province: (contact as any).province || '',
       amphoe: (contact as any).amphoe || '',
       tambon: (contact as any).tambon || '',
+      zipcode: (contact as any).zipcode || '',
       photo: contact.photo,
       id: contact.id,
     });
@@ -846,6 +867,7 @@ export const ContactsPage = () => {
                                 if (tambon) segments.push(`ต.${String(tambon).trim()}`);
                                 if (amphoe) segments.push(`อ.${String(amphoe).trim()}`);
                                 if (province) segments.push(`จ.${String(province).trim()}`);
+                                if ((contact as any).zipcode) segments.push(String((contact as any).zipcode).trim());
                                 return segments.length ? segments.join(' ') : '-';
                               })()}
                             </td>
@@ -887,9 +909,9 @@ export const ContactsPage = () => {
                               })()}
                             </td>
                             <td className="py-3 px-4 border-0" style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                                  <span title={typeof contact.updatedAt === 'string' ? contact.updatedAt : JSON.stringify(contact.updatedAt)}>
-                                    {formatDateTime(contact.updatedAt)}
-                                  </span>
+                              <span title={typeof contact.updatedAt === 'string' ? contact.updatedAt : JSON.stringify(contact.updatedAt)}>
+                                {formatDateTime(contact.updatedAt)}
+                              </span>
                             </td>
                             <td className="py-3 px-4 border-0 text-center">
                               {canModify ? (
@@ -1040,7 +1062,7 @@ export const ContactsPage = () => {
                           <FaPen size={14} className="action-pencil" />
                         </label>
                       </div>
-                      
+
                     </div>
                     <div className="col-md-6 mb-3">
                       <label className="form-label">First Name</label>
@@ -1078,19 +1100,21 @@ export const ContactsPage = () => {
                         onChange={(e) => handleChange('phone', e.target.value)}
                       />
                     </div>
-                    {/* Address moved below Companies dropdown (per UX request) */}
-                    {/* Thailand cascading selects: Province -> Amphoe -> Tambon */}
-                    {/* Address label above the cascading selects */}
-                    <div className="col-md-12 mb-2">
-                      <label className="form-label">Address</label>
-                      <textarea
-                        className="form-control mb-2"
-                        value={formData.address}
-                        onChange={(e) => handleChange('address', e.target.value)}
-                        rows={3}
-                      />
-                    </div>
-                    <div className="col-md-4 mb-3">
+                  </div>
+                  {/* Address moved below Companies dropdown (per UX request) */}
+                  {/* Thailand cascading selects: Province -> Amphoe -> Tambon */}
+                  {/* Address label above the cascading selects */}
+                  <div className="col-md-12 mb-2">
+                    <label className="form-label">Address</label>
+                    <textarea
+                      className="form-control mb-2"
+                      value={formData.address}
+                      onChange={(e) => handleChange('address', e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
                       <div style={{ display: 'flex', gap: 8 }}>
                         <select
                           className="form-select"
@@ -1101,6 +1125,7 @@ export const ContactsPage = () => {
                             // reset lower levels
                             handleChange('amphoe', '');
                             handleChange('tambon', '');
+                            handleChange('zipcode', '');
                           }}
                           style={{ flex: 1 }}
                         >
@@ -1124,11 +1149,15 @@ export const ContactsPage = () => {
                         )}
                       </div>
                     </div>
-                    <div className="col-md-4 mb-3">
+                    <div className="col-md-6 mb-3">
                       <select
                         className="form-select"
                         value={formData.amphoe || ''}
-                        onChange={(e) => { handleChange('amphoe', e.target.value); handleChange('tambon', ''); }}
+                        onChange={(e) => {
+                          handleChange('amphoe', e.target.value);
+                          handleChange('tambon', '');
+                          handleChange('zipcode', '');
+                        }}
                         disabled={!formData.province || !Array.isArray(thailandHierarchy)}
                       >
                         <option value="">Select amphoe</option>
@@ -1143,11 +1172,27 @@ export const ContactsPage = () => {
                         })()}
                       </select>
                     </div>
-                    <div className="col-md-4 mb-3">
+                  </div>
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
                       <select
                         className="form-select"
                         value={formData.tambon || ''}
-                        onChange={(e) => handleChange('tambon', e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handleChange('tambon', val);
+                          // Auto-fill zipcode if exactly one match found in flat hierarchy
+                          if (val && formData.amphoe && formData.province) {
+                            const match = (thailandFlat as any[]).find(r =>
+                              (r.district === val || r.name === val) &&
+                              (r.amphoe === formData.amphoe) &&
+                              (r.province === formData.province)
+                            );
+                            if (match && match.zipcode) {
+                              handleChange('zipcode', match.zipcode.toString());
+                            }
+                          }
+                        }}
                         disabled={!formData.amphoe || !Array.isArray(thailandHierarchy)}
                       >
                         <option value="">Select tambon</option>
@@ -1166,6 +1211,15 @@ export const ContactsPage = () => {
                           });
                         })()}
                       </select>
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={formData.zipcode || ''}
+                        onChange={(e) => handleZipcodeChange(e.target.value)}
+                        placeholder="Zipcode"
+                      />
                     </div>
                   </div>
                   {/* Companies block moved to bottom of form */}
@@ -1259,4 +1313,3 @@ export const ContactsPage = () => {
     </>
   );
 };
-

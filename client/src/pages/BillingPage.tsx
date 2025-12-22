@@ -58,19 +58,17 @@ export const BillingPage: React.FC = () => {
       };
     }, []);
     const parseLocalIso = (iso: string) => {
+      if (!iso) return null;
       try {
         const parts = iso.split('T')[0].split('-');
         if (parts.length >= 3) {
-          const y = Number(parts[0]);
-          const m = Number(parts[1]) - 1;
-          const d = Number(parts[2]);
-          return new Date(y, m, d);
+          return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
         }
-      } catch (e) { /* ignore */ }
-      return new Date(iso);
+      } catch (e) { }
+      return null;
     };
 
-    const [viewDate, setViewDate] = useState<Date>(() => value ? parseLocalIso(value) : new Date());
+    const [viewDate, setViewDate] = useState<Date>(() => (value ? parseLocalIso(value) : null) || new Date());
     const [showYearPicker, setShowYearPicker] = useState(false);
     const [decadeStart, setDecadeStart] = useState(() => Math.floor((viewDate.getFullYear()) / 12) * 12);
 
@@ -110,13 +108,13 @@ export const BillingPage: React.FC = () => {
 
     return (
       <div ref={wrapperRef} style={{ position: 'relative', display: 'inline-block' }}>
-        <button type="button" className="inline-date-trigger" onClick={() => {
+        <button style={{ alignItems: 'center' }} type="button" className="inline-date-trigger" onClick={() => {
           if (!open) {
             window.dispatchEvent(new CustomEvent('inline-month-picker-open', { detail: instanceIdRef.current }));
             setOpen(true);
           } else setOpen(false);
         }}>
-          {value ? formatToDDMMYYYY(value) : 'dd/mm/yyyy'}
+          {value ? formatToDDMMYYYY(value) : '22 Dec 2025'}
         </button>
         {open && (
           <div className="inline-calendar-dropdown card p-3" onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 1200 }}>
@@ -149,14 +147,18 @@ export const BillingPage: React.FC = () => {
             ) : (
               <>
                 <div className="inline-cal-grid">
-                  {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d) => (
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
                     <div key={d} className="inline-cal-weekday small text-muted text-center">{d}</div>
                   ))}
-                  {cells.map((c, i) => (
-                    <div key={i} className={`inline-cal-day text-center ${c.getMonth() !== viewDate.getMonth() ? 'muted' : ''} ${isSameDay(c, today) ? 'today' : ''}`} onClick={() => setIso(c)}>
-                      {c.getDate()}
-                    </div>
-                  ))}
+                  {cells.map((c, i) => {
+                    const sel = parseLocalIso(value);
+                    const isSelected = sel && isSameDay(c, sel);
+                    return (
+                      <div key={i} className={`inline-cal-day text-center ${c.getMonth() !== viewDate.getMonth() ? 'muted' : ''} ${isSameDay(c, today) ? 'today' : ''} ${isSelected ? 'active' : ''}`} onClick={() => setIso(c)}>
+                        {c.getDate()}
+                      </div>
+                    );
+                  })}
                 </div>
                 <div className="d-flex gap-2 mt-3">
                   <button type="button" className="btn btn-sm btn-outline-secondary w-100" onClick={() => { onChange(''); setOpen(false); }}>Clear</button>
@@ -169,35 +171,35 @@ export const BillingPage: React.FC = () => {
       </div>
     );
   };
-    const navigate = useNavigate();
-    const token = typeof window !== 'undefined' ? localStorage.getItem('crud-token') : null;
+  const navigate = useNavigate();
+  const token = typeof window !== 'undefined' ? localStorage.getItem('crud-token') : null;
 
-    const handleDelete = async (id?: string) => {
-      if (!id) return;
-      if (!token) {
-        alert('Please login to perform this action');
-        return;
+  const handleDelete = async (id?: string) => {
+    if (!id) return;
+    if (!token) {
+      alert('Please login to perform this action');
+      return;
+    }
+    const confirmed = window.confirm('Are you sure you want to delete this billing record?');
+    if (!confirmed) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/billing-records/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `Status ${res.status}`);
       }
-      const confirmed = window.confirm('Are you sure you want to delete this billing record?');
-      if (!confirmed) return;
-      try {
-        const res = await fetch(`${API_BASE_URL}/billing-records/${id}`, {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(txt || `Status ${res.status}`);
-        }
-        // remove from UI
-        setRecords((prev) => prev.filter((r) => r.id !== id));
-        try { window.dispatchEvent(new CustomEvent('billing:changed')); } catch (e) { /* ignore */ }
-      } catch (err: any) {
-        alert(err.message || 'Failed to delete billing record');
-      }
-    };
+      // remove from UI
+      setRecords((prev) => prev.filter((r) => r.id !== id));
+      try { window.dispatchEvent(new CustomEvent('billing:changed')); } catch (e) { /* ignore */ }
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete billing record');
+    }
+  };
 
   const fetchRecords = async () => {
     setLoading(true);
@@ -523,7 +525,7 @@ export const BillingPage: React.FC = () => {
       </div>
 
       {/* Active Filters Display (moved directly under header) */}
-      { (filters.company || filters.amount || filters.status || search || contractDateFrom || contractDateTo || notifyDateFrom || notifyDateTo) && (
+      {(filters.company || filters.amount || filters.status || search || contractDateFrom || contractDateTo || notifyDateFrom || notifyDateTo) && (
         <div className="mb-3 d-flex align-items-center gap-2 flex-wrap">
           <span className="text-muted">Filters:</span>
           {Object.entries(filters).map(([key, value]) =>
@@ -567,7 +569,7 @@ export const BillingPage: React.FC = () => {
             Clear All
           </button>
         </div>
-      ) }
+      )}
 
       {/* (date range filter moved into table header) */}
 
@@ -579,14 +581,14 @@ export const BillingPage: React.FC = () => {
             <table className="table table-hover align-middle mb-0 table-borderless">
               <thead>
                 <tr>
-                    <th>{renderFilterDropdown('company', 'Company')}</th>
-                    <th>Contact</th>
-                    <th>{renderFilterDropdown('amount', 'Amount')}</th>
-                    
-                    <th>{renderDateRangeDropdown('Date of this contract', 'contract')}</th>
-                    <th>Billing interval</th>
-                    <th>{renderDateRangeDropdown('Notification date', 'notify')}</th>
-                    <th>Action</th>
+                  <th>{renderFilterDropdown('company', 'Company')}</th>
+                  <th>Contact</th>
+                  <th>{renderFilterDropdown('amount', 'Amount')}</th>
+
+                  <th>{renderDateRangeDropdown('Date of this contract', 'contract')}</th>
+                  <th>Billing interval</th>
+                  <th>{renderDateRangeDropdown('Notification date', 'notify')}</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -613,7 +615,7 @@ export const BillingPage: React.FC = () => {
                   const billingDateIso = r.billingDate ? (r.billingDate + '').split('T')[0] : null;
                   const isNotifyToday = billingDateIso === bangkokTodayIso;
 
-                    return (
+                  return (
                     <tr key={r.id || `${r.companyId}-${r.billingDate}-${r.amount}`}>
                       <td>{r.companyName || r.companyId || '-'}</td>
                       <td>{
@@ -649,7 +651,7 @@ export const BillingPage: React.FC = () => {
                         })()
                       }</td>
                       <td>{typeof r.amount === 'number' ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(r.amount) : (r.amount ?? '-')}</td>
-                     <td>{contractDate}</td>
+                      <td>{contractDate}</td>
                       <td>{billingIntervalText}</td>
                       <td>{notifyDate}</td>
                       <td>

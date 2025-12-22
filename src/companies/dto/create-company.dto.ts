@@ -53,6 +53,10 @@ export class CreateCompanyDto {
 
   @IsOptional()
   @IsString()
+  zipcode?: string;
+
+  @IsOptional()
+  @IsString()
   province?: string;
 
   @IsOptional()

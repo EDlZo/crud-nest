@@ -37,155 +37,157 @@ export const BillingCreatePage: React.FC = () => {
   // Inline month-style picker for create/edit invoice form
   const InlineMonthPicker: React.FC<{ value: string; onChange: (v: string) => void; error?: string }>
     = ({ value, onChange, error }) => {
-    const [open, setOpen] = useState(false);
-    const instanceIdRef = React.useRef<string>(Math.random().toString(36).slice(2));
-    const wrapperRef = React.useRef<HTMLDivElement | null>(null);
+      const [open, setOpen] = useState(false);
+      const instanceIdRef = React.useRef<string>(Math.random().toString(36).slice(2));
+      const wrapperRef = React.useRef<HTMLDivElement | null>(null);
 
-    useEffect(() => {
-      const handler = (e: Event) => {
+      useEffect(() => {
+        const handler = (e: Event) => {
+          try {
+            const detail = (e as CustomEvent).detail;
+            if (detail !== instanceIdRef.current) setOpen(false);
+          } catch (err) { /* ignore */ }
+        };
+        window.addEventListener('inline-month-picker-open', handler as EventListener);
+
+        const onDocClick = (ev: MouseEvent) => {
+          const t = ev.target as Node | null;
+          if (wrapperRef.current && t && !wrapperRef.current.contains(t)) {
+            setOpen(false);
+          }
+        };
+        const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') setOpen(false); };
+        document.addEventListener('click', onDocClick);
+        document.addEventListener('keydown', onKey);
+
+        return () => {
+          window.removeEventListener('inline-month-picker-open', handler as EventListener);
+          document.removeEventListener('click', onDocClick);
+          document.removeEventListener('keydown', onKey);
+        };
+      }, []);
+      const parseLocalIso = (iso: string) => {
+        if (!iso) return null;
         try {
-          const detail = (e as CustomEvent).detail;
-          if (detail !== instanceIdRef.current) setOpen(false);
-        } catch (err) { /* ignore */ }
+          const parts = iso.split('T')[0].split('-');
+          if (parts.length >= 3) {
+            return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+          }
+        } catch (e) { }
+        return null;
       };
-      window.addEventListener('inline-month-picker-open', handler as EventListener);
 
-      const onDocClick = (ev: MouseEvent) => {
-        const t = ev.target as Node | null;
-        if (wrapperRef.current && t && !wrapperRef.current.contains(t)) {
-          setOpen(false);
+      const [viewDate, setViewDate] = useState<Date>(() => (value && parseLocalIso(value)) || new Date());
+      const [showYearPicker, setShowYearPicker] = useState(false);
+      const [decadeStart, setDecadeStart] = useState(() => Math.floor((new Date().getFullYear()) / 12) * 12);
+
+      const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
+      const weekdayOfFirst = (d: Date) => (startOfMonth(d).getDay() + 6) % 7;
+      const buildGrid = (d: Date) => {
+        const first = startOfMonth(d);
+        const wf = weekdayOfFirst(d);
+        const gridStart = new Date(first);
+        gridStart.setDate(first.getDate() - wf);
+        const cells: Date[] = [];
+        for (let i = 0; i < 42; i++) {
+          const c = new Date(gridStart);
+          c.setDate(gridStart.getDate() + i);
+          cells.push(c);
         }
+        return cells;
       };
-      const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') setOpen(false); };
-      document.addEventListener('click', onDocClick);
-      document.addEventListener('keydown', onKey);
 
-      return () => {
-        window.removeEventListener('inline-month-picker-open', handler as EventListener);
-        document.removeEventListener('click', onDocClick);
-        document.removeEventListener('keydown', onKey);
+      const cells = buildGrid(viewDate);
+      const today = new Date();
+      const isSameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+      const toLocalIso = (d: Date) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
       };
-    }, []);
-    const parseLocalIso = (iso: string) => {
-      try {
-        const parts = iso.split('T')[0].split('-');
-        if (parts.length >= 3) {
-          const y = Number(parts[0]);
-          const m = Number(parts[1]) - 1;
-          const d = Number(parts[2]);
-          return new Date(y, m, d);
-        }
-      } catch (e) { }
-      return new Date();
-    };
 
-    const [viewDate, setViewDate] = useState<Date>(() => value ? parseLocalIso(value) : new Date());
-    const [showYearPicker, setShowYearPicker] = useState(false);
-    const [decadeStart, setDecadeStart] = useState(() => Math.floor((new Date().getFullYear()) / 12) * 12);
+      const setIso = (d: Date) => {
+        onChange(toLocalIso(d));
+        setOpen(false);
+      };
 
-    const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
-    const weekdayOfFirst = (d: Date) => (startOfMonth(d).getDay() + 6) % 7;
-    const buildGrid = (d: Date) => {
-      const first = startOfMonth(d);
-      const wf = weekdayOfFirst(d);
-      const gridStart = new Date(first);
-      gridStart.setDate(first.getDate() - wf);
-      const cells: Date[] = [];
-      for (let i = 0; i < 42; i++) {
-        const c = new Date(gridStart);
-        c.setDate(gridStart.getDate() + i);
-        cells.push(c);
-      }
-      return cells;
-    };
-
-    const cells = buildGrid(viewDate);
-    const today = new Date();
-    const isSameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-
-    const toLocalIso = (d: Date) => {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
-    };
-
-    const setIso = (d: Date) => {
-      onChange(toLocalIso(d));
-      setOpen(false);
-    };
-
-    return (
-      <div ref={wrapperRef} style={{ position: 'relative', display: 'block', width: '100%' }}>
-        <input
-          readOnly
-          className="form-control inline-date-trigger"
-          value={value ? formatToDDMMYYYY(value) : 'dd/mm/yyyy'}
-          style={{ width: '100%' }}
-          onClick={() => {
-            if (!open) {
-              window.dispatchEvent(new CustomEvent('inline-month-picker-open', { detail: instanceIdRef.current }));
-              setOpen(true);
-            } else setOpen(false);
-          }}
-        />
-        <button type="button" className="inline-date-btn" onClick={(e) => { e.stopPropagation(); if (!open) { window.dispatchEvent(new CustomEvent('inline-month-picker-open', { detail: instanceIdRef.current })); setOpen(true); } else setOpen(false); }} aria-label="Open calendar">
-          <svg className="inline-date-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.2" fill="none" />
-            <path d="M16 3v4M8 3v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-          </svg>
-        </button>
-        {open && (
-          <div className="inline-calendar-dropdown card p-3" style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 1200 }} onClick={(e) => e.stopPropagation()}>
-            <div className="inline-cal-header d-flex align-items-center justify-content-between mb-2">
-              <button type="button" className="btn btn-sm btn-iconless" onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}>‹</button>
-              <div className="inline-cal-title clickable" onClick={() => { setShowYearPicker(s => !s); setDecadeStart(Math.floor(viewDate.getFullYear() / 12) * 12); }}>{viewDate.toLocaleString('default', { month: 'long' })} {viewDate.getFullYear()}</div>
-              <button type="button" className="btn btn-sm btn-iconless" onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}>›</button>
-            </div>
-
-            {showYearPicker ? (
-              <div>
-                <div className="d-flex align-items-center justify-content-between mb-2">
-                  <button type="button" className="btn btn-sm btn-iconless" onClick={() => setDecadeStart(s => s - 12)}>‹</button>
-                  <div className="fw-bold">{decadeStart} - {decadeStart + 11}</div>
-                  <button type="button" className="btn btn-sm btn-iconless" onClick={() => setDecadeStart(s => s + 12)}>›</button>
-                </div>
-                <div className="inline-year-grid">
-                  {Array.from({ length: 12 }).map((_, i) => {
-                    const y = decadeStart + i;
-                    return (
-                      <div key={y} className={`inline-year-cell ${y === viewDate.getFullYear() ? 'active' : ''}`} onClick={() => { setViewDate(d => new Date(y, d.getMonth(), 1)); setShowYearPicker(false); }}>
-                        {y}
-                      </div>
-                    );
-                  })}
-                </div>
+      return (
+        <div ref={wrapperRef} style={{ position: 'relative', display: 'block', width: '100%' }}>
+          <input
+            readOnly
+            className="form-control inline-date-trigger"
+            value={value ? formatToDDMMYYYY(value) : 'dd/mm/yyyy'}
+            style={{ width: '100%' }}
+            onClick={() => {
+              if (!open) {
+                window.dispatchEvent(new CustomEvent('inline-month-picker-open', { detail: instanceIdRef.current }));
+                setOpen(true);
+              } else setOpen(false);
+            }}
+          />
+          <button type="button" className="inline-date-btn" onClick={(e) => { e.stopPropagation(); if (!open) { window.dispatchEvent(new CustomEvent('inline-month-picker-open', { detail: instanceIdRef.current })); setOpen(true); } else setOpen(false); }} aria-label="Open calendar">
+            <svg className="inline-date-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.2" fill="none" />
+              <path d="M16 3v4M8 3v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+          </button>
+          {open && (
+            <div className="inline-calendar-dropdown card p-3" style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 1200 }} onClick={(e) => e.stopPropagation()}>
+              <div className="inline-cal-header d-flex align-items-center justify-content-between mb-2">
+                <button type="button" className="btn btn-sm btn-iconless" onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}>‹</button>
+                <div className="inline-cal-title clickable" onClick={() => { setShowYearPicker(s => !s); setDecadeStart(Math.floor(viewDate.getFullYear() / 12) * 12); }}>{viewDate.toLocaleString('default', { month: 'long' })} {viewDate.getFullYear()}</div>
+                <button type="button" className="btn btn-sm btn-iconless" onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}>›</button>
               </div>
-            ) : (
-              <>
-                <div className="inline-cal-grid">
-                  {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d) => (
-                    <div key={d} className="inline-cal-weekday small text-muted text-center">{d}</div>
-                  ))}
-                  {cells.map((c, i) => (
-                    <div key={i} className={`inline-cal-day text-center ${c.getMonth() !== viewDate.getMonth() ? 'muted' : ''} ${isSameDay(c, today) ? 'today' : ''}`} onClick={() => setIso(c)}>
-                      {c.getDate()}
-                    </div>
-                  ))}
+
+              {showYearPicker ? (
+                <div>
+                  <div className="d-flex align-items-center justify-content-between mb-2">
+                    <button type="button" className="btn btn-sm btn-iconless" onClick={() => setDecadeStart(s => s - 12)}>‹</button>
+                    <div className="fw-bold">{decadeStart} - {decadeStart + 11}</div>
+                    <button type="button" className="btn btn-sm btn-iconless" onClick={() => setDecadeStart(s => s + 12)}>›</button>
+                  </div>
+                  <div className="inline-year-grid">
+                    {Array.from({ length: 12 }).map((_, i) => {
+                      const y = decadeStart + i;
+                      return (
+                        <div key={y} className={`inline-year-cell ${y === viewDate.getFullYear() ? 'active' : ''}`} onClick={() => { setViewDate(d => new Date(y, d.getMonth(), 1)); setShowYearPicker(false); }}>
+                          {y}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="d-flex gap-2 mt-3">
-                  <button type="button" className="btn btn-sm btn-outline-secondary w-100" onClick={() => { onChange(''); setOpen(false); }}>Clear</button>
-                  <button type="button" className="btn btn-sm btn-primary w-100" onClick={() => setOpen(false)}>Done</button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-        {/* per-field inline error text intentionally omitted to avoid layout shift; outline remains */}
-      </div>
-    );
-  };
-  
+              ) : (
+                <>
+                  <div className="inline-cal-grid">
+                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+                      <div key={d} className="inline-cal-weekday small text-muted text-center">{d}</div>
+                    ))}
+                    {cells.map((c, i) => {
+                      const sel = parseLocalIso(value);
+                      const isSelected = sel && isSameDay(c, sel);
+                      return (
+                        <div key={i} className={`inline-cal-day text-center ${c.getMonth() !== viewDate.getMonth() ? 'muted' : ''} ${isSameDay(c, today) ? 'today' : ''} ${isSelected ? 'active' : ''}`} onClick={() => setIso(c)}>
+                          {c.getDate()}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="d-flex gap-2 mt-3">
+                    <button type="button" className="btn btn-sm btn-outline-secondary w-100" onClick={() => { onChange(''); setOpen(false); }}>Clear</button>
+                    <button type="button" className="btn btn-sm btn-primary w-100" onClick={() => setOpen(false)}>Done</button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          {/* per-field inline error text intentionally omitted to avoid layout shift; outline remains */}
+        </div>
+      );
+    };
+
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -498,12 +500,12 @@ export const BillingCreatePage: React.FC = () => {
                       key={ct.id}
                       value={ct.id}
                     >{
-                      ((ct.firstName || ct.lastName) ? `${(ct.firstName || '').trim()} ${(ct.lastName || '').trim()}`.trim() : ct.name)
+                        ((ct.firstName || ct.lastName) ? `${(ct.firstName || '').trim()} ${(ct.lastName || '').trim()}`.trim() : ct.name)
                         || ct.fullName
                         || ct.email
                         || ct.displayName
                         || ct.id
-                    }</option>
+                      }</option>
                   ))}
                 </select>
               </div>
@@ -532,7 +534,7 @@ export const BillingCreatePage: React.FC = () => {
               </div>
             </div>
 
-            
+
 
             <div className="row mb-3">
               <div className="col-md-6">
@@ -572,24 +574,24 @@ export const BillingCreatePage: React.FC = () => {
                   <tbody>
                     {form.items.map((it: any, idx: number) => (
                       <tr key={idx}>
-                                <td>
-                                  <input
-                                    name={`item_name_${idx}`}
-                                    className={`form-control ${fieldErrors[`item_${idx}`] ? 'is-invalid' : ''}`}
-                                    value={it.name}
-                                    onChange={(e) => {
-                                      const v = e.target.value;
-                                      setItem(idx, 'name', v);
-                                      setFieldErrors((prev) => {
-                                        const p = { ...prev };
-                                        delete p[`item_${idx}`];
-                                        delete p.items;
-                                        return p;
-                                      });
-                                    }}
-                                  />
-                                  {/* inline item error text removed to prevent layout shift; outline remains */}
-                                </td>
+                        <td>
+                          <input
+                            name={`item_name_${idx}`}
+                            className={`form-control ${fieldErrors[`item_${idx}`] ? 'is-invalid' : ''}`}
+                            value={it.name}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setItem(idx, 'name', v);
+                              setFieldErrors((prev) => {
+                                const p = { ...prev };
+                                delete p[`item_${idx}`];
+                                delete p.items;
+                                return p;
+                              });
+                            }}
+                          />
+                          {/* inline item error text removed to prevent layout shift; outline remains */}
+                        </td>
                         <td><input className="form-control" value={it.description} onChange={(e) => setItem(idx, 'description', e.target.value)} /></td>
                         <td><input type="number" className="form-control" value={it.quantity} onChange={(e) => setItem(idx, 'quantity', Number(e.target.value))} /></td>
                         <td><input type="number" className="form-control" value={it.price} onChange={(e) => setItem(idx, 'price', Number(e.target.value))} /></td>

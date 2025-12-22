@@ -55,6 +55,7 @@ export const DashboardPage = () => {
         activitiesRes,
         dealsRes,
         billingRes,
+        settingsRes,
       ] = await Promise.all([
         fetch(withBase('/companies'), {
           headers: { Authorization: `Bearer ${token}` },
@@ -71,10 +72,14 @@ export const DashboardPage = () => {
         fetch(withBase('/billing-records'), {
           headers: { Authorization: `Bearer ${token}` },
         }),
+        fetch(withBase('/notification-settings'), {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
       const companies = companiesRes.ok ? await companiesRes.json() : [];
       const contacts = contactsRes.ok ? await contactsRes.json() : [];
+      const settings = settingsRes.ok ? await settingsRes.json() : {};
 
       let activities: any[] = [];
       let deals: any[] = [];
@@ -115,71 +120,87 @@ export const DashboardPage = () => {
         console.warn('Error parsing billing records:', err);
       }
 
-      // compute today's date in Asia/Bangkok and match billing-records due today
+      // Timezone-safe today (Asia/Bangkok)
       const nowBangkok = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
-      const todayStr = nowBangkok.toISOString().split('T')[0];
+      const todayIso = nowBangkok.toISOString().split('T')[0];
 
-      // Enrich billing records with a contact display name (from record or fetched contacts)
-      const enrichedBilling = Array.isArray(billingRecords) ? billingRecords.map((rec: any) => {
+      // Date logic helpers for alignment
+      const addMonths = (iso: string, months: number) => {
+        try {
+          const d = new Date(iso);
+          d.setMonth(d.getMonth() + months);
+          return d.toISOString().split('T')[0];
+        } catch (e) { return iso; }
+      };
+
+      const alignOccurrence = (anchor: string, interval: number, today: string) => {
+        let current = anchor;
+        const anchorDate = new Date(anchor);
+        const todayDate = new Date(today);
+
+        if (anchorDate > todayDate) {
+          while (true) {
+            const prev = addMonths(current, -interval);
+            if (new Date(prev) < todayDate) break;
+            current = prev;
+          }
+        } else {
+          while (new Date(current) < todayDate) {
+            current = addMonths(current, interval);
+          }
+        }
+        return current;
+      };
+
+      // Enrich and filter billing records
+      const billingDueToday = (Array.isArray(billingRecords) ? billingRecords : []).map((rec: any) => {
         const copy = { ...rec };
-        // prefer contactName stored on the billing record
+        if (!copy.billingDate) return null;
+
+        const interval = Number(copy.billingIntervalMonths || 0);
+        let alignedDate = copy.billingDate.split('T')[0];
+
+        if (interval > 0) {
+          alignedDate = alignOccurrence(alignedDate, interval, todayIso);
+        }
+
+        copy.alignedBillingDate = alignedDate;
+
+        // Contact name enrichment
         if (!copy.contactName) {
           try {
             const cid = copy.contactId || (copy.contact && (copy.contact.id || copy.contact._id || copy.contact)) || null;
             if (cid && Array.isArray(contacts)) {
               const found = contacts.find((c: any) => String(c.id) === String(cid) || String(c._id) === String(cid));
               if (found) {
-                copy.contactName = ((found.firstName || found.lastName) ? `${(found.firstName||'').trim()} ${(found.lastName||'').trim()}`.trim() :
+                copy.contactName = ((found.firstName || found.lastName) ? `${(found.firstName || '').trim()} ${(found.lastName || '').trim()}`.trim() :
                   found.name || found.fullName || found.displayName || found.email || String(found.id));
               }
             }
-          } catch (e) {
-            // ignore
-          }
+          } catch (e) { }
         }
         return copy;
-      }) : [];
+      }).filter((rec: any) => {
+        if (!rec) return false;
 
-      const billingDueToday = Array.isArray(enrichedBilling)
-        ? enrichedBilling.filter((rec: any) => {
-            if (!rec) return false;
+        const alignedDate = rec.alignedBillingDate;
 
-            // Helper: compare an ISO-ish date string against today (Asia/Bangkok)
-            const isSameIsoDay = (value: any) => {
-              try {
-                if (!value) return false;
-                const maybeDate = new Date(value);
-                if (!isNaN(maybeDate.getTime())) {
-                  const iso = maybeDate.toISOString().split('T')[0];
-                  return iso === todayStr;
-                }
-              } catch (err) {
-                // ignore
-              }
-              return false;
-            };
+        // Exact match for today
+        if (alignedDate === todayIso) return true;
 
-            // 1) If a notification-specific date exists, use it first
-            if (isSameIsoDay(rec.notificationDate)) return true;
+        // Advance notification logic
+        if (settings.advanceDays > 0) {
+          try {
+            const dAligned = new Date(alignedDate);
+            const dToday = new Date(todayIso);
+            const diffMs = dAligned.getTime() - dToday.getTime();
+            const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+            if (diffDays > 0 && diffDays <= settings.advanceDays) return true;
+          } catch (e) { }
+        }
 
-            // 2) Otherwise check billingDate (ISO or timestamp)
-            if (isSameIsoDay(rec.billingDate)) return true;
-
-            // 2.5) If the record was already notified today (scheduler or manual send), include it
-            if (isSameIsoDay(rec.lastNotifiedDate)) return true;
-
-            // 3) Fallback: check numeric day-of-month fields (notificationDay then billingDate if numeric)
-            const dayNumCandidates = [rec.notificationDay, rec.billingDate, rec.notificationDayOverride];
-            for (const cand of dayNumCandidates) {
-              const dayNum = Number(String(cand));
-              if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) {
-                if (dayNum === nowBangkok.getDate()) return true;
-              }
-            }
-
-            return false;
-            })
-        : [];
+        return false;
+      });
 
       const pipelineValue = deals
         .filter((d: any) => d.stage !== 'lost')
@@ -190,9 +211,9 @@ export const DashboardPage = () => {
       const totalBills = Array.isArray(billingRecords) ? billingRecords.length : 0;
       const totalBillAmount = Array.isArray(billingRecords)
         ? billingRecords.reduce((sum: number, r: any) => {
-            const amt = typeof r.amount === 'number' ? r.amount : (r.amount ? Number(r.amount) : 0);
-            return sum + (isNaN(amt) ? 0 : amt);
-          }, 0)
+          const amt = typeof r.amount === 'number' ? r.amount : (r.amount ? Number(r.amount) : 0);
+          return sum + (isNaN(amt) ? 0 : amt);
+        }, 0)
         : 0;
 
       setStats({
@@ -203,8 +224,8 @@ export const DashboardPage = () => {
         totalDeals: Array.isArray(deals) ? deals.length : 0,
         pipelineValue,
         wonDeals,
-        recentActivities: activities.slice(0, 5),
-        billingDueToday,
+        recentActivities: activities.slice(0, 3),
+        billingDueToday: billingDueToday.slice(0, 3),
         totalBills,
         totalBillAmount,
       });
@@ -289,17 +310,17 @@ export const DashboardPage = () => {
         <div className="col-xl-6 col-lg-6">
           <div className="card shadow mb-4 dashboard-gray">
             <div className="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-              <h6 className="m-0 font-weight-bold text-primary">Billing Due Today</h6>
-                <Link to="/billing" className="btn btn-sm btn-primary">
-                  View All
-                </Link>
+              <h6 className="m-0 font-weight-bold text-primary">Upcoming & Due Today</h6>
+              <Link to="/billing" className="btn btn-sm btn-primary">
+                View All
+              </Link>
             </div>
             <div className="card-body">
-                {stats.billingDueToday.length === 0 ? (
-                  <div>
-                    <p className="text-center text-muted">No billing due today</p>
-                  </div>
-                ) : (
+              {stats.billingDueToday.length === 0 ? (
+                <div>
+                  <p className="text-center text-muted">No billing due today</p>
+                </div>
+              ) : (
                 <div className="list-group">
                   {stats.billingDueToday.map((rec: any) => (
                     <div key={rec.id} className="list-group-item clean">
@@ -314,29 +335,35 @@ export const DashboardPage = () => {
                             ? `${rec.contractStartDate ? formatToDDMMYYYY(rec.contractStartDate) : '-'}${rec.contractEndDate ? ` - ${formatToDDMMYYYY(rec.contractEndDate)}` : ''}`
                             : (rec.contractDate ? formatToDDMMYYYY(rec.contractDate) : '-')
                         }</span></div>
-                        { (rec.contactName) && (
+                        {(rec.contactName) && (
                           <div className="text-muted small">Contact: <span className="fw-bold">{rec.contactName}</span></div>
-                        ) }
+                        )}
                         <div className="text-muted small">Amount Due: <span className="fw-bold">฿{typeof rec.amount === 'number'
                           ? rec.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                           : (rec.amount ? Number(rec.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00')}</span></div>
 
                         {/* Show billing date or day-of-month */}
                         <div className="text-muted small">Billing Date: <span className="fw-bold">{
-                          (() => {
-                            try {
-                              if (!rec.billingDate) return '-';
-                              const maybeDate = new Date(rec.billingDate);
-                              if (!isNaN(maybeDate.getTime())) return formatToDDMMYYYY(rec.billingDate);
-                              const dayNum = Number(String(rec.billingDate));
-                              if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) return `Day ${dayNum} of month`;
-                              return String(rec.billingDate);
-                            } catch (e) { return String(rec.billingDate || '-'); }
-                          })()
+                          formatToDDMMYYYY(rec.alignedBillingDate || rec.billingDate)
                         }</span></div>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-                        <span className="muted-badge" style={{  color: '#0D6EFD' }}>Due Today</span>
+                        {(() => {
+                          const nowBangkok = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+                          const tIso = nowBangkok.toISOString().split('T')[0];
+                          if (rec.alignedBillingDate === tIso) {
+                            return <span className="muted-badge" style={{ color: '#0D6EFD' }}>Due Today</span>;
+                          }
+                          try {
+                            const dAligned = new Date(rec.alignedBillingDate);
+                            const dToday = new Date(tIso);
+                            const diffMs = dAligned.getTime() - dToday.getTime();
+                            const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                            if (diffDays > 0) return <span className="muted-badge" style={{ color: '#198754' }}>Upcoming ({diffDays} Day)</span>;
+                            if (diffDays < 0) return <span className="muted-badge" style={{ color: '#dc3545' }}>Overdue ({Math.abs(diffDays)} Day)</span>;
+                          } catch (e) { }
+                          return <span className="muted-badge" style={{ color: '#198754' }}>Upcoming</span>;
+                        })()}
                       </div>
                     </div>
                   ))}

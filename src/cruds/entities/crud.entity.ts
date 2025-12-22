@@ -5,6 +5,7 @@ export class Crud {
   email: string;
   phone: string;
   address: string;
+  zipcode?: string;
   province?: string;
   amphoe?: string;
   tambon?: string;

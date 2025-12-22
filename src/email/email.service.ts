@@ -112,6 +112,22 @@ export class EmailService {
     const primaryColor = isDueToday ? '#dc3545' : '#4e73df'; // Red for due today, Blue for upcoming
     const headerText = isDueToday ? 'Billing Due Today' : 'Upcoming Billing';
 
+    const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const formatEmailDate = (iso: string) => {
+      try {
+        const parts = iso.split('T')[0].split('-');
+        if (parts.length === 3) {
+          const dd = parts[2];
+          const mon = MONTHS_SHORT[parseInt(parts[1]) - 1];
+          const yyyy = parts[0];
+          return `${dd} ${mon} ${yyyy}`;
+        }
+      } catch (e) { }
+      return iso;
+    };
+
+    const formattedBillingDate = formatEmailDate(billingDate);
+
     const amountStr = amountDue && typeof amountDue === 'number'
       ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(amountDue)
       : new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(0);
@@ -169,7 +185,7 @@ export class EmailService {
               </div>
               <div class="info-row">
                 <span class="label">Billing Date : </span>
-                <span class="value">&nbsp;${billingDate}</span>
+                <span class="value">&nbsp;${formattedBillingDate}</span>
               </div>
               <div class="info-row">
                 <span class="label">Status : </span>
@@ -198,7 +214,7 @@ export class EmailService {
       ? customTemplate
         .replace(/\{\{companyName\}\}/g, companyName)
         .replace(/\{\{companyId\}\}/g, companyId)
-        .replace(/\{\{billingDate\}\}/g, billingDate)
+        .replace(/\{\{billingDate\}\}/g, formattedBillingDate)
         .replace(/\{\{billingCycle\}\}/g, billingCycle)
         .replace(/\{\{daysUntilBilling\}\}/g, String(daysUntilBilling))
         .replace(/\{\{amountDue\}\}/g, amountStr)

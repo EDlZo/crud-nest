@@ -18,6 +18,10 @@ export class CreateCrudDto {
 
   @IsOptional()
   @IsString()
+  zipcode?: string;
+
+  @IsOptional()
+  @IsString()
   province?: string;
 
   @IsOptional()

@@ -7,6 +7,7 @@ import '../App.css';
 import provincesFallback from '../data/thailand-provinces.json';
 import localThailandHierarchy from '../data/thailand-hierarchy.json';
 import fullThailandHierarchy from '../data/thailand-hierarchy-full.json';
+import thailandFlat from '../data/thailand-hierarchy-full.flat.json';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
 import { getAvatarColor } from '../utils/avatarColor';
@@ -16,6 +17,7 @@ type Company = {
   type: 'individual' | 'company';
   name: string;
   address?: string;
+  zipcode?: string;
   province?: string;
   amphoe?: string;
   tambon?: string;
@@ -52,6 +54,7 @@ const emptyCompany: Company = {
   type: 'company',
   name: '',
   address: '',
+  zipcode: '',
   province: '',
   amphoe: '',
   tambon: '',
@@ -128,7 +131,7 @@ export const CompaniesPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
-  
+
   const [contacts, setContacts] = useState<any[]>([]);
   const [billingSums, setBillingSums] = useState<Record<string, number>>({});
   const [showContactsModal, setShowContactsModal] = useState(false);
@@ -248,6 +251,22 @@ export const CompaniesPage = () => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleZipcodeChange = (zip: string) => {
+    handleChange('zipcode', zip);
+    if (zip.length === 5) {
+      const match = (thailandFlat as any[]).find((r) => r.zipcode.toString() === zip);
+      if (match) {
+        setFormData((prev) => ({
+          ...prev,
+          province: match.province,
+          amphoe: match.amphoe,
+          tambon: match.district,
+          zipcode: zip,
+        }));
+      }
+    }
+  };
+
   const handleSubscriptionChange = (key: string, value: any) => {
     setFormData((prev) => ({
       ...prev,
@@ -359,6 +378,7 @@ export const CompaniesPage = () => {
       type: formData.type || undefined,
       name: formData.name.trim(),
       address: formData.address?.trim() || undefined,
+      zipcode: formData.zipcode?.trim() || undefined,
       phone: formData.phone?.trim() || undefined,
       fax: formData.fax?.trim() || undefined,
       taxId: formData.taxId?.trim() || undefined,
@@ -389,6 +409,7 @@ export const CompaniesPage = () => {
     if (formData.province) payload.province = formData.province;
     if (formData.amphoe) payload.amphoe = formData.amphoe;
     if (formData.tambon) payload.tambon = formData.tambon;
+    if (formData.zipcode) payload.zipcode = formData.zipcode;
     if (!payload.province || !payload.amphoe) {
       const inferred = inferPartsByLookup(formData.address || '') || extractThaiPartsFromAddress(formData.address || '');
       if (!payload.province && inferred.province) payload.province = inferred.province;
@@ -455,6 +476,10 @@ export const CompaniesPage = () => {
       type: company.type || 'company',
       name: company.name,
       address: company.address || '',
+      zipcode: company.zipcode || '',
+      province: company.province || '',
+      amphoe: company.amphoe || '',
+      tambon: company.tambon || '',
       phone: company.phone || '',
       fax: company.fax || '',
       taxId: company.taxId || '',
@@ -545,7 +570,7 @@ export const CompaniesPage = () => {
       <div className="flex flex-col gap-6 px-8 py-6 bg-gray-50 min-h-screen">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            
+
             <input
               type="text"
               className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring focus:border-blue-400"
@@ -587,7 +612,7 @@ export const CompaniesPage = () => {
                 if (filterType !== 'all' && company.type !== filterType) return false;
 
                 // Billing Due Filter
-                
+
 
                 return true;
               })
@@ -618,6 +643,17 @@ export const CompaniesPage = () => {
                       <div>
                         <div className="font-semibold text-lg">{company.name}</div>
                         <div className="text-gray-500 text-sm">{company.type === 'company' ? 'Company' : 'Individual'}</div>
+                        <div className="text-gray-400 text-xs mt-1">
+                          {(() => {
+                            const segs = [];
+                            if (company.address) segs.push(company.address);
+                            if (company.tambon) segs.push(`ต.${company.tambon}`);
+                            if (company.amphoe) segs.push(`อ.${company.amphoe}`);
+                            if (company.province) segs.push(`จ.${company.province}`);
+                            if (company.zipcode) segs.push(company.zipcode);
+                            return segs.length > 0 ? segs.join(' ') : 'No address provided';
+                          })()}
+                        </div>
                       </div>
                     </div>
 
@@ -809,7 +845,7 @@ export const CompaniesPage = () => {
                         rows={3}
                       />
                       <div className="row gx-2 mb-2">
-                        <div className="col-12 col-md-4">
+                        <div className="col-12 col-md-3">
                           <select
                             className="form-select"
                             value={formData.province || ''}
@@ -818,6 +854,7 @@ export const CompaniesPage = () => {
                               handleChange('province', val);
                               handleChange('amphoe', '');
                               handleChange('tambon', '');
+                              handleChange('zipcode', '');
                             }}
                           >
                             <option value="">Select province</option>
@@ -826,7 +863,7 @@ export const CompaniesPage = () => {
                             ))}
                           </select>
                         </div>
-                        <div className="col-12 col-md-4">
+                        <div className="col-12 col-md-3">
                           <select
                             className="form-select"
                             value={formData.amphoe || ''}
@@ -834,6 +871,7 @@ export const CompaniesPage = () => {
                               const val = e.target.value || '';
                               handleChange('amphoe', val);
                               handleChange('tambon', '');
+                              handleChange('zipcode', '');
                             }}
                             disabled={!formData.province}
                           >
@@ -847,11 +885,25 @@ export const CompaniesPage = () => {
                             })()}
                           </select>
                         </div>
-                        <div className="col-12 col-md-4">
+                        <div className="col-12 col-md-3">
                           <select
                             className="form-select"
                             value={formData.tambon || ''}
-                            onChange={(e) => handleChange('tambon', e.target.value || '')}
+                            onChange={(e) => {
+                              const val = e.target.value || '';
+                              handleChange('tambon', val);
+                              // Auto-fill zipcode if found in flat hierarchy
+                              if (val && formData.amphoe && formData.province) {
+                                const match = (thailandFlat as any[]).find(r =>
+                                  (r.district === val || r.name === val) &&
+                                  (r.amphoe === formData.amphoe) &&
+                                  (r.province === formData.province)
+                                );
+                                if (match && match.zipcode) {
+                                  handleChange('zipcode', match.zipcode.toString());
+                                }
+                              }
+                            }}
                             disabled={!formData.amphoe}
                           >
                             <option value="">Select tambon</option>
@@ -865,6 +917,15 @@ export const CompaniesPage = () => {
                               ));
                             })()}
                           </select>
+                        </div>
+                        <div className="col-12 col-md-3">
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={formData.zipcode || ''}
+                            onChange={(e) => handleZipcodeChange(e.target.value)}
+                            placeholder="Zipcode"
+                          />
                         </div>
                       </div>
                     </div>
