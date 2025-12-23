@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { FaEye, FaEllipsisV, FaPlus } from 'react-icons/fa';
+import { FaEye, FaEllipsisV, FaPlus, FaPen } from 'react-icons/fa';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { Dropdown } from 'react-bootstrap';
@@ -138,6 +138,7 @@ export const CompaniesPage = () => {
   const [activeCompany, setActiveCompany] = useState<Company | null>(null);
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
   const [photoPreview, setPhotoPreview] = useState<string>('');
+  const [avatarHover, setAvatarHover] = useState(false);
 
   const performLogout = () => {
     setCompanies([]);
@@ -735,42 +736,41 @@ export const CompaniesPage = () => {
         )}
       </div>
       {showModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  {editingId ? 'Edit Company' : 'Add New Company'}
-                </h5>
-                <button type="button" className="btn-close" onClick={closeModal}></button>
-              </div>
-              <div className="modal-body">
-                <form onSubmit={handleSubmit}>
-                  <div className="row">
-                    {/* Company Logo Upload */}
-                    <div className="col-md-12 mb-4 text-center">
-                      <label className="form-label d-block">Company Logo</label>
-                      <div className="mb-3">
-                        {photoPreview ? (
-                          <img
-                            src={photoPreview}
-                            alt="Preview"
-                            className="d-block mx-auto"
-                            style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, border: '2px solid #ddd' }}
-                          />
-                        ) : (
-                          <div
-                            className="d-flex align-items-center justify-content-center mx-auto text-white fw-bold"
-                            style={{ width: 80, height: 80, borderRadius: 8, backgroundColor: getAvatarColor(formData.name || ''), fontSize: 32 }}
-                          >
-                            {formData.name?.charAt(0).toUpperCase() || 'C'}
-                          </div>
-                        )}
-                      </div>
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-8 py-6 flex justify-between items-center border-b border-gray-100">
+              <h5 className="text-xl font-bold text-gray-900 m-0">
+                {editingId ? 'Edit Company' : 'Add New Company'}
+              </h5>
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center"
+                onClick={closeModal}
+              >
+                <span className="text-2xl leading-none">&times;</span>
+              </button>
+            </div>
+            {/* Body */}
+            <div className="px-8 py-8 overflow-y-auto max-h-[85vh]">
+              <form onSubmit={handleSubmit}>
+                <div className="row">
+                  {/* Company Logo Upload */}
+                  <div className="col-md-12 mb-4 text-center">
+                    <label className="form-label d-block">Company Logo</label>
+                    <div
+                      style={{ display: 'inline-block', marginBottom: 8, position: 'relative' }}
+                      onMouseEnter={() => setAvatarHover(true)}
+                      onMouseLeave={() => setAvatarHover(false)}
+                    >
                       <input
+                        id="company-photo-input"
                         type="file"
-                        className="form-control"
                         accept="image/*"
+                        style={{ display: 'none' }}
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
@@ -807,250 +807,310 @@ export const CompaniesPage = () => {
                           }
                         }}
                       />
-                      <small className="text-muted">Upload a company logo (JPG, PNG)</small>
-                    </div>
-                    <div className="col-md-12 mb-3">
-                      <label className="form-label">
-                        Type <span className="text-danger">*</span>
-                      </label>
-                      <select
-                        className="form-select"
-                        value={formData.type}
-                        onChange={(e) => handleChange('type', e.target.value as 'individual' | 'company')}
-                        required
+
+                      {photoPreview ? (
+                        <img
+                          src={photoPreview}
+                          alt="Preview"
+                          className="d-block mx-auto"
+                          style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, border: '2px solid #ddd', display: 'block' }}
+                        />
+                      ) : (
+                        <div
+                          className="d-flex align-items-center justify-content-center mx-auto text-white fw-bold"
+                          style={{ width: 80, height: 80, borderRadius: 8, backgroundColor: getAvatarColor(formData.name || ''), fontSize: 32 }}
+                        >
+                          {formData.name?.charAt(0).toUpperCase() || 'C'}
+                        </div>
+                      )}
+
+                      <label
+                        htmlFor="company-photo-input"
+                        aria-label="Change company logo"
+                        style={{
+                          position: 'absolute',
+                          right: -6,
+                          top: -6,
+                          width: 34,
+                          height: 34,
+                          borderRadius: 8,
+                          background: '#ffffff',
+                          display: avatarHover ? 'inline-flex' : 'none',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 4px 12px rgba(2,6,23,0.12)',
+                          cursor: 'pointer',
+                        }}
                       >
-                        <option value="company">Company (นิติบุคคล)</option>
-                        <option value="individual">Individual (บุคคล)</option>
-                      </select>
-                    </div>
-                    <div className="col-md-12 mb-3">
-                      <label className="form-label">
-                        {formData.type === 'company' ? 'Company Name' : 'Name'} <span className="text-danger">*</span>
+                        <FaPen size={14} className="action-pencil" />
                       </label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={formData.name}
-                        onChange={(e) => handleChange('name', e.target.value)}
-                        required
-                      />
                     </div>
-                    {/* Province / Amphoe / Tambon selects placed under Address label in a single row */}
-                    <div className="col-md-12 mb-3">
-                      <label className="form-label">Address</label>
-                      <textarea
-                        className="form-control mb-2"
-                        value={formData.address || ''}
-                        onChange={(e) => handleChange('address', e.target.value)}
-                        rows={3}
-                      />
-                      <div className="row gx-2 mb-2">
-                        <div className="col-12 col-md-3">
-                          <select
-                            className="form-select"
-                            value={formData.province || ''}
-                            onChange={(e) => {
-                              const val = e.target.value || '';
-                              handleChange('province', val);
-                              handleChange('amphoe', '');
-                              handleChange('tambon', '');
-                              handleChange('zipcode', '');
-                            }}
-                          >
-                            <option value="">Select province</option>
-                            {Array.isArray(thailandHierarchy) && thailandHierarchy.map((p: any) => (
-                              <option key={p.name || p.province} value={p.name || p.province}>{p.name || p.province}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="col-12 col-md-3">
-                          <select
-                            className="form-select"
-                            value={formData.amphoe || ''}
-                            onChange={(e) => {
-                              const val = e.target.value || '';
-                              handleChange('amphoe', val);
-                              handleChange('tambon', '');
-                              handleChange('zipcode', '');
-                            }}
-                            disabled={!formData.province}
-                          >
-                            <option value="">Select amphoe</option>
-                            {Array.isArray(thailandHierarchy) && formData.province && (() => {
-                              const prov = thailandHierarchy.find((x: any) => (x.name || x.province) === formData.province);
-                              if (!prov || !Array.isArray(prov.amphoes)) return null;
-                              return prov.amphoes.map((a: any) => (
-                                <option key={a.name || a.amphoe} value={a.name || a.amphoe}>{a.name || a.amphoe}</option>
-                              ));
-                            })()}
-                          </select>
-                        </div>
-                        <div className="col-12 col-md-3">
-                          <select
-                            className="form-select"
-                            value={formData.tambon || ''}
-                            onChange={(e) => {
-                              const val = e.target.value || '';
-                              handleChange('tambon', val);
-                              // Auto-fill zipcode if found in flat hierarchy
-                              if (val && formData.amphoe && formData.province) {
-                                const match = (thailandFlat as any[]).find(r =>
-                                  (r.district === val || r.name === val) &&
-                                  (r.amphoe === formData.amphoe) &&
-                                  (r.province === formData.province)
-                                );
-                                if (match && match.zipcode) {
-                                  handleChange('zipcode', match.zipcode.toString());
-                                }
-                              }
-                            }}
-                            disabled={!formData.amphoe}
-                          >
-                            <option value="">Select tambon</option>
-                            {Array.isArray(thailandHierarchy) && formData.province && formData.amphoe && (() => {
-                              const prov = thailandHierarchy.find((x: any) => (x.name || x.province) === formData.province);
-                              if (!prov || !Array.isArray(prov.amphoes)) return null;
-                              const amph = prov.amphoes.find((a: any) => (a.name || a.amphoe) === formData.amphoe);
-                              if (!amph || !Array.isArray(amph.tambons)) return null;
-                              return amph.tambons.map((t: any) => (
-                                <option key={typeof t === 'string' ? t : (t.name || t.tambon)} value={typeof t === 'string' ? t : (t.name || t.tambon)}>{typeof t === 'string' ? t : (t.name || t.tambon)}</option>
-                              ));
-                            })()}
-                          </select>
-                        </div>
-                        <div className="col-12 col-md-3">
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={formData.zipcode || ''}
-                            onChange={(e) => handleZipcodeChange(e.target.value)}
-                            placeholder="Zipcode"
-                          />
-                        </div>
+                  </div>
+                  <div className="col-md-12 mb-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Type <span className="text-danger">*</span>
+                    </label>
+                    <select
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                      value={formData.type}
+                      onChange={(e) => handleChange('type', e.target.value as 'individual' | 'company')}
+                      required
+                    >
+                      <option value="company">Company (นิติบุคคล)</option>
+                      <option value="individual">Individual (บุคคล)</option>
+                    </select>
+                  </div>
+                  <div className="col-md-12 mb-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {formData.type === 'company' ? 'Company Name' : 'Name'} <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                      value={formData.name}
+                      onChange={(e) => handleChange('name', e.target.value)}
+                      required
+                    />
+                  </div>
+                  {/* Province / Amphoe / Tambon selects placed under Address label in a single row */}
+                  <div className="col-md-12 mb-3">
+                    <label className="form-label">Address</label>
+                    <textarea
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all mb-2"
+                      value={formData.address || ''}
+                      onChange={(e) => handleChange('address', e.target.value)}
+                      rows={3}
+                    />
+                    <div className="row gx-2 mb-2">
+                      <div className="col-12 col-md-6">
+                        <select
+                          className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                          value={formData.province || ''}
+                          onChange={(e) => {
+                            const val = e.target.value || '';
+                            handleChange('province', val);
+                            handleChange('amphoe', '');
+                            handleChange('tambon', '');
+                            handleChange('zipcode', '');
+                          }}
+                        >
+                          <option value="">Select province</option>
+                          {Array.isArray(thailandHierarchy) && thailandHierarchy.map((p: any) => (
+                            <option key={p.name || p.province} value={p.name || p.province}>{p.name || p.province}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="col-12 col-md-6">
+                        <select
+                          className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${!formData.province ? 'text-gray-400' : 'text-gray-700'}`}
+                          value={formData.amphoe || ''}
+                          onChange={(e) => {
+                            const val = e.target.value || '';
+                            handleChange('amphoe', val);
+                            handleChange('tambon', '');
+                            handleChange('zipcode', '');
+                          }}
+                          disabled={!formData.province}
+                        >
+                          <option value="">Select amphoe</option>
+                          {Array.isArray(thailandHierarchy) && formData.province && (() => {
+                            const prov = thailandHierarchy.find((x: any) => (x.name || x.province) === formData.province);
+                            if (!prov || !Array.isArray(prov.amphoes)) return null;
+                            return prov.amphoes.map((a: any) => (
+                              <option key={a.name || a.amphoe} value={a.name || a.amphoe}>{a.name || a.amphoe}</option>
+                            ));
+                          })()}
+                        </select>
                       </div>
                     </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Phone</label>
-                      <input
-                        type="tel"
-                        className="form-control"
-                        value={formData.phone || ''}
-                        onChange={(e) => handleChange('phone', e.target.value)}
-                      />
+                    <div className="row gx-2 mb-2">
+                      <div className="col-12 col-md-6">
+                          <select
+                            className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${!formData.amphoe ? 'text-gray-400' : 'text-gray-700'}`}
+                            value={formData.tambon || ''}
+                          onChange={(e) => {
+                            const val = e.target.value || '';
+                            handleChange('tambon', val);
+                            // Auto-fill zipcode if found in flat hierarchy
+                            if (val && formData.amphoe && formData.province) {
+                              const match = (thailandFlat as any[]).find(r =>
+                                (r.district === val || r.name === val) &&
+                                (r.amphoe === formData.amphoe) &&
+                                (r.province === formData.province)
+                              );
+                              if (match && match.zipcode) {
+                                handleChange('zipcode', match.zipcode.toString());
+                              }
+                            }
+                          }}
+                          disabled={!formData.amphoe}
+                        >
+                          <option value="">Select tambon</option>
+                          {Array.isArray(thailandHierarchy) && formData.province && formData.amphoe && (() => {
+                            const prov = thailandHierarchy.find((x: any) => (x.name || x.province) === formData.province);
+                            if (!prov || !Array.isArray(prov.amphoes)) return null;
+                            const amph = prov.amphoes.find((a: any) => (a.name || a.amphoe) === formData.amphoe);
+                            if (!amph || !Array.isArray(amph.tambons)) return null;
+                            return amph.tambons.map((t: any) => (
+                              <option key={typeof t === 'string' ? t : (t.name || t.tambon)} value={typeof t === 'string' ? t : (t.name || t.tambon)}>{typeof t === 'string' ? t : (t.name || t.tambon)}</option>
+                            ));
+                          })()}
+                        </select>
+                      </div>
+                      <div className="col-12 col-md-6">
+                        <input
+                          type="text"
+                          className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                          value={formData.zipcode || ''}
+                          onChange={(e) => handleZipcodeChange(e.target.value)}
+                          placeholder="Zipcode"
+                        />
+                      </div>
                     </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Fax</label>
-                      <input
-                        type="tel"
-                        className="form-control"
-                        value={formData.fax || ''}
-                        onChange={(e) => handleChange('fax', e.target.value)}
-                      />
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Tax ID</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={formData.taxId || ''}
-                        onChange={(e) => handleChange('taxId', e.target.value)}
-                      />
-                    </div>
-                    {formData.type === 'company' && (
-                      <>
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label">Branch Name</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={formData.branchName || ''}
-                            onChange={(e) => handleChange('branchName', e.target.value)}
-                          />
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label">Branch Number</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={formData.branchNumber || ''}
-                            onChange={(e) => handleChange('branchNumber', e.target.value)}
-                          />
-                        </div>
-                      </>
-                    )}
                   </div>
-                  {error && <div className="alert alert-danger">{error}</div>}
-                  <div className="d-flex gap-2">
-                    <button type="submit" className="btn btn-primary" disabled={submitting}>
-                      {submitting
-                        ? 'Saving...'
-                        : editingId
-                          ? 'Save Changes'
-                          : 'Add Company'}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={closeModal}
-                      disabled={submitting}
-                    >
-                      Cancel
-                    </button>
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Phone</label>
+                    <input
+                      type="tel"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                      value={formData.phone || ''}
+                      onChange={(e) => handleChange('phone', e.target.value)}
+                    />
                   </div>
-                </form>
-              </div>
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Fax</label>
+                    <input
+                      type="tel"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                      value={formData.fax || ''}
+                      onChange={(e) => handleChange('fax', e.target.value)}
+                    />
+                  </div>
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Tax ID</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                      value={formData.taxId || ''}
+                      onChange={(e) => handleChange('taxId', e.target.value)}
+                    />
+                  </div>
+                  {formData.type === 'company' && (
+                    <>
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label">Branch Name</label>
+                        <input
+                          type="text"
+                          className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                          value={formData.branchName || ''}
+                          onChange={(e) => handleChange('branchName', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label">Branch Number</label>
+                        <input
+                          type="text"
+                          className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                          value={formData.branchNumber || ''}
+                          onChange={(e) => handleChange('branchNumber', e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+                {error && <div className="alert alert-danger">{error}</div>}
+                <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 mt-6">
+                  <button
+                    type="button"
+                    className="px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center"
+                    onClick={closeModal}
+                    disabled={submitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center"
+                    disabled={submitting}
+                  >
+                    {submitting ? 'Saving...' : editingId ? 'Save Changes' : 'Create Company'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
       )}
       {/* Modal for adding contacts to a company */}
       {showContactsModal && activeCompany && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Add contacts to {activeCompany.name}</h5>
-                <button type="button" className="btn-close" onClick={closeContactsModal}></button>
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-8 py-6 flex justify-between items-center border-b border-gray-100">
+              <h5 className="text-xl font-bold text-gray-900 m-0">Add contacts to {activeCompany.name}</h5>
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center"
+                onClick={closeContactsModal}
+              >
+                <span className="text-2xl leading-none">&times;</span>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-8 py-8 overflow-y-auto max-h-[70vh]">
+              <div className="mb-3">
+                <input className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all" placeholder="Search contacts" onChange={(e) => { /* optional: implement search */ }} />
               </div>
-              <div className="modal-body">
-                <div className="mb-3">
-                  <input className="form-control" placeholder="Search contacts" onChange={(e) => { /* optional: implement search */ }} />
-                </div>
-                <div style={{ maxHeight: 360, overflow: 'auto' }}>
-                  {contacts.map((c) => (
-                    <div key={c.id} className="form-check d-flex align-items-center mb-2">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        checked={selectedContactIds.includes(c.id)}
-                        onChange={() => toggleContactSelection(c.id)}
-                        id={`contact_${c.id}`}
-                      />
-                      <label className="form-check-label ms-2 d-flex align-items-center" htmlFor={`contact_${c.id}`}>
-                        {(c.avatarUrl || c.photo) ? (
-                          <img src={c.avatarUrl || c.photo} alt={c.firstName || c.email} style={{ width: 28, height: 28, borderRadius: '50%', marginRight: 8, objectFit: 'cover' }} />
-                        ) : (
-                          <div
-                            className="d-flex align-items-center justify-content-center text-white fw-bold"
-                            style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: getAvatarColor(c.firstName || c.email || ''), marginRight: 8, fontSize: 12 }}
-                          >
-                            {c.firstName?.charAt(0).toUpperCase() || (c.email ? c.email.charAt(0).toUpperCase() : 'C')}
-                          </div>
-                        )}
-                        {c.firstName ? `${c.firstName} ${c.lastName || ''}` : c.email}
-                      </label>
-                    </div>
-                  ))}
-                </div>
+              <div style={{ maxHeight: 360, overflow: 'auto' }}>
+                {contacts.map((c) => (
+                  <div key={c.id} className="form-check d-flex align-items-center mb-2">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      checked={selectedContactIds.includes(c.id)}
+                      onChange={() => toggleContactSelection(c.id)}
+                      id={`contact_${c.id}`}
+                    />
+                    <label className="form-check-label ms-2 d-flex align-items-center" htmlFor={`contact_${c.id}`}>
+                      {(c.avatarUrl || c.photo) ? (
+                        <img src={c.avatarUrl || c.photo} alt={c.firstName || c.email} style={{ width: 28, height: 28, borderRadius: '50%', marginRight: 8, objectFit: 'cover' }} />
+                      ) : (
+                        <div
+                          className="d-flex align-items-center justify-content-center text-white fw-bold"
+                          style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: getAvatarColor(c.firstName || c.email || ''), marginRight: 8, fontSize: 12 }}
+                        >
+                          {c.firstName?.charAt(0).toUpperCase() || (c.email ? c.email.charAt(0).toUpperCase() : 'C')}
+                        </div>
+                      )}
+                      {c.firstName ? `${c.firstName} ${c.lastName || ''}` : c.email}
+                    </label>
+                  </div>
+                ))}
               </div>
-              <div className="modal-footer">
-                <button className="btn btn-primary" onClick={saveCompanyContacts}>Save</button>
-                <button className="btn btn-secondary" onClick={closeContactsModal}>Cancel</button>
-              </div>
+            </div>
+            {/* Footer */}
+            <div className="bg-gray-50 px-8 py-6 flex justify-end gap-3 border-t border-gray-100">
+              <button
+                className="px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center"
+                onClick={closeContactsModal}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-md active:scale-95 flex items-center justify-center"
+                onClick={saveCompanyContacts}
+              >
+                Save Changes
+              </button>
             </div>
           </div>
         </div>
-      )}
+      )
+      }
     </>
   );
 };

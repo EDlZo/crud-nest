@@ -263,7 +263,7 @@ export const ProfilePage = () => {
             </div>
             <div className="card-body">
               {error && <div className="alert alert-danger">{error}</div>}
-              
+
               <form onSubmit={handleSubmit}>
                 {/* Avatar Upload (hidden input + overlay) */}
                 <div className="mb-4">
@@ -345,7 +345,7 @@ export const ProfilePage = () => {
                 {/* Social Links */}
                 <div className="mb-4">
                   <label className="form-label fw-bold">Social Media</label>
-                  
+
                   <div className="mb-3">
                     <label className="form-label d-flex align-items-center">
                       <SiLine className="me-2" style={{ color: '#00C300' }} />
@@ -399,7 +399,7 @@ export const ProfilePage = () => {
                     onClick={fetchProfile}
                     disabled={submitting}
                   >
-                    Canceltop
+                    Cancel
                   </button>
                 </div>
               </form>
@@ -434,7 +434,7 @@ export const ProfilePage = () => {
               )}
               <h5 className="mb-1">{profile?.email || user?.email}</h5>
               <p className="text-muted mb-3">{profile?.role || user?.role || 'Guest'}</p>
-              
+
               {profile?.socials && Object.keys(profile.socials).length > 0 && (
                 <div className="mt-4">
                   <h6 className="mb-3">Social Media</h6>

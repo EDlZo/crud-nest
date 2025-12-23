@@ -1,8 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaCheck, FaClock, FaExclamationTriangle, FaPlus, FaEllipsisV, FaChevronDown } from 'react-icons/fa';
-import { FiEye } from 'react-icons/fi';
-import { FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiEye, FiEdit2, FiTrash2, FiClipboard, FiPhone, FiMail, FiUsers, FiFileText, FiBookmark } from 'react-icons/fi';
 import { Dropdown } from 'react-bootstrap';
 import '../App.css';
 import { API_BASE_URL } from '../config';
@@ -409,21 +408,21 @@ export const ActivitiesPage = () => {
 
   const getPriorityBadge = (priority?: string) => {
     const badges: Record<string, { class: string; label: string; icon: any }> = {
-      low: { class: 'bg-success', label: 'Low', icon: null },
-      medium: { class: 'bg-warning', label: 'Medium', icon: <FaClock /> },
-      high: { class: 'bg-danger', label: 'High', icon: <FaExclamationTriangle /> },
+      low: { class: 'bg-emerald-500', label: 'Low', icon: null },
+      medium: { class: 'bg-amber-500', label: 'Medium', icon: <FaClock /> },
+      high: { class: 'bg-rose-500', label: 'High', icon: <FaExclamationTriangle /> },
     };
     return badges[priority || 'medium'] || badges.medium;
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'task': return '📋';
-      case 'call': return '📞';
-      case 'email': return '📧';
-      case 'meeting': return '🤝';
-      case 'note': return '📝';
-      default: return '📌';
+      case 'task': return { icon: <FiClipboard />, color: 'text-blue-600', bg: 'bg-blue-50' };
+      case 'call': return { icon: <FiPhone />, color: 'text-emerald-600', bg: 'bg-emerald-50' };
+      case 'email': return { icon: <FiMail />, color: 'text-indigo-600', bg: 'bg-indigo-50' };
+      case 'meeting': return { icon: <FiUsers />, color: 'text-purple-600', bg: 'bg-purple-50' };
+      case 'note': return { icon: <FiFileText />, color: 'text-amber-600', bg: 'bg-amber-50' };
+      default: return { icon: <FiBookmark />, color: 'text-gray-600', bg: 'bg-gray-50' };
     }
   };
 
@@ -515,8 +514,8 @@ export const ActivitiesPage = () => {
                 <div key={activity.id} className="bg-white rounded-xl shadow-lg p-6 flex flex-col gap-4 border border-gray-100 hover:shadow-xl transition-shadow">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-xl">
-                        {getTypeIcon(activity.type)}
+                      <div className={`w-10 h-10 rounded-xl ${getTypeIcon(activity.type).bg} flex items-center justify-center text-lg ${getTypeIcon(activity.type).color}`}>
+                        {getTypeIcon(activity.type).icon}
                       </div>
                       <div>
                         <h3 className="font-semibold text-gray-900 line-clamp-1" title={activity.title}>
@@ -559,13 +558,13 @@ export const ActivitiesPage = () => {
                         <div className="relative inline-block">
                           <select
                             className={`appearance-none border-0 rounded-full px-3 py-1 pr-10 text-xs font-medium text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 text-left truncate ${statusBadge.class}`}
-                              style={{
-                                backgroundImage: 'none',
-                                width: 'auto',
-                                minWidth: '100px',
-                                maxWidth: '200px',
-                                overflow: 'hidden'
-                              }}
+                            style={{
+                              backgroundImage: 'none',
+                              width: 'auto',
+                              minWidth: '100px',
+                              maxWidth: '200px',
+                              overflow: 'hidden'
+                            }}
                             value={activity.status}
                             onChange={(e) => handleStatusChange(activity.id!, e.target.value)}
                           >
@@ -592,13 +591,13 @@ export const ActivitiesPage = () => {
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-500">Due Date</span>
-                        <span className="font-medium text-gray-700">
-                          {activity.dueDate ? (
-                            <span title={activity.dueDate}>{formatDateTime(activity.dueDate)}</span>
-                          ) : (
-                            '-'
-                          )}
-                        </span>
+                      <span className="font-medium text-gray-700">
+                        {activity.dueDate ? (
+                          <span title={activity.dueDate}>{formatDateTime(activity.dueDate)}</span>
+                        ) : (
+                          '-'
+                        )}
+                      </span>
                     </div>
                     <div className="pt-3 mt-1 border-t border-gray-100 flex justify-between items-center">
                       <div className="flex items-center gap-2">
@@ -643,19 +642,20 @@ export const ActivitiesPage = () => {
             style={{ animation: 'slideUp 0.3s ease-out' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-[linear-gradient(180deg,#3763a0,#1d4b8b)] text-white px-6 py-4 flex justify-between items-center">
-              <h5 className="text-xl font-bold m-0">
+            <div className="px-8 py-6 flex justify-between items-center border-b border-gray-100">
+              <h5 className="text-xl font-bold text-gray-900 m-0">
                 {editingId ? 'Edit Activity' : 'Add New Activity'}
               </h5>
               <button
                 type="button"
-                className="text-white/80 hover:text-white transition-colors border-0 bg-transparent p-0"
+                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center"
                 onClick={closeModal}
               >
-                <span className="text-2xl">&times;</span>
+                <FiEye style={{ transform: 'rotate(45deg)', display: 'none' }} /> {/* dummy for spacing if needed */}
+                <span className="text-2xl leading-none">&times;</span>
               </button>
             </div>
-            <div className="p-6 max-h-[80vh] overflow-y-auto">
+            <div className="px-8 py-8 overflow-y-auto max-h-[85vh]">
               <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   {/* Type */}
@@ -664,7 +664,7 @@ export const ActivitiesPage = () => {
                       Type <span className="text-red-500">*</span>
                     </label>
                     <select
-                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
                       value={formData.type}
                       onChange={(e) => handleChange('type', e.target.value)}
                       required
@@ -682,7 +682,7 @@ export const ActivitiesPage = () => {
                       Status <span className="text-red-500">*</span>
                     </label>
                     <select
-                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
                       value={formData.status}
                       onChange={(e) => handleChange('status', e.target.value)}
                       required
@@ -702,7 +702,7 @@ export const ActivitiesPage = () => {
                   </label>
                   <input
                     type="text"
-                    className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
                     value={formData.title}
                     onChange={(e) => handleChange('title', e.target.value)}
                     required
@@ -713,7 +713,7 @@ export const ActivitiesPage = () => {
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                   <textarea
-                    className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
                     value={formData.description || ''}
                     onChange={(e) => handleChange('description', e.target.value)}
                     rows={3}
@@ -725,7 +725,7 @@ export const ActivitiesPage = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
                     <select
-                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
                       value={formData.priority || 'medium'}
                       onChange={(e) => handleChange('priority', e.target.value)}
                     >
@@ -739,7 +739,7 @@ export const ActivitiesPage = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Due Date & Time</label>
                     <input
                       type="datetime-local"
-                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
                       value={formData.dueDate ? (() => {
                         const dateStr = formData.dueDate;
                         if (dateStr.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/)) {
@@ -779,7 +779,7 @@ export const ActivitiesPage = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
                     <select
-                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
                       value={formData.assignedTo || ''}
                       onChange={(e) => handleChange('assignedTo', e.target.value)}
                     >
@@ -798,7 +798,7 @@ export const ActivitiesPage = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Related To</label>
                     <select
-                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
                       value={formData.relatedTo || ''}
                       onChange={(e) => {
                         handleChange('relatedTo', e.target.value as any);
@@ -815,7 +815,7 @@ export const ActivitiesPage = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Select Company</label>
                       <select
-                        className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
                         value={formData.relatedId || ''}
                         onChange={(e) => handleChange('relatedId', e.target.value)}
                       >
@@ -832,7 +832,7 @@ export const ActivitiesPage = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Select Contact</label>
                       <select
-                        className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
                         value={formData.relatedId || ''}
                         onChange={(e) => handleChange('relatedId', e.target.value)}
                       >
@@ -850,7 +850,7 @@ export const ActivitiesPage = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Related Deal ID</label>
                       <input
                         type="text"
-                        className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
                         placeholder="Enter Deal ID"
                         value={formData.relatedId || ''}
                         onChange={(e) => handleChange('relatedId', e.target.value)}
@@ -862,10 +862,10 @@ export const ActivitiesPage = () => {
 
                 {error && <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-4 text-sm">{error}</div>}
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
                   <button
                     type="button"
-                    className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm"
+                    className="px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center"
                     onClick={closeModal}
                     disabled={submitting}
                   >
@@ -873,14 +873,14 @@ export const ActivitiesPage = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-sm"
+                    className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center"
                     disabled={submitting}
                   >
                     {submitting
                       ? 'Saving...'
                       : editingId
                         ? 'Save Changes'
-                        : 'Add Activity'}
+                        : 'Create Activity'}
                   </button>
                 </div>
               </form>
@@ -897,22 +897,25 @@ export const ActivitiesPage = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="bg-[linear-gradient(180deg,#3763a0,#1d4b8b)] text-white px-6 py-4 flex justify-between items-center">
+            {/* Header */}
+            <div className="px-8 py-6 flex justify-between items-center border-b border-gray-100">
               <div className="flex items-center gap-3">
-                <FiEye className="text-xl" />
-                <h5 className="text-xl font-bold m-0">Activity Details</h5>
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                  <FiEye className="text-xl" />
+                </div>
+                <h5 className="text-xl font-bold text-gray-900 m-0">Activity Details</h5>
               </div>
               <button
                 type="button"
-                className="text-white/80 hover:text-white transition-colors border-0 bg-transparent p-0"
+                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center"
                 onClick={() => setViewingActivity(null)}
               >
-                <span className="text-2xl">&times;</span>
+                <span className="text-2xl leading-none">&times;</span>
               </button>
             </div>
 
             {/* Body */}
-            <div className="p-6 max-h-[70vh] overflow-y-auto">
+            <div className="px-8 py-8 overflow-y-auto max-h-[75vh]">
               {/* Title & Badges */}
               <div className="mb-6">
                 <div className="flex items-start justify-between gap-4 mb-3">
@@ -935,8 +938,8 @@ export const ActivitiesPage = () => {
                   </span>
 
                   {/* Type Badge */}
-                  <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800 flex items-center gap-1.5">
-                    {getTypeIcon(viewingActivity.type)}
+                  <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${getTypeIcon(viewingActivity.type).bg} ${getTypeIcon(viewingActivity.type).color} flex items-center gap-1.5 shadow-sm`}>
+                    {getTypeIcon(viewingActivity.type).icon}
                     <span className="capitalize">{viewingActivity.type}</span>
                   </span>
                 </div>
@@ -1045,7 +1048,7 @@ export const ActivitiesPage = () => {
             {/* Footer */}
             <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-100">
               <button
-                className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm"
+                className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center justify-center"
                 onClick={() => setViewingActivity(null)}
               >
                 Close
@@ -1054,7 +1057,7 @@ export const ActivitiesPage = () => {
                 user?.role === 'superadmin' ||
                 viewingActivity.assignedTo === user?.userId) && (
                   <button
-                    className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2 border-0"
+                    className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2 border-0"
                     onClick={() => {
                       setViewingActivity(null);
                       handleEdit(viewingActivity);
@@ -1077,21 +1080,22 @@ export const ActivitiesPage = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="bg-[linear-gradient(180deg,#3763a0,#1d4b8b)] text-white px-6 py-4 flex justify-between items-center">
-              <h5 className="text-xl font-bold m-0">
+            {/* Header */}
+            <div className="px-8 py-6 flex justify-between items-center border-b border-gray-100">
+              <h5 className="text-xl font-bold text-gray-900 m-0">
                 {relatedContact ? 'Contact Details' : 'Company Details'}
               </h5>
               <button
                 type="button"
-                className="text-white/80 hover:text-white transition-colors border-0 bg-transparent p-0"
+                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center"
                 onClick={() => setShowContactModal(false)}
               >
-                <span className="text-2xl">&times;</span>
+                <span className="text-2xl leading-none">&times;</span>
               </button>
             </div>
 
             {/* Body */}
-            <div className="p-6 max-h-[70vh] overflow-y-auto">
+            <div className="px-8 py-8 overflow-y-auto max-h-[75vh]">
               {relatedContact ? (
                 <>
                   <div className="mb-6">
@@ -1218,7 +1222,7 @@ export const ActivitiesPage = () => {
             {/* Footer */}
             <div className="bg-gray-50 px-6 py-4 flex justify-end border-t border-gray-100">
               <button
-                className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm"
+                className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center justify-center"
                 onClick={() => setShowContactModal(false)}
               >
                 Close

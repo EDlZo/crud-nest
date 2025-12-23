@@ -964,348 +964,354 @@ export const ContactsPage = () => {
         </div>,
         document.body
       )}
-      {/* Modal for Add/Edit contact */}
+      {/* Modal for Add/Edit contact (styled like Activities modal) */}
       {showModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">{editingId ? 'Edit Contact' : 'Add New Contact'}</h5>
-                <button type="button" className="btn-close" onClick={closeModal}></button>
-              </div>
-              <div className="modal-body">
-                <form onSubmit={handleSubmit}>
-                  <div className="row">
-                    {/* Photo Upload */}
-                    <div className="col-md-12 mb-4 text-center">
-                      <label className="form-label d-block">Profile Photo</label>
-                      <div
-                        style={{ display: 'inline-block', marginBottom: 8, position: 'relative' }}
-                        onMouseEnter={() => setAvatarHover(true)}
-                        onMouseLeave={() => setAvatarHover(false)}
-                      >
-                        <input
-                          id="contact-photo-input"
-                          type="file"
-                          accept="image/*"
-                          style={{ display: 'none' }}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                const img = new Image();
-                                img.onload = () => {
-                                  const canvas = document.createElement('canvas');
-                                  const MAX_WIDTH = 400;
-                                  const MAX_HEIGHT = 400;
-                                  let width = img.width;
-                                  let height = img.height;
-                                  if (width > height) {
-                                    if (width > MAX_WIDTH) {
-                                      height *= MAX_WIDTH / width;
-                                      width = MAX_WIDTH;
-                                    }
-                                  } else {
-                                    if (height > MAX_HEIGHT) {
-                                      width *= MAX_HEIGHT / height;
-                                      height = MAX_HEIGHT;
-                                    }
-                                  }
-                                  canvas.width = width;
-                                  canvas.height = height;
-                                  const ctx = canvas.getContext('2d');
-                                  ctx?.drawImage(img, 0, 0, width, height);
-                                  const base64String = canvas.toDataURL('image/jpeg', 0.7);
-                                  handleChange('photo', base64String);
-                                  setPhotoPreview(base64String);
-                                };
-                                img.src = event.target?.result as string;
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                        />
-                        {photoPreview ? (
-                          <img
-                            src={photoPreview}
-                            alt="Preview"
-                            className="rounded-circle"
-                            style={{ width: 100, height: 100, objectFit: 'cover', border: '2px solid #ddd', display: 'block' }}
-                          />
-                        ) : (
-                          <div
-                            className="d-flex align-items-center justify-content-center rounded-circle text-white fw-semibold"
-                            style={{ width: 100, height: 100, backgroundColor: getAvatarColor(formData.firstName || formData.email || ''), fontSize: 36, border: '2px solid #ddd' }}
-                          >
-                            {formData.firstName?.charAt(0).toUpperCase() || (formData.email ? formData.email.charAt(0).toUpperCase() : 'C')}
-                          </div>
-                        )}
-                        <label
-                          htmlFor="contact-photo-input"
-                          aria-label="Change profile photo"
-                          style={{
-                            position: 'absolute',
-                            right: -6,
-                            top: -6,
-                            width: 34,
-                            height: 34,
-                            borderRadius: 8,
-                            background: '#ffffff',
-                            display: avatarHover ? 'inline-flex' : 'none',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            boxShadow: '0 4px 12px rgba(2,6,23,0.12)',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <FaPen size={14} className="action-pencil" />
-                        </label>
-                      </div>
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={closeModal}>
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
+            style={{ animation: 'slideUp 0.18s ease-out' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-8 py-6 flex justify-between items-center border-b border-gray-100">
+              <h5 className="text-xl font-bold text-gray-900 m-0">{editingId ? 'Edit Contact' : 'Add New Contact'}</h5>
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center"
+                onClick={closeModal}
+              >
+                <span className="text-2xl leading-none">&times;</span>
+              </button>
+            </div>
 
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">First Name</label>
+            <div className="px-8 py-8 overflow-y-auto max-h-[85vh]">
+              <form onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  {/* Photo Upload */}
+                  <div className="md:col-span-2 text-center">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
+                    <div
+                      style={{ display: 'inline-block', marginBottom: 8, position: 'relative' }}
+                      onMouseEnter={() => setAvatarHover(true)}
+                      onMouseLeave={() => setAvatarHover(false)}
+                    >
                       <input
-                        type="text"
-                        className="form-control"
-                        value={formData.firstName}
-                        onChange={(e) => handleChange('firstName', e.target.value)}
+                        id="contact-photo-input"
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const img = new Image();
+                              img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const MAX_WIDTH = 400;
+                                const MAX_HEIGHT = 400;
+                                let width = img.width;
+                                let height = img.height;
+                                if (width > height) {
+                                  if (width > MAX_WIDTH) {
+                                    height *= MAX_WIDTH / width;
+                                    width = MAX_WIDTH;
+                                  }
+                                } else {
+                                  if (height > MAX_HEIGHT) {
+                                    width *= MAX_HEIGHT / height;
+                                    height = MAX_HEIGHT;
+                                  }
+                                }
+                                canvas.width = width;
+                                canvas.height = height;
+                                const ctx = canvas.getContext('2d');
+                                ctx?.drawImage(img, 0, 0, width, height);
+                                const base64String = canvas.toDataURL('image/jpeg', 0.7);
+                                handleChange('photo', base64String);
+                                setPhotoPreview(base64String);
+                              };
+                              img.src = event.target?.result as string;
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
                       />
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Last Name</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={formData.lastName}
-                        onChange={(e) => handleChange('lastName', e.target.value)}
-                      />
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Email</label>
-                      <input
-                        type="email"
-                        className="form-control"
-                        value={formData.email}
-                        onChange={(e) => handleChange('email', e.target.value)}
-                      />
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Phone</label>
-                      <input
-                        type="tel"
-                        className="form-control"
-                        value={formData.phone}
-                        onChange={(e) => handleChange('phone', e.target.value)}
-                      />
+                      {photoPreview ? (
+                        <img
+                          src={photoPreview}
+                          alt="Preview"
+                          className="rounded-full"
+                          style={{ width: 100, height: 100, objectFit: 'cover', border: '2px solid #ddd', display: 'block' }}
+                        />
+                      ) : (
+                        <div
+                          className="flex items-center justify-center rounded-full text-white font-semibold"
+                          style={{ width: 100, height: 100, backgroundColor: getAvatarColor(formData.firstName || formData.email || ''), fontSize: 36, border: '2px solid #ddd' }}
+                        >
+                          {formData.firstName?.charAt(0).toUpperCase() || (formData.email ? formData.email.charAt(0).toUpperCase() : 'C')}
+                        </div>
+                      )}
+                      <label
+                        htmlFor="contact-photo-input"
+                        aria-label="Change profile photo"
+                        style={{
+                          position: 'absolute',
+                          right: -6,
+                          top: -6,
+                          width: 34,
+                          height: 34,
+                          borderRadius: 8,
+                          background: '#ffffff',
+                          display: avatarHover ? 'inline-flex' : 'none',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 4px 12px rgba(2,6,23,0.12)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <FaPen size={14} className="action-pencil" />
+                      </label>
                     </div>
                   </div>
-                  {/* Address moved below Companies dropdown (per UX request) */}
-                  {/* Thailand cascading selects: Province -> Amphoe -> Tambon */}
-                  {/* Address label above the cascading selects */}
-                  <div className="col-md-12 mb-2">
-                    <label className="form-label">Address</label>
-                    <textarea
-                      className="form-control mb-2"
-                      value={formData.address}
-                      onChange={(e) => handleChange('address', e.target.value)}
-                      rows={3}
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                      value={formData.firstName}
+                      onChange={(e) => handleChange('firstName', e.target.value)}
                     />
                   </div>
-                  <div className="row">
-                    <div className="col-md-6 mb-3">
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <select
-                          className="form-select"
-                          value={formData.province || ''}
-                          onChange={(e) => {
-                            const prov = e.target.value;
-                            handleChange('province', prov);
-                            // reset lower levels
-                            handleChange('amphoe', '');
-                            handleChange('tambon', '');
-                            handleChange('zipcode', '');
-                          }}
-                          style={{ flex: 1 }}
-                        >
-                          {thailandHierarchy === null ? (
-                            <option value="">Loading provinces...</option>
-                          ) : Array.isArray(thailandHierarchy) && thailandHierarchy.length === 0 ? (
-                            <option value="">No provinces loaded</option>
-                          ) : (
-                            <>
-                              <option value="">Select province</option>
-                              {Array.isArray(thailandHierarchy) && thailandHierarchy.map((p: any) => (
-                                <option key={p.id || p.code || p.province || p.name} value={p.name || p.province || p.name_th || p.province_name || p.code}>
-                                  {p.name || p.province || p.name_th || p.province_name || p.code}
-                                </option>
-                              ))}
-                            </>
-                          )}
-                        </select>
-                        {Array.isArray(thailandHierarchy) && thailandHierarchy.length === 0 && (
-                          <button type="button" className="btn btn-outline-secondary" onClick={() => fetchThailandHierarchy()} style={{ whiteSpace: 'nowrap' }}>Retry</button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="col-md-6 mb-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                      value={formData.lastName}
+                      onChange={(e) => handleChange('lastName', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                      value={formData.email}
+                      onChange={(e) => handleChange('email', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <input
+                      type="tel"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                      value={formData.phone}
+                      onChange={(e) => handleChange('phone', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                  <textarea
+                    className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all mb-2"
+                    value={formData.address}
+                    onChange={(e) => handleChange('address', e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Province</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
                       <select
-                        className="form-select"
-                        value={formData.amphoe || ''}
+                        className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                        value={formData.province || ''}
                         onChange={(e) => {
-                          handleChange('amphoe', e.target.value);
+                          const prov = e.target.value;
+                          handleChange('province', prov);
+                          handleChange('amphoe', '');
                           handleChange('tambon', '');
                           handleChange('zipcode', '');
                         }}
-                        disabled={!formData.province || !Array.isArray(thailandHierarchy)}
+                        style={{ flex: 1 }}
                       >
-                        <option value="">Select amphoe</option>
-                        {Array.isArray(thailandHierarchy) && formData.province && (() => {
-                          const prov = thailandHierarchy.find((x: any) => (x.name || x.province || x.province_name || x.name_th) === formData.province);
-                          const amphoes = prov && Array.isArray(prov.amphoes) ? prov.amphoes : (prov && Array.isArray(prov.districts) ? prov.districts : []);
-                          return amphoes.map((a: any) => (
-                            <option key={a.id || a.code || a.amphoe || a.name} value={a.name || a.amphoe || a.name_th || a.code}>
-                              {a.name || a.amphoe || a.name_th || a.code}
-                            </option>
-                          ));
-                        })()}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="row">
-                    <div className="col-md-6 mb-3">
-                      <select
-                        className="form-select"
-                        value={formData.tambon || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          handleChange('tambon', val);
-                          // Auto-fill zipcode if exactly one match found in flat hierarchy
-                          if (val && formData.amphoe && formData.province) {
-                            const match = (thailandFlat as any[]).find(r =>
-                              (r.district === val || r.name === val) &&
-                              (r.amphoe === formData.amphoe) &&
-                              (r.province === formData.province)
-                            );
-                            if (match && match.zipcode) {
-                              handleChange('zipcode', match.zipcode.toString());
-                            }
-                          }
-                        }}
-                        disabled={!formData.amphoe || !Array.isArray(thailandHierarchy)}
-                      >
-                        <option value="">Select tambon</option>
-                        {Array.isArray(thailandHierarchy) && formData.province && formData.amphoe && (() => {
-                          const prov = thailandHierarchy.find((x: any) => (x.name || x.province || x.province_name || x.name_th) === formData.province);
-                          const amphoes = prov && Array.isArray(prov.amphoes) ? prov.amphoes : (prov && Array.isArray(prov.districts) ? prov.districts : []);
-                          const a = amphoes && amphoes.find((aa: any) => (aa.name || aa.amphoe || aa.name_th) === formData.amphoe);
-                          const tambons = a && Array.isArray(a.tambons) ? a.tambons : (a && Array.isArray(a.subdistricts) ? a.subdistricts : []);
-                          return (tambons || []).map((t: any) => {
-                            const display = (typeof t === 'string') ? t : (t.name || t.tambon || t.name_th || t.code || '');
-                            const key = (typeof t === 'string') ? display : (t.id || t.code || t.tambon || t.name || display);
-                            const value = display;
-                            return (
-                              <option key={key} value={value}>{display}</option>
-                            );
-                          });
-                        })()}
-                      </select>
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={formData.zipcode || ''}
-                        onChange={(e) => handleZipcodeChange(e.target.value)}
-                        placeholder="Zipcode"
-                      />
-                    </div>
-                  </div>
-                  {/* Companies block moved to bottom of form */}
-                  <div className="col-md-12 mb-3 position-relative">
-                    <label className="form-label">Companies</label>
-                    <div>
-                      <button
-                        ref={companyToggleRef}
-                        type="button"
-                        className="btn"
-                        onClick={(e) => { e.stopPropagation(); setCompanyDropdownOpen(prev => !prev); }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: 8,
-                          width: '100%',
-                          padding: '8px 12px',
-                          borderRadius: 6,
-                          border: '1px solid #d1d5db',
-                          background: '#fff',
-                          textAlign: 'left'
-                        }}
-                      >
-                        <div style={{ color: selectedCompanyIds.length ? '#111827' : '#6b7280' }}>{renderSelectedCompaniesLabel()}</div>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: companyDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 120ms' }}>
-                            <path d="M6 9l6 6 6-6" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </div>
-                      </button>
-                    </div>
-                    {companyDropdownOpen && (
-                      <div
-                        ref={companyDropdownRef}
-                        onClick={(e) => e.stopPropagation()}
-                        className="shadow-sm bg-white rounded"
-                        style={(() => {
-                          const base: any = { position: 'fixed', zIndex: 2000, maxHeight: 260, overflow: 'auto', border: '1px solid #e5e7eb', padding: 6, borderRadius: 6 };
-                          if (dropdownPos) {
-                            return { ...base, left: dropdownPos.left, top: dropdownPos.top, width: dropdownPos.width };
-                          }
-                          // fallback to absolute inside modal
-                          return { ...base, position: 'absolute', left: 0, top: '46px', width: '100%' };
-                        })()}
-                      >
-                        {companies.length === 0 ? (
-                          <div className="text-muted px-2">No companies available</div>
+                        {thailandHierarchy === null ? (
+                          <option value="">Loading provinces...</option>
+                        ) : Array.isArray(thailandHierarchy) && thailandHierarchy.length === 0 ? (
+                          <option value="">No provinces loaded</option>
                         ) : (
-                          companies.map((c) => {
-                            const checked = selectedCompanyIds.includes(c.id);
-                            const hovered = hoveredCompanyId === c.id;
-                            return (
-                              <label
-                                key={c.id}
-                                className="d-flex align-items-center gap-2 w-100 px-2 py-2"
-                                style={{ cursor: 'pointer', background: hovered ? '#f3e8ff' : (checked ? '#eef2ff' : 'transparent'), borderRadius: 6, marginBottom: 4 }}
-                                onMouseEnter={() => setHoveredCompanyId(c.id)}
-                                onMouseLeave={() => setHoveredCompanyId(null)}
-                                onClick={() => toggleCompany(c.id)}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  readOnly
-                                  style={{ width: 16, height: 16 }}
-                                />
-                                <div style={{ flex: 1 }}>{c.name || c.branchName || c.id}</div>
-                              </label>
-                            );
-                          })
+                          <>
+                            <option value="">Select province</option>
+                            {Array.isArray(thailandHierarchy) && thailandHierarchy.map((p: any) => (
+                              <option key={p.id || p.code || p.province || p.name} value={p.name || p.province || p.name_th || p.province_name || p.code}>
+                                {p.name || p.province || p.name_th || p.province_name || p.code}
+                              </option>
+                            ))}
+                          </>
                         )}
+                      </select>
+                      {Array.isArray(thailandHierarchy) && thailandHierarchy.length === 0 && (
+                        <button type="button" className="px-3 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-all shadow-sm" onClick={() => fetchThailandHierarchy()} style={{ whiteSpace: 'nowrap' }}>Retry</button>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Amphoe</label>
+                    <select
+                      className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${!formData.province || !Array.isArray(thailandHierarchy) ? 'text-gray-600' : 'text-gray-700'}`}
+                      value={formData.amphoe || ''}
+                      onChange={(e) => {
+                        handleChange('amphoe', e.target.value);
+                        handleChange('tambon', '');
+                        handleChange('zipcode', '');
+                      }}
+                      disabled={!formData.province || !Array.isArray(thailandHierarchy)}
+                    >
+                      <option value="">Select amphoe</option>
+                      {Array.isArray(thailandHierarchy) && formData.province && (() => {
+                        const prov = thailandHierarchy.find((x: any) => (x.name || x.province || x.province_name || x.name_th) === formData.province);
+                        const amphoes = prov && Array.isArray(prov.amphoes) ? prov.amphoes : (prov && Array.isArray(prov.districts) ? prov.districts : []);
+                        return amphoes.map((a: any) => (
+                          <option key={a.id || a.code || a.amphoe || a.name} value={a.name || a.amphoe || a.name_th || a.code}>
+                            {a.name || a.amphoe || a.name_th || a.code}
+                          </option>
+                        ));
+                      })()}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tambon</label>
+                    <select
+                      className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${!formData.amphoe || !Array.isArray(thailandHierarchy) ? 'text-gray-600' : 'text-gray-700'}`}
+                      value={formData.tambon || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        handleChange('tambon', val);
+                        if (val && formData.amphoe && formData.province) {
+                          const match = (thailandFlat as any[]).find(r =>
+                            (r.district === val || r.name === val) &&
+                            (r.amphoe === formData.amphoe) &&
+                            (r.province === formData.province)
+                          );
+                          if (match && match.zipcode) {
+                            handleChange('zipcode', match.zipcode.toString());
+                          }
+                        }
+                      }}
+                      disabled={!formData.amphoe || !Array.isArray(thailandHierarchy)}
+                    >
+                      <option value="">Select tambon</option>
+                      {Array.isArray(thailandHierarchy) && formData.province && formData.amphoe && (() => {
+                        const prov = thailandHierarchy.find((x: any) => (x.name || x.province || x.province_name || x.name_th) === formData.province);
+                        const amphoes = prov && Array.isArray(prov.amphoes) ? prov.amphoes : (prov && Array.isArray(prov.districts) ? prov.districts : []);
+                        const a = amphoes && amphoes.find((aa: any) => (aa.name || aa.amphoe || aa.name_th) === formData.amphoe);
+                        const tambons = a && Array.isArray(a.tambons) ? a.tambons : (a && Array.isArray(a.subdistricts) ? a.subdistricts : []);
+                        return (tambons || []).map((t: any) => {
+                          const display = (typeof t === 'string') ? t : (t.name || t.tambon || t.name_th || t.code || '');
+                          const key = (typeof t === 'string') ? display : (t.id || t.code || t.tambon || t.name || display);
+                          const value = display;
+                          return (
+                            <option key={key} value={value}>{display}</option>
+                          );
+                        });
+                      })()}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Zipcode</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                      value={formData.zipcode || ''}
+                      onChange={(e) => handleZipcodeChange(e.target.value)}
+                      placeholder="Zipcode"
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-4 relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Companies</label>
+                  <div>
+                    <button
+                      ref={companyToggleRef}
+                      type="button"
+                      className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm bg-white flex items-center justify-between"
+                      onClick={(e) => { e.stopPropagation(); setCompanyDropdownOpen(prev => !prev); }}
+                    >
+                      <div style={{ color: selectedCompanyIds.length ? '#111827' : '#6b7280' }}>{renderSelectedCompaniesLabel()}</div>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: companyDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 120ms' }}>
+                          <path d="M6 9l6 6 6-6" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       </div>
-                    )}
-                  </div>
-                  {error && <div className="alert alert-danger">{error}</div>}
-                  <div className="d-flex gap-2">
-                    <button type="submit" className="btn btn-primary" disabled={submitting}>
-                      {submitting ? 'Saving...' : editingId ? 'Save changes' : 'Add contact'}
-                    </button>
-                    <button type="button" className="btn btn-secondary" onClick={closeModal} disabled={submitting}>
-                      Cancel
                     </button>
                   </div>
-                </form>
-              </div>
+                  {companyDropdownOpen && (
+                    <div
+                      ref={companyDropdownRef}
+                      onClick={(e) => e.stopPropagation()}
+                      className="shadow-sm bg-white rounded companies-dropdown mt-2"
+                      style={(() => {
+                        const base: any = { position: 'fixed', zIndex: 2000, maxHeight: 260, overflow: 'auto', border: '1px solid #e5e7eb', padding: 6, borderRadius: 6 };
+                        if (dropdownPos) {
+                          return { ...base, left: dropdownPos.left, top: dropdownPos.top, width: dropdownPos.width };
+                        }
+                        return { ...base, position: 'absolute', left: 0, top: '58px', width: '100%' };
+                      })()}
+                    >
+                      {companies.length === 0 ? (
+                        <div className="text-muted px-2">No companies available</div>
+                      ) : (
+                        companies.map((c) => {
+                          const checked = selectedCompanyIds.includes(c.id);
+                          return (
+                            <label
+                              key={c.id}
+                              className={`flex items-center gap-2 w-100 px-2 py-2 companies-item ${checked ? 'checked' : ''}`}
+                              style={{ cursor: 'pointer', borderRadius: 6, marginBottom: 6 }}
+                              onClick={() => toggleCompany(c.id)}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                readOnly
+                                style={{ width: 16, height: 16 }}
+                              />
+                              <div style={{ flex: 1 }}>{c.name || c.branchName || c.id}</div>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {error && <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-4 text-sm">{error}</div>}
+
+                <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
+                  <button
+                    type="button"
+                    className="px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-all shadow-sm"
+                    onClick={closeModal}
+                    disabled={submitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-md active:scale-95 disabled:opacity-50"
+                    disabled={submitting}
+                  >
+                    {submitting ? 'Saving...' : editingId ? 'Save changes' : 'Add contact'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
