@@ -161,7 +161,7 @@ export const AdminUsersPage = () => {
 
         // If backend returned a token for this user, handle it
         if (data?.token) {
-            try {
+          try {
             // If the affected user is the currently logged-in user, prompt them to re-login
             if (user?.userId && data.userId === user.userId) {
               promptedSignOut = true;
@@ -182,14 +182,16 @@ export const AdminUsersPage = () => {
       await fetchUsers();
       setPending({});
       if (promptedSignOut) {
-        // show a modal-like alert then sign the user out and redirect to login
-        // use confirm to ensure UX in this tab — we can replace with a nicer modal if desired
-        // eslint-disable-next-line no-alert
-        const ok = confirm('Your account permissions have changed. Do you want to log out and go to the login page to refresh your permissions?');
-        if (ok) {
-          logout();
-          navigate('/login');
-        }
+        setConfirmModal({
+          title: 'Permissions Changed',
+          message: 'Your account permissions have changed. Do you want to log out and go to the login page to refresh your permissions?',
+          confirmText: 'Log Out',
+          confirmColor: 'warning',
+          onConfirm: () => {
+            logout();
+            navigate('/login');
+          }
+        });
       }
     } catch (err) {
       setError((err as Error).message);
@@ -198,8 +200,14 @@ export const AdminUsersPage = () => {
     }
   };
 
-  // Confirm modal state for deleting a user
-  const [confirmTarget, setConfirmTarget] = useState<{ userId: string; email: string } | null>(null);
+  // Generic Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    title: string;
+    message: string;
+    confirmText?: string;
+    confirmColor?: 'danger' | 'warning' | 'primary';
+    onConfirm: () => void;
+  } | null>(null);
 
   const deleteUser = async (userId: string) => {
     if (!token) return;
@@ -217,12 +225,21 @@ export const AdminUsersPage = () => {
       setError((err as Error).message);
     } finally {
       setLoading(false);
-      setConfirmTarget(null);
+      setConfirmModal(null);
     }
   };
 
-  const openDeleteConfirm = (userId: string, email: string) => setConfirmTarget({ userId, email });
-  const cancelDelete = () => setConfirmTarget(null);
+  const openDeleteConfirm = (userId: string, email: string) => {
+    setConfirmModal({
+      title: 'Delete User',
+      message: `Are you sure you want to delete user ${email}? This action cannot be undone.`,
+      confirmText: 'Delete',
+      confirmColor: 'danger',
+      onConfirm: () => deleteUser(userId),
+    });
+  };
+
+  const closeConfirmModal = () => setConfirmModal(null);
 
   const cancelAll = () => setPending({});
 
@@ -307,7 +324,7 @@ export const AdminUsersPage = () => {
         <div className="card-header py-3 d-flex flex-row align-items-center justify-content-between">
           <h6 className="m-0 font-weight-bold text-primary">Users and Roles</h6>
           <div>
-              <button className="btn-refresh me-2" onClick={fetchUsers} disabled={loading}>
+            <button className="btn-refresh me-2" onClick={fetchUsers} disabled={loading}>
               {loading ? 'Loading...' : 'Refresh'}
             </button>
             {canManageRoles && hasPendingChanges() && (
@@ -363,8 +380,8 @@ export const AdminUsersPage = () => {
                                 }}
                               />
                             ) : null}
-                            <FaUserCircle 
-                              size={40} 
+                            <FaUserCircle
+                              size={40}
                               className="text-gray-400"
                               style={{ display: u.avatarUrl ? 'none' : 'block' }}
                             />
@@ -439,8 +456,8 @@ export const AdminUsersPage = () => {
             <nav>
               <ul className="pagination pagination-sm mb-0">
                 <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                  <button 
-                    className="page-link" 
+                  <button
+                    className="page-link"
                     onClick={goToPrevious}
                     disabled={currentPage === 1}
                     style={{ cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
@@ -450,8 +467,8 @@ export const AdminUsersPage = () => {
                 </li>
                 {getPageNumbers().map((pageNum) => (
                   <li key={pageNum} className={`page-item ${currentPage === pageNum ? 'active' : ''}`}>
-                    <button 
-                      className="page-link" 
+                    <button
+                      className="page-link"
                       onClick={() => goToPage(pageNum)}
                       style={{ cursor: 'pointer' }}
                     >
@@ -460,8 +477,8 @@ export const AdminUsersPage = () => {
                   </li>
                 ))}
                 <li className={`page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}`}>
-                  <button 
-                    className="page-link" 
+                  <button
+                    className="page-link"
                     onClick={goToNext}
                     disabled={currentPage === totalPages || totalPages === 0}
                     style={{ cursor: currentPage === totalPages || totalPages === 0 ? 'not-allowed' : 'pointer' }}
@@ -476,20 +493,32 @@ export const AdminUsersPage = () => {
         </div>
       </div>
 
-      {confirmTarget && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Confirm Delete User</h5>
-                <button type="button" className="btn-close" onClick={cancelDelete}></button>
+      {confirmModal && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={closeConfirmModal}>
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${confirmModal.confirmColor === 'warning' ? 'bg-amber-100 text-amber-500' : 'bg-red-100 text-red-500'}`}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
               </div>
-              <div className="modal-body">
-                <p>Are you sure you want to delete user <strong>{confirmTarget.email}</strong>? This action cannot be undone.</p>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">{confirmModal.title}</h3>
+                <p className="text-gray-500 mt-2">{confirmModal.message}</p>
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={cancelDelete}>Cancel</button>
-                <button type="button" className="btn btn-danger" onClick={() => deleteUser(confirmTarget.userId)}>Delete</button>
+              <div className="flex gap-3 w-full mt-2">
+                <button
+                  className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+                  onClick={closeConfirmModal}
+                >
+                  Cancel
+                </button>
+                <button
+                  className={`flex-1 px-4 py-2 text-white rounded-lg font-medium ${confirmModal.confirmColor === 'warning' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-red-600 hover:bg-red-700'}`}
+                  onClick={() => confirmModal.onConfirm()}
+                >
+                  {confirmModal.confirmText || 'Confirm'}
+                </button>
               </div>
             </div>
           </div>

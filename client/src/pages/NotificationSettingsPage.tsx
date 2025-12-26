@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { FaBell, FaEnvelope, FaPlus, FaPaperPlane, FaSave, FaUserShield } from 'react-icons/fa';
 import { FiTrash2 } from 'react-icons/fi';
+import { VscOpenPreview } from 'react-icons/vsc';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
 import '../App.css';
@@ -39,6 +40,7 @@ export const NotificationSettingsPage = () => {
     const [sendingBillingTest, setSendingBillingTest] = useState(false);
     const [newEmail, setNewEmail] = useState('');
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [showPreview, setShowPreview] = useState(false);
 
     const fetchSettings = useCallback(async () => {
         if (!token) return;
@@ -49,7 +51,13 @@ export const NotificationSettingsPage = () => {
             });
             if (response.ok) {
                 const data = await response.json();
-                setSettings({ ...defaultSettings, ...data });
+                // prefer local unsaved draft so user doesn't lose in-progress edits
+                const draft = typeof window !== 'undefined' ? localStorage.getItem('app_email_template_draft') : null;
+                if (draft && draft.trim().length > 0) {
+                    setSettings({ ...defaultSettings, ...data, emailTemplate: draft });
+                } else {
+                    setSettings({ ...defaultSettings, ...data });
+                }
             }
         } catch (error) {
             console.error('Failed to fetch settings', error);
@@ -61,6 +69,24 @@ export const NotificationSettingsPage = () => {
     useEffect(() => {
         fetchSettings();
     }, [fetchSettings]);
+
+    const renderPreviewHtml = () => {
+        const sampleValues: Record<string, string> = {
+            companyName: 'Test Company',
+            billingDate: (new Date()).toLocaleDateString(),
+            billingCycle: 'Monthly',
+            daysUntilBilling: '0',
+        };
+        let tpl = settings.emailTemplate && settings.emailTemplate.trim().length > 0
+            ? settings.emailTemplate
+            : `<p>Dear {{companyName}},<br/>Your billing date is {{billingDate}} ({{billingCycle}}).</p>`;
+        // simple placeholder replacement
+        tpl = tpl.replace(/{{\s*companyName\s*}}/gi, sampleValues.companyName)
+                 .replace(/{{\s*billingDate\s*}}/gi, sampleValues.billingDate)
+                 .replace(/{{\s*billingCycle\s*}}/gi, sampleValues.billingCycle)
+                 .replace(/{{\s*daysUntilBilling\s*}}/gi, sampleValues.daysUntilBilling);
+        return tpl;
+    };
 
     const handleSave = async () => {
         if (!token) return;
@@ -77,6 +103,7 @@ export const NotificationSettingsPage = () => {
             });
             if (response.ok) {
                 setMessage({ type: 'success', text: 'Settings saved successfully!' });
+                try { if (typeof window !== 'undefined') localStorage.removeItem('app_email_template_draft'); } catch (e) {}
             } else {
                 setMessage({ type: 'error', text: 'Failed to save settings' });
             }
@@ -348,42 +375,28 @@ export const NotificationSettingsPage = () => {
                                 rows={6}
                                 placeholder="Leave empty to use default template"
                                 value={settings.emailTemplate}
-                                onChange={(e) =>
-                                    setSettings((prev) => ({ ...prev, emailTemplate: e.target.value }))
-                                }
+                                onChange={(e) => {
+                                    const v = e.target.value;
+                                    setSettings((prev) => ({ ...prev, emailTemplate: v }));
+                                    try {
+                                        if (typeof window !== 'undefined') localStorage.setItem('app_email_template_draft', v);
+                                    } catch (err) {
+                                        // ignore storage errors
+                                    }
+                                }}
                             />
-                            <button
-                                className="btn btn-outline-primary me-2"
-                                onClick={handleSendTestEmail}
-                                disabled={sendingTest}
-                            >
-                                {sendingTest ? (
-                                    <>
-                                        <span className="spinner-border spinner-border-sm me-1" />
-                                        Sending...
-                                    </>
-                                ) : (
-                                    <span className="d-flex align-items-center">
-                                        <FaPaperPlane className="me-1" /> Send Test Email
-                                    </span>
-                                )}
-                            </button>
-                            <button
-                                className="btn btn-outline-success"
-                                onClick={handleSendBillingTest}
-                                disabled={sendingBillingTest}
-                            >
-                                {sendingBillingTest ? (
-                                    <>
-                                        <span className="spinner-border spinner-border-sm me-1" />
-                                        Sending...
-                                    </>
-                                ) : (
-                                    <span className="d-flex align-items-center">
-                                        <FaBell className="me-1" /> Test Billing Notification
-                                    </span>
-                                )}
-                            </button>
+                            <div className="mb-3">
+                                <button
+                                    type="button"
+                                    className="btn btn-outline-secondary me-2"
+                                    onClick={() => setShowPreview(true)}
+                                    disabled={!settings.emailTemplate || settings.emailTemplate.trim().length === 0}
+                                >
+                                    <VscOpenPreview />
+                                </button>
+                            </div>
+                            
+                            
                         </div>
                     </div>
                 </div>
@@ -404,6 +417,30 @@ export const NotificationSettingsPage = () => {
                     )}
                 </button>
             </div>
+            {showPreview && (
+                <div
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 2200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    onClick={() => setShowPreview(false)}
+                >
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        style={{ background: 'white', borderRadius: 8, width: 'min(900px, 96%)', maxHeight: '80vh', overflow: 'auto', padding: 20 }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="d-flex justify-content-between align-items-center mb-3">
+                            <h5 className="m-0">Template Preview</h5>
+                            <button type="button" className="btn-close" aria-label="Close" onClick={() => setShowPreview(false)} />
+                        </div>
+                        <div style={{ lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: renderPreviewHtml() }} />
+                        <div className="d-flex justify-content-end mt-3">
+                            <button className="btn btn-secondary" onClick={() => setShowPreview(false)}>Close</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
+
+export default NotificationSettingsPage;

@@ -139,6 +139,7 @@ export const CompaniesPage = () => {
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
   const [photoPreview, setPhotoPreview] = useState<string>('');
   const [avatarHover, setAvatarHover] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const performLogout = () => {
     setCompanies([]);
@@ -493,10 +494,13 @@ export const CompaniesPage = () => {
     setShowModal(true);
   };
 
-  const handleDelete = async (id?: string) => {
+  const handleDelete = (id?: string) => {
+    if (id) setDeleteTargetId(id);
+  };
+
+  const confirmDelete = async () => {
+    const id = deleteTargetId;
     if (!token || !id) return;
-    const confirmed = window.confirm('Are you sure you want to delete this company?');
-    if (!confirmed) return;
 
     try {
       const response = await fetch(withBase(`/companies/${id}`), {
@@ -523,6 +527,8 @@ export const CompaniesPage = () => {
       }
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setDeleteTargetId(null);
     }
   };
 
@@ -583,7 +589,7 @@ export const CompaniesPage = () => {
           </div>
           <div className="flex items-center gap-2">
             <button
-              className="px-4 py-2 rounded-lg bg-[#3869a9] text-white font-medium shadow"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-sm"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 17 }}
               onClick={openAddModal}
             >
@@ -748,7 +754,7 @@ export const CompaniesPage = () => {
               </h5>
               <button
                 type="button"
-                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center"
+                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center no-hover-shadow"
                 onClick={closeModal}
               >
                 <span className="text-2xl leading-none">&times;</span>
@@ -925,9 +931,9 @@ export const CompaniesPage = () => {
                     </div>
                     <div className="row gx-2 mb-2">
                       <div className="col-12 col-md-6">
-                          <select
-                            className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${!formData.amphoe ? 'text-gray-400' : 'text-gray-700'}`}
-                            value={formData.tambon || ''}
+                        <select
+                          className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${!formData.amphoe ? 'text-gray-400' : 'text-gray-700'}`}
+                          value={formData.tambon || ''}
                           onChange={(e) => {
                             const val = e.target.value || '';
                             handleChange('tambon', val);
@@ -1053,7 +1059,7 @@ export const CompaniesPage = () => {
               <h5 className="text-xl font-bold text-gray-900 m-0">Add contacts to {activeCompany.name}</h5>
               <button
                 type="button"
-                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center"
+                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center no-hover-shadow"
                 onClick={closeContactsModal}
               >
                 <span className="text-2xl leading-none">&times;</span>
@@ -1111,6 +1117,37 @@ export const CompaniesPage = () => {
         </div>
       )
       }
+      {deleteTargetId && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteTargetId(null)}>
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Delete Company</h3>
+                <p className="text-gray-500 mt-2">Are you sure you want to delete this company? This action cannot be undone.</p>
+              </div>
+              <div className="flex gap-3 w-full mt-2">
+                <button
+                  className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+                  onClick={() => setDeleteTargetId(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                  onClick={confirmDelete}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

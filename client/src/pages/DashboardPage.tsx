@@ -236,6 +236,16 @@ export const DashboardPage = () => {
     }
   };
 
+  const getStatusBadge = (status: string) => {
+    const badges: Record<string, { class: string; label: string }> = {
+      pending: { class: 'bg-gray-100 text-gray-700 border border-gray-200', label: 'Pending' },
+      in_progress: { class: 'bg-blue-50 text-blue-700 border border-blue-100', label: 'In Progress' },
+      completed: { class: 'bg-emerald-50 text-emerald-700 border border-emerald-100', label: 'Completed' },
+      cancelled: { class: 'bg-gray-50 text-gray-500 border border-gray-200', label: 'Cancelled' },
+    };
+    return badges[status] || { class: 'bg-gray-50 text-gray-600 border border-gray-200', label: status };
+  };
+
   // use shared formatter from utils
 
   /* Calendar widget removed per request */
@@ -311,7 +321,7 @@ export const DashboardPage = () => {
           <div className="card shadow mb-4 dashboard-gray">
             <div className="card-header py-3 d-flex flex-row align-items-center justify-content-between">
               <h6 className="m-0 font-weight-bold text-primary">Upcoming & Due Today</h6>
-              <Link to="/billing" className="btn btn-sm btn-primary">
+              <Link to="/billing" className="view-all-btn no-hover-shadow small">
                 View All
               </Link>
             </div>
@@ -323,7 +333,7 @@ export const DashboardPage = () => {
               ) : (
                 <div className="list-group">
                   {stats.billingDueToday.map((rec: any) => (
-                    <div key={rec.id} className="list-group-item clean">
+                    <div key={rec.id} className="list-group-item clean dashboard-item">
                       <div>
                         <h6 className="mb-1">
                           <Link to={rec.companyId ? `/companies/${rec.companyId}` : '#'} className="text-decoration-none text-dark fw-semibold">
@@ -352,15 +362,15 @@ export const DashboardPage = () => {
                           const nowBangkok = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
                           const tIso = nowBangkok.toISOString().split('T')[0];
                           if (rec.alignedBillingDate === tIso) {
-                            return <span className="muted-badge" style={{ color: '#0D6EFD' }}>Due Today</span>;
+                            return <span className="muted-badge pill" style={{ color: '#0D6EFD' }}>Due Today</span>;
                           }
                           try {
                             const dAligned = new Date(rec.alignedBillingDate);
                             const dToday = new Date(tIso);
                             const diffMs = dAligned.getTime() - dToday.getTime();
                             const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-                            if (diffDays > 0) return <span className="muted-badge" style={{ color: '#198754' }}>Upcoming ({diffDays} Day)</span>;
-                            if (diffDays < 0) return <span className="muted-badge" style={{ color: '#dc3545' }}>Overdue ({Math.abs(diffDays)} Day)</span>;
+                            if (diffDays > 0) return <span className="muted-badge pill" style={{ color: '#198754' }}>Upcoming ({diffDays} Day)</span>;
+                            if (diffDays < 0) return <span className="muted-badge pill" style={{ color: '#dc3545' }}>Overdue ({Math.abs(diffDays)} Day)</span>;
                           } catch (e) { }
                           return <span className="muted-badge" style={{ color: '#198754' }}>Upcoming</span>;
                         })()}
@@ -380,7 +390,7 @@ export const DashboardPage = () => {
           <div className="card shadow mb-4 dashboard-gray">
             <div className="card-header py-3 d-flex flex-row align-items-center justify-content-between">
               <h6 className="m-0 font-weight-bold text-primary">Recent Activities</h6>
-              <Link to="/activities" className="btn btn-sm btn-primary">
+              <Link to="/activities" className="view-all-btn no-hover-shadow small">
                 View All
               </Link>
             </div>
@@ -389,18 +399,18 @@ export const DashboardPage = () => {
                 <p className="text-center text-muted">No recent activities</p>
               ) : (
                 <div className="list-group">
-                  {stats.recentActivities.map((activity: any) => (
-                    <div key={activity.id} className="list-group-item d-flex justify-content-between align-items-center">
-                      <div>
-                        <h6 className="mb-1">{activity.title}</h6>
-                        <small className="text-muted">{activity.type} • {formatToDDMMYYYY(activity.createdAt)}</small>
+                  {stats.recentActivities.map((activity: any) => {
+                    const s = getStatusBadge(activity.status);
+                    return (
+                      <div key={activity.id} className="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                          <h6 className="mb-1">{activity.title}</h6>
+                          <small className="text-muted">{activity.type} • {formatToDDMMYYYY(activity.createdAt)}</small>
+                        </div>
+                        <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${s.class}`}>{s.label}</span>
                       </div>
-                      <span className={`badge rounded-pill ${activity.status === 'completed' ? 'bg-success' :
-                        activity.status === 'in_progress' ? 'bg-info text-white' :
-                          activity.status === 'cancelled' ? 'bg-secondary' : 'bg-warning text-dark'
-                        } small`}>{activity.status}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

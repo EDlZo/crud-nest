@@ -1,12 +1,12 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FaCheck, FaClock, FaExclamationTriangle, FaPlus, FaEllipsisV, FaChevronDown } from 'react-icons/fa';
 import { FiEye, FiEdit2, FiTrash2, FiClipboard, FiPhone, FiMail, FiUsers, FiFileText, FiBookmark } from 'react-icons/fi';
 import { Dropdown } from 'react-bootstrap';
 import '../App.css';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
-import { formatDateTime } from '../utils/formatDate';
+import formatToDDMMYYYY, { formatDateTime } from '../utils/formatDate';
 
 type Activity = {
   id?: string;
@@ -59,12 +59,15 @@ export const ActivitiesPage = () => {
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterPriority, setFilterPriority] = useState<string>('all');
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [companies, setCompanies] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [viewingActivity, setViewingActivity] = useState<Activity | null>(null);
   const [relatedContact, setRelatedContact] = useState<any | null>(null);
   const [relatedCompany, setRelatedCompany] = useState<any | null>(null);
+  const [companyInvoices, setCompanyInvoices] = useState<any[]>([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
 
   const performLogout = () => {
@@ -159,6 +162,59 @@ export const ActivitiesPage = () => {
     }
   }, [fetchActivities, token]);
 
+  // If navigated here with state.openActivityId, open that activity's detail
+  const location = useLocation();
+  useEffect(() => {
+    const openId = (location.state as any)?.openActivityId;
+    const editId = (location.state as any)?.editActivityId;
+    if (!openId && !editId) return;
+
+    const open = async () => {
+      // Try to find in already loaded activities
+      if (openId) {
+        const found = activities.find((a) => String(a.id) === String(openId));
+        if (found) {
+          setViewingActivity(found);
+          if (found.relatedTo && found.relatedId) fetchRelatedData(found.relatedTo, found.relatedId);
+        } else if (token) {
+          try {
+            const res = await fetch(withBase(`/activities/${openId}`), { headers: { Authorization: `Bearer ${token}` } });
+            if (res.ok) {
+              const data = await res.json();
+              setViewingActivity(data);
+              if (data.relatedTo && data.relatedId) fetchRelatedData(data.relatedTo, data.relatedId);
+            }
+          } catch (e) {
+            console.error('Failed to fetch activity by id', e);
+          }
+        }
+      }
+
+      if (editId) {
+        const found = activities.find((a) => String(a.id) === String(editId));
+        if (found) {
+          handleEdit(found);
+        } else if (token) {
+          try {
+            const res = await fetch(withBase(`/activities/${editId}`), { headers: { Authorization: `Bearer ${token}` } });
+            if (res.ok) {
+              const data = await res.json();
+              handleEdit(data);
+            }
+          } catch (e) {
+            console.error('Failed to fetch activity for edit', e);
+          }
+        }
+      }
+
+      // clear navigation state so it doesn't reopen repeatedly
+      try { window.history.replaceState({}, document.title); } catch (e) { /* ignore */ }
+    };
+
+    open();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, activities, token]);
+
   const handleChange = (key: keyof Activity, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
@@ -252,6 +308,25 @@ export const ActivitiesPage = () => {
           const companies = await response.json();
           const company = Array.isArray(companies) ? companies.find((c: any) => c.id === relatedId) : null;
           setRelatedCompany(company);
+          // fetch invoices for this company
+          try {
+            setLoadingInvoices(true);
+            const invRes = await fetch(withBase('/billing-records'), { headers: { Authorization: `Bearer ${token}` } });
+            if (invRes.ok) {
+              const invData = await invRes.json();
+              if (Array.isArray(invData)) {
+                const filtered = invData.filter((r: any) => String(r.companyId || (r.company && (r.company.id || r.company._id))) === String(relatedId));
+                setCompanyInvoices(filtered);
+              } else setCompanyInvoices([]);
+            } else {
+              setCompanyInvoices([]);
+            }
+          } catch (e) {
+            console.error('Failed to fetch invoices for company', e);
+            setCompanyInvoices([]);
+          } finally {
+            setLoadingInvoices(false);
+          }
         }
       }
     } catch (err) {
@@ -348,9 +423,13 @@ export const ActivitiesPage = () => {
     }
   };
 
-  const handleDelete = async (id?: string) => {
+  const handleDelete = (id?: string) => {
+    if (id) setDeleteTargetId(id);
+  };
+
+  const confirmDelete = async () => {
+    const id = deleteTargetId;
     if (!id || !token) return;
-    if (!confirm('Are you sure you want to delete this activity?')) return;
 
     try {
       const response = await fetch(withBase(`/activities/${id}`), {
@@ -374,6 +453,8 @@ export const ActivitiesPage = () => {
       }
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setDeleteTargetId(null);
     }
   };
 
@@ -398,19 +479,21 @@ export const ActivitiesPage = () => {
 
   const getStatusBadge = (status: string) => {
     const badges: Record<string, { class: string; label: string }> = {
-      pending: { class: 'bg-warning', label: 'Pending' },
-      in_progress: { class: 'bg-info', label: 'In Progress' },
-      completed: { class: 'bg-success', label: 'Completed' },
-      cancelled: { class: 'bg-secondary', label: 'Cancelled' },
+      // Minimal, muted styles: light background, subtle border, and muted text
+      pending: { class: 'bg-gray-100 text-gray-700 border border-gray-200', label: 'Pending' },
+      in_progress: { class: 'bg-blue-50 text-blue-700 border border-blue-100', label: 'In Progress' },
+      completed: { class: 'bg-emerald-50 text-emerald-700 border border-emerald-100', label: 'Completed' },
+      cancelled: { class: 'bg-gray-50 text-gray-500 border border-gray-200', label: 'Cancelled' },
     };
-    return badges[status] || { class: 'bg-secondary', label: status };
+    return badges[status] || { class: 'bg-gray-50 text-gray-600 border border-gray-200', label: status };
   };
 
   const getPriorityBadge = (priority?: string) => {
     const badges: Record<string, { class: string; label: string; icon: any }> = {
-      low: { class: 'bg-emerald-500', label: 'Low', icon: null },
-      medium: { class: 'bg-amber-500', label: 'Medium', icon: <FaClock /> },
-      high: { class: 'bg-rose-500', label: 'High', icon: <FaExclamationTriangle /> },
+      // Minimal/muted variants: light background, muted text, subtle border
+      low: { class: 'bg-emerald-50 text-emerald-700 border border-emerald-100', label: 'Low', icon: null },
+      medium: { class: 'bg-amber-50 text-amber-700 border border-amber-100', label: 'Medium', icon: <FaClock /> },
+      high: { class: 'bg-rose-50 text-rose-700 border border-rose-100', label: 'High', icon: <FaExclamationTriangle /> },
     };
     return badges[priority || 'medium'] || badges.medium;
   };
@@ -426,14 +509,39 @@ export const ActivitiesPage = () => {
     }
   };
 
+  // Format due date as 'dd Mon yyyy HH:mm' (24-hour), e.g. '23 Dec 2025 14:30'
+  const formatDueDate = (val?: string | number | Date | any) => {
+    if (!val) return '-';
+    const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    let d: Date | null = null;
+    try {
+      if (typeof val === 'string' || typeof val === 'number') d = new Date(val as any);
+      else if (val instanceof Date) d = val;
+      else if (val && (val.seconds || val._seconds)) {
+        const seconds = (val.seconds ?? val._seconds) as number;
+        const nanos = (val.nanoseconds ?? val._nanoseconds) as number | undefined;
+        d = new Date(seconds * 1000 + Math.round((nanos ?? 0) / 1e6));
+      }
+    } catch (e) {
+      return '-';
+    }
+    if (!d || isNaN(d.getTime())) return '-';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mon = MONTHS_SHORT[d.getMonth()];
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${dd} ${mon} ${yyyy} ${hh}:${min}`;
+  };
+
   return (
     <>
       <div className="flex flex-col gap-6 px-8 py-6 bg-gray-50 min-h-screen">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Activities & Tasks</h1>
+          <h1 className="h3 mb-0 text-gray-800">Activities & Tasks</h1>
           <div className="flex items-center gap-3">
             <button
-              className="px-4 py-2 rounded-lg bg-[#3869a9] text-white font-medium shadow hover:bg-[#2c5282] transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-sm flex items-center justify-center min-w-[100px] gap-2"
               onClick={openAddModal}
             >
               + Add New Activity
@@ -526,7 +634,7 @@ export const ActivitiesPage = () => {
                     </div>
                     {canModify && (
                       <Dropdown align="end">
-                        <Dropdown.Toggle as="button" className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 border-0 bg-transparent">
+                        <Dropdown.Toggle as="button" className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 border-0 bg-transparent no-hover-shadow">
                           <FaEllipsisV />
                         </Dropdown.Toggle>
                         <Dropdown.Menu>
@@ -557,7 +665,7 @@ export const ActivitiesPage = () => {
                       {canModify ? (
                         <div className="relative inline-block">
                           <select
-                            className={`appearance-none border-0 rounded-full px-3 py-1 pr-10 text-xs font-medium text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 text-left truncate ${statusBadge.class}`}
+                            className={`appearance-none border-0 rounded-full px-3 py-1 pr-10 text-xs font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 text-left truncate ${statusBadge.class}`}
                             style={{
                               backgroundImage: 'none',
                               width: 'auto',
@@ -573,27 +681,27 @@ export const ActivitiesPage = () => {
                             <option value="completed" className="text-gray-800 bg-white">Completed</option>
                             <option value="cancelled" className="text-gray-800 bg-white">Cancelled</option>
                           </select>
-                          <span className="pointer-events-none absolute right-2 top-1/2 transform -translate-y-1/2 text-white text-xs">
+                          <span className="pointer-events-none absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 text-xs">
                             <FaChevronDown />
                           </span>
                         </div>
                       ) : (
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${statusBadge.class}`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusBadge.class}`}>
                           {statusBadge.label}
                         </span>
                       )}
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-500">Priority</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium text-white flex items-center gap-1 ${priorityBadge.class}`}>
-                        {priorityBadge.icon} {priorityBadge.label}
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${priorityBadge.class}`}>
+                        {priorityBadge.icon} <span className="leading-none">{priorityBadge.label}</span>
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-500">Due Date</span>
                       <span className="font-medium text-gray-700">
                         {activity.dueDate ? (
-                          <span title={activity.dueDate}>{formatDateTime(activity.dueDate)}</span>
+                          <span title={activity.dueDate}>{formatDueDate(activity.dueDate)}</span>
                         ) : (
                           '-'
                         )}
@@ -648,7 +756,7 @@ export const ActivitiesPage = () => {
               </h5>
               <button
                 type="button"
-                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center"
+                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center no-hover-shadow"
                 onClick={closeModal}
               >
                 <FiEye style={{ transform: 'rotate(45deg)', display: 'none' }} /> {/* dummy for spacing if needed */}
@@ -907,7 +1015,7 @@ export const ActivitiesPage = () => {
               </div>
               <button
                 type="button"
-                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center"
+                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center no-hover-shadow"
                 onClick={() => setViewingActivity(null)}
               >
                 <span className="text-2xl leading-none">&times;</span>
@@ -920,21 +1028,18 @@ export const ActivitiesPage = () => {
               <div className="mb-6">
                 <div className="flex items-start justify-between gap-4 mb-3">
                   <h4 className="text-2xl font-bold text-gray-800 m-0">{viewingActivity.title}</h4>
-                  <span className="text-sm text-gray-500 whitespace-nowrap">
-                    ID: {viewingActivity.id?.substring(0, 8)}
-                  </span>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {/* Status Badge */}
-                  <span className={`px-3 py-1.5 rounded-full text-sm font-medium text-white shadow-sm ${getStatusBadge(viewingActivity.status).class}`}>
+                  {/* Status Badge (minimal) */}
+                  <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${getStatusBadge(viewingActivity.status).class}`}>
                     {getStatusBadge(viewingActivity.status).label}
                   </span>
 
-                  {/* Priority Badge */}
-                  <span className={`px-3 py-1.5 rounded-full text-sm font-medium text-white shadow-sm flex items-center gap-1.5 ${getPriorityBadge(viewingActivity.priority).class}`}>
+                  {/* Priority Badge (minimal) */}
+                  <span className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 ${getPriorityBadge(viewingActivity.priority).class}`}>
                     {getPriorityBadge(viewingActivity.priority).icon}
-                    {getPriorityBadge(viewingActivity.priority).label}
+                    <span className="leading-none">{getPriorityBadge(viewingActivity.priority).label}</span>
                   </span>
 
                   {/* Type Badge */}
@@ -960,17 +1065,7 @@ export const ActivitiesPage = () => {
                   <div className="flex items-center gap-2 mb-1 text-yellow-800 font-semibold">
                     <FaClock /> Due Date & Time
                   </div>
-                  <p className="text-gray-800 font-medium m-0">
-                    {viewingActivity.dueDate
-                      ? new Date(viewingActivity.dueDate).toLocaleString('th-TH', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })
-                      : '-'}
-                  </p>
+                  <p className="text-gray-800 font-medium m-0">{viewingActivity.dueDate ? formatDueDate(viewingActivity.dueDate) : '-'}</p>
                 </div>
 
                 {/* Assigned To */}
@@ -1018,7 +1113,8 @@ export const ActivitiesPage = () => {
                   </div>
                   {(relatedContact || relatedCompany) && (
                     <button
-                      className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 text-sm border-0 bg-transparent p-0"
+                      type="button"
+                      className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 text-sm border-0 bg-transparent p-0 no-hover-shadow"
                       onClick={() => setShowContactModal(true)}
                     >
                       <FiEye /> View Details
@@ -1087,7 +1183,7 @@ export const ActivitiesPage = () => {
               </h5>
               <button
                 type="button"
-                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center"
+                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center no-hover-shadow"
                 onClick={() => setShowContactModal(false)}
               >
                 <span className="text-2xl leading-none">&times;</span>
@@ -1141,10 +1237,20 @@ export const ActivitiesPage = () => {
                   <div className="mb-6">
                     <h6 className="text-blue-600 font-semibold mb-3">Basic Information</h6>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {relatedCompany.address && (
+                      {(relatedCompany.address || relatedCompany.tambon || relatedCompany.amphoe || relatedCompany.province || relatedCompany.zipcode) && (
                         <div className="col-span-1 md:col-span-2 bg-gray-50 rounded-xl p-4 border border-gray-100">
                           <strong className="text-gray-500 text-sm block mb-1">Address</strong>
-                          <p className="text-gray-800 font-medium m-0">{relatedCompany.address}</p>
+                          <p className="text-gray-800 font-medium m-0">{
+                            (() => {
+                              const parts: string[] = [];
+                              if (relatedCompany.address) parts.push(String(relatedCompany.address).trim());
+                              if (relatedCompany.tambon) parts.push(`ต.${String(relatedCompany.tambon).trim()}`);
+                              if (relatedCompany.amphoe) parts.push(`อ.${String(relatedCompany.amphoe).trim()}`);
+                              if (relatedCompany.province) parts.push(`จ.${String(relatedCompany.province).trim()}`);
+                              if (relatedCompany.zipcode) parts.push(String(relatedCompany.zipcode).trim());
+                              return parts.length ? parts.join(' ') : '-';
+                            })()
+                          }</p>
                         </div>
                       )}
                       {relatedCompany.phone && (
@@ -1190,31 +1296,35 @@ export const ActivitiesPage = () => {
                   )}
 
                   {/* Billing Information */}
-                  {(relatedCompany.billingCycle || relatedCompany.billingDate || relatedCompany.notificationDate) && (
-                    <div className="mb-6">
-                      <h6 className="text-blue-600 font-semibold mb-3">Billing Information</h6>
+                  {/* Invoices for this company (replace former Billing Information) */}
+                  <div className="mb-6">
+                    <h6 className="text-blue-600 font-semibold mb-3">Invoices</h6>
+                    {loadingInvoices ? (
+                      <div className="text-sm text-gray-500">Loading invoices...</div>
+                    ) : companyInvoices.length === 0 ? (
+                      <div className="text-sm text-gray-500">No invoices found for this company.</div>
+                    ) : (
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {relatedCompany.billingCycle && (
-                          <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-100">
-                            <strong className="text-yellow-800 text-sm block mb-1">Billing Cycle</strong>
-                            <p className="text-yellow-900 font-medium m-0 capitalize">{relatedCompany.billingCycle}</p>
+                        {companyInvoices.slice(0, 6).map((inv) => (
+                          <div key={inv.id || inv._id} className="bg-yellow-50 rounded-xl p-4 border border-yellow-100">
+                            <div className="text-sm text-yellow-800 font-semibold mb-1">Invoice</div>
+                            <div className="text-sm text-gray-700">Date: {inv.billingDate ? formatToDDMMYYYY(inv.billingDate) : (inv.createdAt ? formatToDDMMYYYY(inv.createdAt) : '-')}</div>
+                            <div className="text-sm text-gray-700">Amount: {typeof inv.amount === 'number' ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(inv.amount) : (inv.amount ?? '-')}</div>
                           </div>
-                        )}
-                        {relatedCompany.billingDate && (
-                          <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-100">
-                            <strong className="text-yellow-800 text-sm block mb-1">Billing Date</strong>
-                            <p className="text-yellow-900 font-medium m-0">Day {relatedCompany.billingDate} of month</p>
-                          </div>
-                        )}
-                        {relatedCompany.notificationDate && (
-                          <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-100">
-                            <strong className="text-yellow-800 text-sm block mb-1">Notification Date</strong>
-                            <p className="text-yellow-900 font-medium m-0">Day {relatedCompany.notificationDate} of month</p>
-                          </div>
-                        )}
+                        ))}
                       </div>
+                    )}
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        className="text-blue-600 font-medium text-sm border-0 bg-transparent p-0 cursor-pointer hover:bg-transparent focus:bg-transparent focus:outline-none focus:ring-0 no-hover-shadow"
+                        onClick={() => navigate(`/billing?companyId=${relatedCompany.id}`)}
+                        style={{ boxShadow: 'none' }}
+                      >
+                        View all invoices
+                      </button>
                     </div>
-                  )}
+                  </div>
                 </>
               ) : null}
             </div>
@@ -1248,6 +1358,37 @@ export const ActivitiesPage = () => {
           }
         }
       `}</style>
+      {deleteTargetId && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteTargetId(null)}>
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Delete Activity</h3>
+                <p className="text-gray-500 mt-2">Are you sure you want to delete this activity? This action cannot be undone.</p>
+              </div>
+              <div className="flex gap-3 w-full mt-2">
+                <button
+                  className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+                  onClick={() => setDeleteTargetId(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                  onClick={confirmDelete}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

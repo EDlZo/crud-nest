@@ -12,6 +12,7 @@ import thailandFlat from '../data/thailand-hierarchy-full.flat.json';
 import { useAuth } from '../context/AuthContext';
 import { formatDateTime } from '../utils/formatDate';
 import { getAvatarColor } from '../utils/avatarColor';
+import DeleteConfirmPopover from '../components/DeleteConfirmPopover';
 
 type Contact = {
   id?: string;
@@ -245,9 +246,29 @@ export const ContactsPage = () => {
   }, [openCompaniesFor]);
 
   // Close company dropdown in modal when clicking outside or pressing Escape
-  // Also compute a fixed position so dropdown can open upwards when needed
+  // Use Portal + Fixed position + Scroll tracking to ensure it sticks to button AND breaks out of overflow
   useEffect(() => {
     if (!companyDropdownOpen) return;
+
+    const updatePosition = () => {
+      const btn = companyToggleRef.current;
+      if (btn) {
+        const rect = btn.getBoundingClientRect();
+        // Check if we should open up or down
+        const maxHeight = 260;
+        const estimatedHeight = Math.min(maxHeight, (companies.length * 44) + 12);
+        const spaceBelow = window.innerHeight - rect.bottom;
+        // Default to down, unless space is tight
+        let top = rect.bottom + 4;
+        if (spaceBelow < estimatedHeight && rect.top > estimatedHeight) {
+          top = rect.top - estimatedHeight - 4; // Open up
+        }
+        setDropdownPos({ left: rect.left, top, width: rect.width });
+      }
+    };
+
+    updatePosition(); // Initial calculation
+
     const onDocClick = (e: MouseEvent) => {
       const el = companyDropdownRef.current;
       const btn = companyToggleRef.current;
@@ -259,28 +280,17 @@ export const ContactsPage = () => {
       if (e.key === 'Escape') setCompanyDropdownOpen(false);
     };
 
-    // compute position for fixed dropdown
-    const btn = companyToggleRef.current;
-    if (btn) {
-      const rect = btn.getBoundingClientRect();
-      const maxHeight = 260;
-      const estimatedHeight = Math.min(maxHeight, (companies.length * 44) + 12);
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
-      let top = rect.bottom + 8;
-      if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
-        // open upwards
-        top = rect.top - estimatedHeight - 8;
-      }
-      setDropdownPos({ left: rect.left, top, width: rect.width });
-    }
-
-    document.addEventListener('click', onDocClick);
+    // Use capture=true for scroll to catch scrolling of the modal div
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    document.addEventListener('click', onDocClick, true);
     document.addEventListener('keydown', onKey);
+
     return () => {
-      document.removeEventListener('click', onDocClick);
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+      document.removeEventListener('click', onDocClick, true);
       document.removeEventListener('keydown', onKey);
-      setDropdownPos(null);
     };
   }, [companyDropdownOpen, companies.length]);
 
@@ -511,8 +521,8 @@ export const ContactsPage = () => {
 
   const handleDelete = async (id?: string) => {
     if (!token || !id) return;
-    const confirmed = window.confirm('Are you sure you want to delete this record?');
-    if (!confirmed) return;
+    // Confirmed via Popover
+
 
     try {
       const response = await fetch(withBase(`/cruds/${id}`), {
@@ -733,8 +743,13 @@ export const ContactsPage = () => {
         {/* Page Heading */}
         <div className="d-sm-flex align-items-center justify-content-between mb-4">
           <h1 className="h3 mb-0 text-gray-800">Contacts</h1>
-          <div>
-            <button className="btn btn-add me-2" onClick={openAddModal}>+ Add New Contact</button>
+          <div className="d-flex align-items-center">
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-sm flex items-center justify-center me-2"
+              onClick={openAddModal}
+            >
+              + Add New Contact
+            </button>
             <button className="btn-refresh" onClick={fetchContacts} disabled={loading}>
               {loading ? 'Loading...' : 'Refresh'}
             </button>
@@ -919,9 +934,11 @@ export const ContactsPage = () => {
                                   <button className="icon-btn edit" aria-label="edit" title="Edit" onClick={() => handleEdit(contact)}>
                                     <FiEdit2 className="action-pencil" />
                                   </button>
-                                  <button className="icon-btn delete" aria-label="delete" title="Delete" onClick={() => handleDelete(contact.id)}>
-                                    <FiTrash2 />
-                                  </button>
+                                  <DeleteConfirmPopover onConfirm={() => handleDelete(contact.id)}>
+                                    <button className="icon-btn delete" aria-label="delete" title="Delete">
+                                      <FiTrash2 />
+                                    </button>
+                                  </DeleteConfirmPopover>
                                 </div>
                               ) : (
                                 <span className="badge bg-secondary">No permission</span>
@@ -976,7 +993,7 @@ export const ContactsPage = () => {
               <h5 className="text-xl font-bold text-gray-900 m-0">{editingId ? 'Edit Contact' : 'Add New Contact'}</h5>
               <button
                 type="button"
-                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center"
+                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center no-hover-shadow"
                 onClick={closeModal}
               >
                 <span className="text-2xl leading-none">&times;</span>
@@ -1161,7 +1178,7 @@ export const ContactsPage = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Amphoe</label>
                     <select
-                      className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${!formData.province || !Array.isArray(thailandHierarchy) ? 'text-gray-600' : 'text-gray-700'}`}
+                      className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${!formData.province || !Array.isArray(thailandHierarchy) ? 'text-gray-400' : 'text-gray-700'}`}
                       value={formData.amphoe || ''}
                       onChange={(e) => {
                         handleChange('amphoe', e.target.value);
@@ -1188,7 +1205,7 @@ export const ContactsPage = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Tambon</label>
                     <select
-                      className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${!formData.amphoe || !Array.isArray(thailandHierarchy) ? 'text-gray-600' : 'text-gray-700'}`}
+                      className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${!formData.amphoe || !Array.isArray(thailandHierarchy) ? 'text-gray-400' : 'text-gray-700'}`}
                       value={formData.tambon || ''}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -1252,18 +1269,25 @@ export const ContactsPage = () => {
                       </div>
                     </button>
                   </div>
-                  {companyDropdownOpen && (
+
+                  {/* Dropdown rendered via Portal to avoid overflow clipping */}
+                  {companyDropdownOpen && dropdownPos && createPortal(
                     <div
                       ref={companyDropdownRef}
                       onClick={(e) => e.stopPropagation()}
-                      className="shadow-sm bg-white rounded companies-dropdown mt-2"
-                      style={(() => {
-                        const base: any = { position: 'fixed', zIndex: 2000, maxHeight: 260, overflow: 'auto', border: '1px solid #e5e7eb', padding: 6, borderRadius: 6 };
-                        if (dropdownPos) {
-                          return { ...base, left: dropdownPos.left, top: dropdownPos.top, width: dropdownPos.width };
-                        }
-                        return { ...base, position: 'absolute', left: 0, top: '58px', width: '100%' };
-                      })()}
+                      className="shadow-sm bg-white rounded companies-dropdown"
+                      style={{
+                        position: 'fixed',
+                        zIndex: 9999,
+                        maxHeight: 260,
+                        overflow: 'auto',
+                        border: '1px solid #e5e7eb',
+                        padding: 6,
+                        borderRadius: 6,
+                        top: dropdownPos.top,
+                        left: dropdownPos.left,
+                        width: dropdownPos.width,
+                      }}
                     >
                       {companies.length === 0 ? (
                         <div className="text-muted px-2">No companies available</div>
@@ -1288,33 +1312,34 @@ export const ContactsPage = () => {
                           );
                         })
                       )}
-                    </div>
-                  )}
-                </div>
+                    </div>,
+                    document.body
+                    )}
 
-                {error && <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-4 text-sm">{error}</div>}
+                  {error && <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-4 text-sm">{error}</div>}
 
-                <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
-                  <button
-                    type="button"
-                    className="px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-all shadow-sm"
-                    onClick={closeModal}
-                    disabled={submitting}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-md active:scale-95 disabled:opacity-50"
-                    disabled={submitting}
-                  >
-                    {submitting ? 'Saving...' : editingId ? 'Save changes' : 'Add contact'}
-                  </button>
+                  <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
+                    <button
+                      type="button"
+                      className="px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-all shadow-sm"
+                      onClick={closeModal}
+                      disabled={submitting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-md active:scale-95 disabled:opacity-50"
+                      disabled={submitting}
+                    >
+                      {submitting ? 'Saving...' : editingId ? 'Save changes' : 'Add contact'}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
           </div>
-        </div>
+        </div >
       )}
     </>
   );

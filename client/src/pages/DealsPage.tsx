@@ -4,6 +4,7 @@ import { FaDollarSign, FaEye, FaClock } from 'react-icons/fa';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import '../App.css';
 import { API_BASE_URL } from '../config';
+import DeleteConfirmPopover from '../components/DeleteConfirmPopover';
 import { useAuth } from '../context/AuthContext';
 
 type Deal = {
@@ -80,7 +81,7 @@ export const DealsPage = () => {
     try {
       const params = new URLSearchParams();
       if (filterStage !== 'all') params.append('stage', filterStage);
-      
+
       const response = await fetch(withBase(`/deals?${params.toString()}`), {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -100,12 +101,12 @@ export const DealsPage = () => {
           throw new Error(`Server error: ${response.status} ${response.statusText}`);
         }
       }
-      
+
       const contentType = response.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) {
         throw new Error('Server returned non-JSON response. Please check if backend is running.');
       }
-      
+
       const data = await response.json();
       setDeals(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -143,17 +144,17 @@ export const DealsPage = () => {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
-      
+
       if (companiesRes.ok) {
         const data = await companiesRes.json();
         setCompanies(Array.isArray(data) ? data : []);
       }
-      
+
       if (contactsRes.ok) {
         const data = await contactsRes.json();
         setContacts(Array.isArray(data) ? data : []);
       }
-      
+
       if (usersRes.ok) {
         const data = await usersRes.json();
         setUsers(Array.isArray(data) ? data : []);
@@ -273,7 +274,7 @@ export const DealsPage = () => {
 
   const handleDelete = async (id?: string) => {
     if (!id || !token) return;
-    if (!confirm('Are you sure you want to delete this deal?')) return;
+    // Confirmed via Popover
 
     try {
       const response = await fetch(withBase(`/deals/${id}`), {
@@ -454,7 +455,7 @@ export const DealsPage = () => {
                         user?.role === 'superadmin' ||
                         deal.assignedTo === user?.userId;
                       const stageInfo = getStageInfo(deal.stage);
-                      
+
                       return (
                         <tr key={deal.id}>
                           <td>
@@ -504,14 +505,15 @@ export const DealsPage = () => {
                                 >
                                   <FiEdit2 />
                                 </button>
-                                <button
-                                  className="icon-btn delete"
-                                  aria-label="delete"
-                                  title="Delete"
-                                  onClick={() => handleDelete(deal.id)}
-                                >
-                                  <FiTrash2 />
-                                </button>
+                                <DeleteConfirmPopover onConfirm={() => handleDelete(deal.id)} placement="left">
+                                  <button
+                                    className="icon-btn delete"
+                                    aria-label="delete"
+                                    title="Delete"
+                                  >
+                                    <FiTrash2 />
+                                  </button>
+                                </DeleteConfirmPopover>
                               </div>
                             ) : (
                               <span className="badge bg-secondary">No Permission</span>
@@ -692,8 +694,8 @@ export const DealsPage = () => {
                       {submitting
                         ? 'Saving...'
                         : editingId
-                        ? 'Save Changes'
-                        : 'Add Deal'}
+                          ? 'Save Changes'
+                          : 'Add Deal'}
                     </button>
                     <button
                       type="button"

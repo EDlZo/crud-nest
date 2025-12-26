@@ -64,7 +64,9 @@ export class EmailController {
                 '15', // billingDate (day of month)
                 'monthly',
                 3, // daysUntilBilling
-                10000 // amountDue (mock)
+                10000, // amountDue (mock)
+                undefined, // customTemplate (none)
+                [] // no items for test
             );
             this.logger.log(`sendBillingReminder result: ${success}`);
 

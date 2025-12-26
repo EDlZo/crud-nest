@@ -160,6 +160,24 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Utility to opt-out of the global button hover transform & shadow */
+.no-hover-shadow,
+button.no-hover-shadow {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+button.no-hover-shadow:hover {
+  box-shadow: none !important;
+  transform: none !important;
+  background-color: transparent !important;
+}
+
+button.no-hover-shadow:focus {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
 .secondary {
   background: #e2e8f0;
   color: #0f172a;
@@ -338,6 +356,54 @@ table th:last-child .btn {
   background-color: rgba(220, 38, 38, 0.1);
 }
 
+/* Remove modal header icon focus/pill (accessibility ring) that appears as purple */
+.modal .modal-header .icon-btn,
+.modal .modal-header .icon-btn:focus,
+.modal .modal-header .icon-btn:focus-visible,
+.modal .modal-header button:focus,
+.modal .modal-header button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Also remove any pseudo-element highlights on these buttons */
+.modal .modal-header .icon-btn::before,
+.modal .modal-header .icon-btn::after,
+.modal .modal-header button::before,
+.modal .modal-header button::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Standardize modal action button colors across the app
+   - Save/Primary: blue #2563eb
+   - Close/Secondary: white with gray border/text
+ */
+.modal .btn-primary,
+.modal .btn.btn-primary {
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 18px rgba(37,99,235,0.12) !important;
+}
+
+.modal .btn-secondary,
+.modal .btn.btn-secondary {
+  background-color: #ffffff !important;
+  color: #374151 !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: none !important;
+}
+
+/* Generic fallback: buttons inside modal footer using utility classes */
+.fixed .flex.justify-end .bg-blue-600 {
+  background-color: #2563eb !important;
+}
+.fixed .flex.justify-end .bg-white {
+  background-color: #ffffff !important;
+}
+
 /* red for delete */
 
 .icon-btn svg {
@@ -399,6 +465,47 @@ table th:last-child .btn {
   color: #94a3b8;
   font-size: 0.85rem;
 
+}
+
+
+/* Invoice table layout: equal-ish column widths and highlights */
+.invoice-table {
+  table-layout: fixed;
+}
+.invoice-table th,
+.invoice-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+/* Give first 6 columns equal width and reserve a smaller width for action */
+.invoice-table th:nth-child(1), .invoice-table td:nth-child(1),
+.invoice-table th:nth-child(2), .invoice-table td:nth-child(2),
+.invoice-table th:nth-child(3), .invoice-table td:nth-child(3),
+.invoice-table th:nth-child(4), .invoice-table td:nth-child(4),
+.invoice-table th:nth-child(5), .invoice-table td:nth-child(5),
+.invoice-table th:nth-child(6), .invoice-table td:nth-child(6) {
+  width: 15%;
+}
+.invoice-table th:nth-child(7), .invoice-table td:nth-child(7) {
+  width: 10%;
+}
+
+/* Highlight company and notification columns */
+.invoice-table td.col-company {
+  color: #1e40af;
+  font-weight: 600;
+}
+.invoice-table td.col-notify {
+  color: #065f46;
+  font-weight: 600;
+}
+
+.invoice-table thead th {
+  color: #475569;
+  font-weight: 700;
+}
 /* Contacts modal / companies picker styles to match Add Activities */
 .companies-toggle {
   padding: 0.7rem 1rem !important;
@@ -451,7 +558,6 @@ table th:last-child .btn {
   background: #ffffff !important;
   color: #111827 !important;
   border: 1px solid #e6eef8 !important;
-}
 }
 
 .auth-container {
@@ -1346,6 +1452,32 @@ table th:last-child .btn {
   background: #1e40af;
 }
 
+/* Minimal 'View All' button used in dashboard headers */
+.view-all-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #2563eb;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: none;
+  transition: background-color 120ms ease, color 120ms ease, transform 80ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-all-btn:hover {
+  background: rgba(37, 99, 235, 0.06);
+  color: #1e40af;
+  transform: none;
+}
+
+.view-all-btn.small {
+  padding: 5px 10px;
+  font-size: 0.9rem;
+}
+
 .list-group-item.clean {
   background: #fff;
   border-radius: 10px;
@@ -1466,6 +1598,177 @@ table th:last-child .btn {
 
 .dashboard-gray .quick-action-btn .btn-icon {
   color: #6b7280;
+}
+
+/* Topbar bell */
+.topbar-bell-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.topbar-bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  color: #374151;
+  background: transparent;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.topbar-bell:hover { background: rgba(2,6,23,0.04); }
+.topbar-bell svg { width: 18px; height: 18px; }
+.topbar-bell-count {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Dashboard visual polish */
+.dashboard-card {
+  border-radius: 14px;
+  overflow: visible;
+}
+
+.dashboard-item {
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background-color 0.12s ease;
+}
+
+.dashboard-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px rgba(15,23,42,0.06);
+}
+
+.dashboard .card-body {
+  padding: 1rem 1rem 1.25rem;
+}
+
+.list-group-item.clean .amount {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.muted-badge.small {
+  padding: 6px 10px;
+  font-size: 0.75rem;
+}
+
+/* small pill badge for Due Today / Upcoming */
+.muted-badge.pill {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #e6eef8;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.03);
+}
+
+/* Activity status pills: flatter, tighter */
+.dashboard .badge.rounded-pill {
+  padding: 6px 10px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  border-radius: 999px;
+}
+
+/* Make the right column card lighter and compact like the screenshot */
+.dashboard-gray .card {
+  background: linear-gradient(180deg,#ffffff,#fbfdff);
+}
+
+/* Keep spacing consistent inside lists */
+.list-group {
+  margin: 0 -0.5rem;
+  padding: 0.5rem 0.5rem 0;
+}
+
+.list-group-item.clean {
+  margin: 0 0.5rem 12px;
+}
+
+/* Calendar styles */
+.calendar-grid {
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.calendar-weekday {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #64748b;
+  text-align: center;
+}
+.calendar-rows {
+  display: grid;
+  gap: 8px;
+}
+.calendar-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+.calendar-cell {
+  background: #fff;
+  border-radius: 10px;
+  min-height: 90px;
+  padding: 8px;
+  border: 1px solid #eef2f6;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+.calendar-cell.empty {
+  background: transparent;
+  border: none;
+  cursor: default;
+}
+.calendar-cell.today {
+  box-shadow: 0 6px 18px rgba(37,99,235,0.06);
+  border: 1px solid rgba(37,99,235,0.12);
+}
+.calendar-cell.selected {
+  background: linear-gradient(180deg, #eff6ff, #f8fafc);
+}
+.cell-day {
+  font-weight: 700;
+  color: #0f172a;
+}
+.cell-events {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cell-event {
+  background: #2563eb;
+  color: #ffffff;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 

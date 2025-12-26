@@ -10,6 +10,7 @@ import localThailandHierarchy from '../data/thailand-hierarchy.json';
 import fullThailandHierarchy from '../data/thailand-hierarchy-full.json';
 import thailandFlat from '../data/thailand-hierarchy-full.flat.json';
 import { API_BASE_URL } from '../config';
+import formatToDDMMYYYY from '../utils/formatDate';
 import { useAuth } from '../context/AuthContext';
 import { getAvatarColor } from '../utils/avatarColor';
 
@@ -240,29 +241,7 @@ export const CompanyDetailsPage = () => {
         }
     };
 
-    const handleDeleteBilling = async (recId?: string) => {
-        if (!recId) return;
-        if (!token) { alert('Please login to perform this action'); return; }
-        const ok = window.confirm('Are you sure you want to delete this billing record?');
-        if (!ok) return;
-        try {
-            const res = await fetch(withBase(`/billing-records/${recId}`), {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            if (!res.ok) throw new Error('Delete failed');
-            // refresh
-            await refreshBillingRecords();
-        } catch (err: any) {
-            alert(err.message || 'Failed to delete billing record');
-        }
-    };
 
-    const handleSendBillingNow = async (recId?: string) => {
-        if (!recId) return;
-        // Open preview page where user can inspect and send
-        navigate(`/billing/preview/${recId}`);
-    };
 
     // Inline editing handlers
     const startEditing = (field: string, currentValue: string) => {
@@ -670,7 +649,20 @@ export const CompanyDetailsPage = () => {
                                                                 <span className="fw-medium">{contact.firstName} {contact.lastName}</span>
                                                             </div>
                                                         </td>
-                                                        <td>{(contact as any).address || '-'}</td>
+                                                        <td>{(() => {
+                                                            const parts: string[] = [];
+                                                            const addr = (contact as any).address;
+                                                            const tambon = (contact as any).tambon || (contact as any).subdistrict;
+                                                            const amphoe = (contact as any).amphoe || (contact as any).district;
+                                                            const province = (contact as any).province;
+                                                            const zipcode = (contact as any).zipcode || (contact as any).postalCode;
+                                                            if (addr) parts.push(String(addr).trim());
+                                                            if (tambon) parts.push(`ต.${String(tambon).trim()}`);
+                                                            if (amphoe) parts.push(`อ.${String(amphoe).trim()}`);
+                                                            if (province) parts.push(`จ.${String(province).trim()}`);
+                                                            if (zipcode) parts.push(String(zipcode).trim());
+                                                            return parts.length ? parts.join(' ') : '-';
+                                                        })()}</td>
                                                         <td className="text-end pe-4">
                                                             <div className="btn-group">
                                                                 <button
@@ -697,7 +689,10 @@ export const CompanyDetailsPage = () => {
                                 </div>
                             </div>
                             <div className="card-footer bg-white border-top-0 py-3">
-                                <button className="btn btn-link text-decoration-none p-0" onClick={openContactsModal}>
+                                <button
+                                    className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                                    onClick={openContactsModal}
+                                >
                                     + Add new contact
                                 </button>
                             </div>
@@ -733,9 +728,33 @@ export const CompanyDetailsPage = () => {
                                                 </tr>
                                             )}
                                             {!billingLoading && billingRecords.map((r: any) => {
+                                                const normalize = (val: any) => {
+                                                    if (!val && val !== 0) return '-';
+                                                    try {
+                                                        const seconds = val?.seconds ?? val?._seconds;
+                                                        const nanos = val?.nanoseconds ?? val?._nanoseconds;
+                                                        if (seconds !== undefined && seconds !== null) {
+                                                            const s = Number(seconds || 0);
+                                                            const ms = s * 1000 + Math.round((nanos ?? 0) / 1e6);
+                                                            return formatToDDMMYYYY(new Date(ms));
+                                                        }
+                                                    } catch (e) { }
+                                                    if (typeof val === 'number') {
+                                                        const ms = val > 1e12 ? val : val * 1000;
+                                                        return formatToDDMMYYYY(new Date(ms));
+                                                    }
+                                                    if (typeof val === 'string') {
+                                                        const m = String(val).match(/^(\d{4})-(\d{2})-(\d{2})/);
+                                                        if (m) {
+                                                            return formatToDDMMYYYY(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+                                                        }
+                                                    }
+                                                    return formatToDDMMYYYY(val);
+                                                };
+
                                                 const contractDate = r.contractStartDate || r.contractEndDate
-                                                    ? `${r.contractStartDate || '-'}${r.contractEndDate ? ` - ${r.contractEndDate}` : ''}`
-                                                    : (r.contractDate || '-');
+                                                    ? `${normalize(r.contractStartDate) || '-'}${r.contractEndDate ? ` - ${normalize(r.contractEndDate)}` : ''}`
+                                                    : (r.contractDate ? normalize(r.contractDate) : '-');
                                                 const billingIntervalText = r.billingIntervalMonths
                                                     ? `ทุกๆ ${r.billingIntervalMonths} เดือน`
                                                     : (r.billingCycle || '-');
@@ -750,7 +769,7 @@ export const CompanyDetailsPage = () => {
                                                         <td>{contractDate}</td>
                                                         <td>{typeof r.amount === 'number' ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(r.amount) : (r.amount ?? '-')}</td>
                                                         <td>{billingIntervalText}</td>
-                                                        <td>{r.billingDate || '-'}</td>
+                                                        <td>{r.billingDate ? normalize(r.billingDate) : '-'}</td>
 
                                                         {/* actions removed in company details view */}
                                                     </tr>

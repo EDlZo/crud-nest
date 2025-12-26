@@ -14,6 +14,8 @@ import { NotificationSettingsPage } from './pages/NotificationSettingsPage';
 import { BillingPage } from './pages/BillingPage';
 import { BillingCreatePage } from './pages/BillingCreatePage';
 import { BillingPreviewPage } from './pages/BillingPreviewPage';
+import CalendarPage from './pages/CalendarPage';
+import NotificationsPage from './pages/NotificationsPage';
 // import { DealsPage } from './pages/DealsPage'; // Hidden temporarily
 import Layout from './components/Layout';
 import { useEffect } from 'react';
@@ -133,6 +135,26 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <ActivitiesPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <CalendarPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <NotificationsPage />
               </Layout>
             </ProtectedRoute>
           }

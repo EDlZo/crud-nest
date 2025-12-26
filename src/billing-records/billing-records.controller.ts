@@ -90,7 +90,7 @@ export class BillingRecordsController {
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/send')
-  async sendNow(@Param('id') id: string, @Body('type') type: string, @Req() req: any) {
+  async sendNow(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     try {
       const rec = await this.svc.findById(id);
       if (!rec) return { success: false, error: 'Not found' };
@@ -137,10 +137,36 @@ export class BillingRecordsController {
       // billingIntervalMonths is already declared above
       const billingCycleText = billingIntervalMonths ? `ทุกๆ ${billingIntervalMonths} เดือน` : rec.billingCycle || '-';
 
+      // allow overriding template via request body (useful for preview/send with unsaved drafts)
       const settings = await this.settingsService.getSettings();
-      const customTemplate = settings?.emailTemplate;
+      const customTemplate = body?.template ?? settings?.emailTemplate;
 
-      // Send email
+      // Build items array from record (similar logic to frontend preview)
+      const safeNum = (v: any) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 0;
+      };
+      const items: Array<any> = [];
+      if (Array.isArray(rec.services) && rec.services.length > 0) {
+        rec.services.forEach((s: any) => {
+          const unit = safeNum(s.amount ?? s.price ?? s.unitPrice ?? s.cost ?? s.value);
+          const qty = safeNum(s.qty ?? s.quantity) || 1;
+          const total = safeNum(s.total ?? unit * qty);
+          items.push({ code: s.code || s.id || null, description: s.name || s.description || 'Service', qty, unitPrice: unit, total });
+        });
+      } else if (Array.isArray(rec.items) && rec.items.length > 0) {
+        rec.items.forEach((it: any) => {
+          const unit = safeNum(it.unitPrice ?? it.price ?? it.amount ?? it.cost);
+          const qty = safeNum(it.qty ?? it.quantity) || 1;
+          const total = safeNum(it.total ?? unit * qty);
+          items.push({ code: it.code || it.id || null, description: it.description || it.name || 'Item', qty, unitPrice: unit, total });
+        });
+      } else {
+        const amt = safeNum(rec.amount ?? rec.amountDue ?? rec.total ?? rec.subtotal ?? rec.price);
+        items.push({ code: null, description: rec.description || rec.note || 'Invoice Amount', qty: 1, unitPrice: amt, total: amt });
+      }
+
+      // Send email (pass items so EmailService can inject rows into template)
       const ok = await this.emailService.sendBillingReminder(
         recipients,
         companyName,
@@ -150,11 +176,13 @@ export class BillingRecordsController {
         daysUntil,
         amountDue,
         customTemplate,
+        items,
         id,
       );
 
       // mark notification metadata similarly to scheduler to avoid duplicate sends
-      const notifyType = type === 'onDate' ? 'onDate' : type === 'advance' ? 'advance' : daysUntil === 0 ? 'onDate' : 'advance';
+      const reqType = body?.type;
+      const notifyType = reqType === 'onDate' ? 'onDate' : reqType === 'advance' ? 'advance' : daysUntil === 0 ? 'onDate' : 'advance';
       const todayIso = bangkok.toISOString().split('T')[0];
       const updates: any = {
         lastNotifiedDate: todayIso,

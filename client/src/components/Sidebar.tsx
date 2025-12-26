@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt, FaChevronDown, FaChevronRight, FaFileAlt, FaTasks, FaEllipsisV, FaBell } from 'react-icons/fa';
+import { FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt, FaChevronDown, FaChevronRight, FaFileAlt, FaTasks, FaEllipsisV, FaBell, FaCalendarAlt } from 'react-icons/fa';
 import { PiAddressBookFill } from 'react-icons/pi';
 import { Dropdown } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
@@ -150,121 +150,135 @@ const Sidebar = () => {
 
     return (
         <>
-        {/* Mobile hamburger - only visible on small screens via CSS */}
-        <button className="mobile-sidebar-toggle" aria-label="Toggle sidebar" onClick={() => setMobileOpen(v => !v)}>
-            <span className="hamburger" />
-        </button>
+            {/* Mobile hamburger - only visible on small screens via CSS */}
+            <button className="mobile-sidebar-toggle" aria-label="Toggle sidebar" onClick={() => setMobileOpen(v => !v)}>
+                <span className="hamburger" />
+            </button>
 
-        <div className={`sidebar-backdrop ${mobileOpen ? 'show' : ''}`} onClick={() => setMobileOpen(false)} />
+            <div className={`sidebar-backdrop ${mobileOpen ? 'show' : ''}`} onClick={() => setMobileOpen(false)} />
 
-                <ul className={`navbar-nav bg-gradient-primary sidebar sidebar-dark accordion d-flex flex-column ${mobileOpen ? 'open-mobile' : ''} ${isMini ? 'mini' : ''}`} id="accordionSidebar" style={{ minHeight: '100vh' }}>
-            {/* Sidebar - Brand */}
-            <Link className="sidebar-brand d-flex align-items-center justify-content-center" to="/" onClick={() => setMobileOpen(false)}>
-                <div className="sidebar-brand-icon rotate-n-15">
-                    <PiAddressBookFill size={50} />
+            <ul className={`navbar-nav bg-gradient-primary sidebar sidebar-dark accordion d-flex flex-column ${mobileOpen ? 'open-mobile' : ''} ${isMini ? 'mini' : ''}`} id="accordionSidebar" style={{ minHeight: '100vh' }}>
+                {/* Sidebar - Brand */}
+                <Link className="sidebar-brand d-flex align-items-center justify-content-center" to="/" onClick={() => setMobileOpen(false)}>
+                    <div className="sidebar-brand-icon rotate-n-15">
+                        <PiAddressBookFill size={50} />
+                    </div>
+                </Link>
+                {/* mini toggle removed per request */}
+
+                {/* Divider */}
+                <hr className="sidebar-divider my-0" />
+
+
+
+                {/* Divider */}
+                <hr className="sidebar-divider" />
+
+                {/* Heading */}
+
+
+                {/* Dashboard */}
+                {isPageVisible('dashboard') && (
+                    <li className="nav-item accordion-section">
+                        <div className="accordion-card">
+                            <Link
+                                className={`nav-link accordion-header ${isActive('/dashboard') ? 'active' : ''}`}
+                                to="/dashboard"
+                                onClick={() => setMobileOpen(false)}
+                            >
+                                <FaTachometerAlt className="me-2" />
+                                <span>Dashboard</span>
+                            </Link>
+                        </div>
+                    </li>
+                )}
+
+                {/* Divider */}
+                <hr className="sidebar-divider" />
+
+                {/* Heading */}
+                <div className="sidebar-heading">
+                    PAGE
                 </div>
-            </Link>
-                        {/* mini toggle removed per request */}
 
-            {/* Divider */}
-            <hr className="sidebar-divider my-0" />
+                {/* Contacts */}
+                {isPageVisible('contacts') && (
+                    <li className="nav-item accordion-section">
+                        <div className="accordion-card">
+                            <Link
+                                className={`nav-link accordion-header ${isActive('/contacts') ? 'active' : ''}`}
+                                to="/contacts"
+                                onClick={() => setMobileOpen(false)}
+                            >
+                                <FaTable className="me-2" />
+                                <span>Contacts</span>
+                            </Link>
+                        </div>
+                    </li>
+                )}
 
+                {/* Companies */}
+                {isPageVisible('companies') && (
+                    <li className="nav-item accordion-section">
+                        <div className="accordion-card">
+                            <Link
+                                className={`nav-link accordion-header ${isActive('/companies') ? 'active' : ''}`}
+                                to="/companies"
+                                onClick={() => setMobileOpen(false)}
+                            >
+                                <FaBuilding className="me-2" />
+                                <span>Companies</span>
+                            </Link>
+                        </div>
+                    </li>
+                )}
 
-
-            {/* Divider */}
-            <hr className="sidebar-divider" />
-
-            {/* Heading */}
-            
-
-            {/* Dashboard */}
-            {isPageVisible('dashboard') && (
+                {/* Billing (Bill) - always visible */}
                 <li className="nav-item accordion-section">
                     <div className="accordion-card">
                         <Link
-                            className={`nav-link accordion-header ${isActive('/dashboard') ? 'active' : ''}`}
-                            to="/dashboard"
+                            className={`nav-link accordion-header ${isActive('/billing') ? 'active' : ''}`}
+                            to="/billing"
                             onClick={() => setMobileOpen(false)}
                         >
-                            <FaTachometerAlt className="me-2" />
-                            <span>Dashboard</span>
+                            <FaFileAlt className="me-2" />
+                            <span>Invoice</span>
                         </Link>
                     </div>
                 </li>
-            )}
 
-            {/* Divider */}
-            <hr className="sidebar-divider" />
+                {/* Activities */}
+                {isPageVisible('activities') && (
+                    <li className="nav-item accordion-section">
+                        <div className="accordion-card">
+                            <Link
+                                className={`nav-link accordion-header ${isActive('/activities') ? 'active' : ''}`}
+                                to="/activities"
+                                onClick={() => setMobileOpen(false)}
+                            >
+                                <FaTasks className="me-2" />
+                                <span>Activities & Tasks</span>
+                            </Link>
+                        </div>
+                    </li>
+                )}
 
-            {/* Heading */}
-            <div className="sidebar-heading">
-                PAGE
-            </div>
-
-            {/* Contacts */}
-            {isPageVisible('contacts') && (
+                {/* Calendar - visible by default */}
                 <li className="nav-item accordion-section">
                     <div className="accordion-card">
                         <Link
-                            className={`nav-link accordion-header ${isActive('/contacts') ? 'active' : ''}`}
-                            to="/contacts"
+                            className={`nav-link accordion-header ${isActive('/calendar') ? 'active' : ''}`}
+                            to="/calendar"
                             onClick={() => setMobileOpen(false)}
                         >
-                            <FaTable className="me-2" />
-                            <span>Contacts</span>
+                            <FaCalendarAlt className="me-2" />
+                            <span>Calendar</span>
                         </Link>
                     </div>
                 </li>
-            )}
 
-            {/* Companies */}
-            {isPageVisible('companies') && (
-                <li className="nav-item accordion-section">
-                    <div className="accordion-card">
-                        <Link
-                            className={`nav-link accordion-header ${isActive('/companies') ? 'active' : ''}`}
-                            to="/companies"
-                            onClick={() => setMobileOpen(false)}
-                        >
-                            <FaBuilding className="me-2" />
-                            <span>Companies</span>
-                        </Link>
-                    </div>
-                </li>
-            )}
-
-            {/* Billing (Bill) - always visible */}
-            <li className="nav-item accordion-section">
-                <div className="accordion-card">
-                        <Link
-                        className={`nav-link accordion-header ${isActive('/billing') ? 'active' : ''}`}
-                        to="/billing"
-                        onClick={() => setMobileOpen(false)}
-                    >
-                        <FaFileAlt className="me-2" />
-                        <span>Invoice</span>
-                    </Link>
-                </div>
-            </li>
-
-            {/* Activities */}
-            {isPageVisible('activities') && (
-                <li className="nav-item accordion-section">
-                    <div className="accordion-card">
-                        <Link
-                            className={`nav-link accordion-header ${isActive('/activities') ? 'active' : ''}`}
-                            to="/activities"
-                            onClick={() => setMobileOpen(false)}
-                        >
-                            <FaTasks className="me-2" />
-                            <span>Activities & Tasks</span>
-                        </Link>
-                    </div>
-                </li>
-            )}
-
-            {/* Deals - Hidden temporarily */}
-            {/* {isPageVisible('deals') && (
+                {/* Deals - Hidden temporarily */}
+                {/* {isPageVisible('deals') && (
                 <li className="nav-item accordion-section">
                     <div className="accordion-card">
                         <Link 
@@ -278,64 +292,64 @@ const Sidebar = () => {
                 </li>
             )} */}
 
-            {/* Manage Section */}
-            {(isPageVisible('admin_users') || isPageVisible('visibility')) && (
-                <li className="nav-item accordion-section">
-                    <div className="accordion-card">
-                        <a
-                            className="nav-link accordion-header collapsed"
-                            onClick={() => toggleSection('manage')}
-                            style={{ cursor: 'pointer' }}
-                        >
-                            <FaCog className="me-2" />
-                            <span>Manage</span>
-                            {expandedSections.manage ? (
-                                <FaChevronDown className="ms-auto" size={12} />
-                            ) : (
-                                <FaChevronRight className="ms-auto" size={12} />
-                            )}
-                        </a>
-                        <div
-                            className="accordion-content"
-                            style={{
-                                maxHeight: expandedSections.manage ? '500px' : '0',
-                                opacity: expandedSections.manage ? 1 : 0,
-                                transition: 'max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
-                                overflow: 'hidden'
-                            }}
-                        >
-                            {isPageVisible('admin_users') && (
-                                <Link className={`accordion-item ${isActive('/admin/users') ? 'active' : ''}`} to="/admin/users" onClick={() => setMobileOpen(false)}>
-                                    <FaUsers className="me-2" />
-                                    <span>User</span>
-                                </Link>
-                            )}
-                            {isPageVisible('visibility') && (
-                                <Link className={`accordion-item ${isActive('/admin/visibility') ? 'active' : ''}`} to="/admin/visibility" onClick={() => setMobileOpen(false)}>
-                                    <FaCog className="me-2" />
-                                    <span>Visibility</span>
-                                </Link>
-                            )}
-                            {(isPageVisible('admin_users') || isPageVisible('visibility')) && (
-                                <Link className={`accordion-item ${isActive('/admin/notifications') ? 'active' : ''}`} to="/admin/notifications" onClick={() => setMobileOpen(false)}>
-                                    <FaBell className="me-2" />
-                                    <span>Notifications</span>
-                                </Link>
-                            )}
+                {/* Manage Section */}
+                {(isPageVisible('admin_users') || isPageVisible('visibility')) && (
+                    <li className="nav-item accordion-section">
+                        <div className="accordion-card">
+                            <a
+                                className="nav-link accordion-header collapsed"
+                                onClick={() => toggleSection('manage')}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <FaCog className="me-2" />
+                                <span>Manage</span>
+                                {expandedSections.manage ? (
+                                    <FaChevronDown className="ms-auto" size={12} />
+                                ) : (
+                                    <FaChevronRight className="ms-auto" size={12} />
+                                )}
+                            </a>
+                            <div
+                                className="accordion-content"
+                                style={{
+                                    maxHeight: expandedSections.manage ? '500px' : '0',
+                                    opacity: expandedSections.manage ? 1 : 0,
+                                    transition: 'max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
+                                    overflow: 'hidden'
+                                }}
+                            >
+                                {isPageVisible('admin_users') && (
+                                    <Link className={`accordion-item ${isActive('/admin/users') ? 'active' : ''}`} to="/admin/users" onClick={() => setMobileOpen(false)}>
+                                        <FaUsers className="me-2" />
+                                        <span>User</span>
+                                    </Link>
+                                )}
+                                {isPageVisible('visibility') && (
+                                    <Link className={`accordion-item ${isActive('/admin/visibility') ? 'active' : ''}`} to="/admin/visibility" onClick={() => setMobileOpen(false)}>
+                                        <FaCog className="me-2" />
+                                        <span>Visibility</span>
+                                    </Link>
+                                )}
+                                {(isPageVisible('admin_users') || isPageVisible('visibility')) && (
+                                    <Link className={`accordion-item ${isActive('/admin/notifications') ? 'active' : ''}`} to="/admin/notifications" onClick={() => setMobileOpen(false)}>
+                                        <FaBell className="me-2" />
+                                        <span>Notifications</span>
+                                    </Link>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                </li>
-            )}
+                    </li>
+                )}
 
-            {/* Divider */}
-            <hr className="sidebar-divider d-none d-md-block" />
+                {/* Divider */}
+                <hr className="sidebar-divider d-none d-md-block" />
 
-            {/* Spacer to push User Profile to bottom */}
-            <div style={{ flex: 1 }}></div>
-
+                {/* Spacer to push User Profile to bottom */}
+                <div style={{ flex: 1 }}></div>
 
 
-        </ul>
+
+            </ul>
         </>
     );
 };

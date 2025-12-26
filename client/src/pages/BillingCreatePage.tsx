@@ -357,7 +357,7 @@ export const BillingCreatePage: React.FC = () => {
     // Validate and show field-level errors if any
     if (!isFormValid) {
       const errs: Record<string, string> = {};
-      if (!form.companyId) errs.companyId = 'Customer is required';
+      if (!form.companyId) errs.companyId = 'Companies is required';
       if (!form.contactId) errs.contactId = 'Contact is required';
       if (!form.billingDate) errs.billingDate = 'Billing date is required';
       if (!form.contractStartDate) errs.contractStartDate = 'Contract start date is required';
@@ -410,7 +410,8 @@ export const BillingCreatePage: React.FC = () => {
         contractEndDate: form.contractEndDate || undefined,
         billingCycle: cycleName,
         billingIntervalMonths: months,
-        items: form.items,
+        // Always set name from description for backend compatibility
+        items: form.items.map((it: any) => ({ ...it, name: it.description })),
         amount: computeAmount(),
         status: form.status,
       };
@@ -461,7 +462,7 @@ export const BillingCreatePage: React.FC = () => {
           <form onSubmit={handleSubmit}>
             <div className="row mb-3">
               <div className="col-md-4">
-                <label className="form-label">Customer</label>
+                <label className="form-label">Companies</label>
                 <select
                   className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${fieldErrors.companyId ? 'ring-2 ring-red-200' : ''}`}
                   value={form.companyId}
@@ -476,16 +477,16 @@ export const BillingCreatePage: React.FC = () => {
                     });
                   }}
                 >
-                  <option value="">-- Select customer --</option>
+                  <option value="">-- Select Companies --</option>
                   {companies.map((c: any) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
               </div>
-              <div className="col-md-4">
+              <div className="col-md-4" >
                 <label className="form-label">Contact</label>
                 <select
-                  className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${fieldErrors.contactId ? 'ring-2 ring-red-200' : ''} ${(!form.companyId || loadingContactsForCompany) ? 'opacity-70' : ''}`}
+                  className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${fieldErrors.contactId ? 'ring-2 ring-red-200' : ''} ${(!form.companyId || loadingContactsForCompany) ? 'opacity-70 text-gray-400' : 'text-gray-700'}`}
                   value={form.contactId}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -570,7 +571,6 @@ export const BillingCreatePage: React.FC = () => {
                   <thead>
                     <tr>
                       <th>Name</th>
-                      <th>Description</th>
                       <th style={{ width: 120 }}>Qty</th>
                       <th style={{ width: 120 }}>Price</th>
                       <th style={{ width: 60 }}></th>
@@ -583,10 +583,10 @@ export const BillingCreatePage: React.FC = () => {
                           <input
                             name={`item_name_${idx}`}
                             className={`w-full px-3 py-2 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${fieldErrors[`item_${idx}`] ? 'ring-2 ring-red-200' : ''}`}
-                            value={it.name}
+                            value={it.description}
                             onChange={(e) => {
                               const v = e.target.value;
-                              setItem(idx, 'name', v);
+                              setItem(idx, 'description', v);
                               setFieldErrors((prev) => {
                                 const p = { ...prev };
                                 delete p[`item_${idx}`];
@@ -597,7 +597,6 @@ export const BillingCreatePage: React.FC = () => {
                           />
                           {/* inline item error text removed to prevent layout shift; outline remains */}
                         </td>
-                        <td><input className="w-full px-3 py-2 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all" value={it.description} onChange={(e) => setItem(idx, 'description', e.target.value)} /></td>
                         <td><input type="number" className="w-full px-3 py-2 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all" value={it.quantity} onChange={(e) => setItem(idx, 'quantity', Number(e.target.value))} /></td>
                         <td><input type="number" className="w-full px-3 py-2 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all" value={it.price} onChange={(e) => setItem(idx, 'price', Number(e.target.value))} /></td>
                         <td>

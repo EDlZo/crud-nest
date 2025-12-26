@@ -2,8 +2,10 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiEdit2, FiTrash2, FiFilter } from 'react-icons/fi';
 import { FaPaperPlane } from 'react-icons/fa';
+import { CiShare1 } from 'react-icons/ci';
 import { API_BASE_URL } from '../config';
 import formatToDDMMYYYY from '../utils/formatDate';
+import DeleteConfirmPopover from '../components/DeleteConfirmPopover';
 // read token directly to avoid circular import/runtime issues
 
 export const BillingPage: React.FC = () => {
@@ -180,8 +182,7 @@ export const BillingPage: React.FC = () => {
       alert('Please login to perform this action');
       return;
     }
-    const confirmed = window.confirm('Are you sure you want to delete this billing record?');
-    if (!confirmed) return;
+    // Confirmed via Popover
     try {
       const res = await fetch(`${API_BASE_URL}/billing-records/${id}`, {
         method: 'DELETE',
@@ -275,46 +276,7 @@ export const BillingPage: React.FC = () => {
     navigate(`/billing/preview/${id}`);
   };
 
-  const handleSendDirect = async (id?: string) => {
-    if (!id) return;
-    const confirmed = window.confirm('Confirm send billing email for this invoice now?');
-    if (!confirmed) return;
-    const tokenLocal = typeof window !== 'undefined' ? localStorage.getItem('crud-token') : null;
-    if (!tokenLocal) {
-      alert('Please login to perform this action');
-      return;
-    }
-    try {
-      setSendingIds(prev => ({ ...prev, [id]: true }));
-      const res = await fetch(`${API_BASE_URL}/billing-records/${id}/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${tokenLocal}`,
-        },
-        body: JSON.stringify({ type: 'manual' }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const msg = data?.message || (await res.text()).slice(0, 200);
-        alert(`Send failed: ${res.status} ${msg}`);
-        return;
-      }
-      alert(data?.message || 'Send requested. Check server logs.');
 
-      // optimistic update: mark lastNotifiedDate locally so UI reflects change
-      try {
-        const now = new Date();
-        const bangkokToday = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
-        const todayIso = bangkokToday.toISOString().split('T')[0];
-        setRecords(prev => prev.map(r => r.id === id ? { ...r, lastNotifiedDate: todayIso, notificationsSentCount: (r.notificationsSentCount || 0) + 1 } : r));
-      } catch (e) { /* ignore */ }
-    } catch (err: any) {
-      alert(err.message || 'Failed to send billing reminder');
-    } finally {
-      setSendingIds(prev => ({ ...prev, [id || '']: false }));
-    }
-  };
 
   useEffect(() => {
     fetchRecords();
@@ -468,7 +430,7 @@ export const BillingPage: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div className="d-flex align-items-center" style={{ gap: 8 }}>
             <button
-              className="btn btn-add"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-sm"
               style={{ minWidth: 120, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
               onClick={() => navigate('/billing/create')}
             >
@@ -482,44 +444,7 @@ export const BillingPage: React.FC = () => {
             >
               {loading ? 'Loading...' : 'Refresh'}
             </button>
-            <button
-              className="btn btn-outline-secondary"
-              style={{ minWidth: 120, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-              onClick={async () => {
-                try {
-                  if (!token) {
-                    alert('Please login as admin to trigger scheduler');
-                    return;
-                  }
-                  const doRun = window.confirm('Run scheduler now?\nOK = run and send emails. Cancel = dry-run (no emails, just show what would be sent).');
-                  const payload = { dryRun: !doRun };
-                  const headers: any = { 'Content-Type': 'application/json' };
-                  if (token) headers.Authorization = `Bearer ${token}`;
-                  const resp = await fetch(`${API_BASE_URL}/email/trigger-scheduler`, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify(payload),
-                  });
-                  const data = await resp.json().catch(() => ({}));
-                  if (!resp.ok) {
-                    const msg = data?.message || (await resp.text()).slice(0, 200);
-                    alert(`Trigger failed: ${resp.status} ${msg}`);
-                    return;
-                  }
-                  if (payload.dryRun) {
-                    const candidates = data?.result?.candidates || [];
-                    alert(`Dry-run complete. ${candidates.length} notification(s) would be sent. Check server response for details.`);
-                    console.debug('Dry-run candidates:', candidates);
-                  } else {
-                    alert(data?.message || 'Scheduler triggered (check server logs)');
-                  }
-                } catch (err: any) {
-                  alert(`Trigger error: ${err.message || err}`);
-                }
-              }}
-            >
-              Trigger Scheduler
-            </button>
+
           </div>
         </div>
       </div>
@@ -578,17 +503,17 @@ export const BillingPage: React.FC = () => {
           {error && <div className="alert alert-danger">{error}</div>}
 
           <div className="table-responsive">
-            <table className="table table-hover align-middle mb-0 table-borderless">
+            <table className="table table-hover align-middle mb-0 table-borderless invoice-table">
               <thead>
                 <tr>
-                  <th>{renderFilterDropdown('company', 'Company')}</th>
+                  <th className="col-company">{renderFilterDropdown('company', 'Company')}</th>
                   <th>Contact</th>
                   <th>{renderFilterDropdown('amount', 'Amount')}</th>
 
                   <th>{renderDateRangeDropdown('Date of this contract', 'contract')}</th>
                   <th>Billing interval</th>
-                  <th>{renderDateRangeDropdown('Notification date', 'notify')}</th>
-                  <th>Action</th>
+                  <th className="col-notify">{renderDateRangeDropdown('Notification date', 'notify')}</th>
+                  <th style={{ width: '100px' }} className="text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -599,14 +524,56 @@ export const BillingPage: React.FC = () => {
                 )}
                 {displayedRecords.map((r: any) => {
                   const fmt = formatToDDMMYYYY;
+                  const toDisplayDate = (val: any) => {
+                    if (!val && val !== 0) return '-';
+
+                    // Handle Firestore-like timestamp objects: { seconds, nanoseconds } or { _seconds, _nanoseconds }
+                    try {
+                      const seconds = val?.seconds ?? val?._seconds;
+                      const nanos = val?.nanoseconds ?? val?._nanoseconds;
+                      if (seconds !== undefined && seconds !== null) {
+                        const s = Number(seconds || 0);
+                        const ms = s * 1000 + Math.round((nanos ?? 0) / 1e6);
+                        return fmt(new Date(ms));
+                      }
+                    } catch (e) {
+                      // ignore and continue
+                    }
+
+                    // If it's a number, decide whether it's seconds or milliseconds
+                    if (typeof val === 'number') {
+                      // heuristic: timestamps in ms are > 1e12
+                      const ms = val > 1e12 ? val : val * 1000;
+                      return fmt(new Date(ms));
+                    }
+
+                    // If it's a string, try to parse YYYY-MM-DD or ISO and construct a local Date to avoid timezone shifts
+                    if (typeof val === 'string') {
+                      const m = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                      if (m) {
+                        const y = Number(m[1]);
+                        const mon = Number(m[2]);
+                        const d = Number(m[3]);
+                        // construct local date (year, monthIndex, day)
+                        return fmt(new Date(y, mon - 1, d));
+                      }
+                      // fallback to Date parsing
+                      const parsed = Date.parse(val);
+                      if (!isNaN(parsed)) return fmt(new Date(parsed));
+                    }
+
+                    // Fallback: let the formatter try its best
+                    return fmt(val);
+                  };
+
                   const contractDate = (r.contractStartDate || r.contractEndDate)
-                    ? `${r.contractStartDate ? fmt(r.contractStartDate) : '-'}${r.contractEndDate ? ` - ${fmt(r.contractEndDate)}` : ''}`
-                    : (r.contractDate ? fmt(r.contractDate) : '-');
+                    ? `${r.contractStartDate ? toDisplayDate(r.contractStartDate) : '-'}${r.contractEndDate ? ` - ${toDisplayDate(r.contractEndDate)}` : ''}`
+                    : (r.contractDate ? toDisplayDate(r.contractDate) : '-');
                   const billingIntervalText = r.billingIntervalMonths
                     ? `ทุกๆ ${r.billingIntervalMonths} เดือน`
                     : (r.billingCycle || '-');
                   const rawNotify = r.notificationDate ?? r.notificationDay ?? r.notificationTime ?? r.billingDate ?? '-';
-                  const notifyDate = rawNotify === '-' ? '-' : fmt(rawNotify);
+                  const notifyDate = rawNotify === '-' ? '-' : toDisplayDate(rawNotify);
 
                   // Determine Bangkok today and whether billingDate matches today
                   const now = new Date();
@@ -617,7 +584,7 @@ export const BillingPage: React.FC = () => {
 
                   return (
                     <tr key={r.id || `${r.companyId}-${r.billingDate}-${r.amount}`}>
-                      <td>{r.companyName || r.companyId || '-'}</td>
+                      <td className="col-company">{r.companyName || r.companyId || '-'}</td>
                       <td>{
                         (() => {
                           // prefer explicit fields on the record
@@ -653,19 +620,18 @@ export const BillingPage: React.FC = () => {
                       <td>{typeof r.amount === 'number' ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(r.amount) : (r.amount ?? '-')}</td>
                       <td>{contractDate}</td>
                       <td>{billingIntervalText}</td>
-                      <td>{notifyDate}</td>
+                      <td className="col-notify">{notifyDate}</td>
                       <td>
-                        <div className="d-flex align-items-center gap-2">
+                        <div className="d-flex align-items-center gap-2 justify-content-center">
                           {/* keep send-now button even if we don't show a "notify today" column */}
                           <button
                             type="button"
                             className="btn btn-sm btn-outline-success"
-                            title="กระดาษจรวด"
-                            aria-label="กระดาษจรวด"
-                            onClick={() => handleSendDirect(r.id)}
-                            disabled={!!sendingIds[r.id]}
+                            title="Share"
+                            aria-label="Share"
+                            onClick={() => handleSendNow(r.id)}
                           >
-                            {sendingIds[r.id] ? 'Sending...' : <FaPaperPlane />}
+                            <CiShare1 size={20} style={{ width: 20, height: 20, display: 'inline-block' ,color: '#6b7280 ' ,strokeWidth: 0.8  }} className="action-share" />
                           </button>
                           <button
                             type="button"
@@ -676,15 +642,16 @@ export const BillingPage: React.FC = () => {
                           >
                             <FiEdit2 className="action-pencil" />
                           </button>
-                          <button
-                            type="button"
-                            className="icon-btn delete"
-                            title="ถังขยะ"
-                            aria-label="ถังขยะ"
-                            onClick={() => handleDelete(r.id)}
-                          >
-                            <FiTrash2 />
-                          </button>
+                          <DeleteConfirmPopover onConfirm={() => handleDelete(r.id)}>
+                            <button
+                              type="button"
+                              className="icon-btn delete"
+                              title="ถังขยะ"
+                              aria-label="ถังขยะ"
+                            >
+                              <FiTrash2 />
+                            </button>
+                          </DeleteConfirmPopover>
                         </div>
                       </td>
                     </tr>

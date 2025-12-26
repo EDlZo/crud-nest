@@ -1,79 +1,81 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <style>
-        /* สไตล์หลัก */
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; }
-        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
-        
-        /* สไตล์ส่วนหัว */
-        .header { background-color: #007bff; color: #ffffff; padding: 20px; text-align: center; }
-        .header h1 { margin: 0; font-size: 24px; }
-        
-        /* สไตล์เนื้อหา */
-        .content { padding: 30px; color: #333333; line-height: 1.6; }
-        
-        /* สไตล์กล่องข้อมูลบิล */
-        .billing-info { background-color: #f9f9f9; border: 1px solid #eeeeee; padding: 20px; margin: 25px 0; border-radius: 6px; text-align: center; }
-        .amount { font-size: 36px; font-weight: bold; color: #dc3545; } /* **สีแดง** สำหรับจำนวนเงิน */
-        .due-date { font-size: 18px; font-weight: bold; color: #007bff; } /* **สีน้ำเงิน** สำหรับวันกำหนดชำระ */
-        .days-left { font-size: 16px; color: #6c757d; margin-top: 15px; } 
-        
-        /* สไตล์ปุ่ม */
-        .button { 
-            display: inline-block; 
-            background-color: #28a745; /* **สีเขียว** */
-            color: #ffffff !important; 
-            padding: 12px 25px; 
-            text-decoration: none; 
-            border-radius: 5px; 
-            font-weight: bold;
-        }
-        
-        /* สไตล์ส่วนท้าย */
-        .footer { background-color: #eeeeee; color: #6c757d; padding: 15px; text-align: center; font-size: 12px; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Billing Notification</title>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>แจ้งเตือนการเรียกเก็บเงิน</h1>
+<body style="margin:0;padding:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background-color:#f4f6f9;color:#333;line-height:1.6;">
+  <div style="padding:40px 0;">
+    <div style="max-width:680px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.05);border-top:6px solid #0d6efd;">
+      <div style="padding:40px 50px;">
+        <!-- Header -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:40px;">
+          <tr>
+            <td valign="top">
+              <h2 style="margin:0;color:#111827;font-size:24px;font-weight:700;">{{companyName}}</h2>
+            </td>
+            <td valign="top" style="text-align:right;">
+              <h1 style="margin:0;color:#e5e7eb;font-size:36px;letter-spacing:2px;font-weight:900;line-height:1;">INVOICE</h1>
+              <div style="margin-top:8px;">
+                <span style="color:#6b7280;font-size:13px;font-weight:500;display:block;">Date</span>
+                <span style="color:#111827;font-size:16px;font-weight:700;">{{billingDate}}</span>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Line Items Table (Bordered Box) -->
+        <div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:30px;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; table-layout:fixed;">
+  <thead>
+    <tr style="background-color:#f9fafb;">
+      <th style="padding:12px 20px;text-align:left;font-size:13px;font-weight:700;color:#111827;width:70%;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Item</th>
+      <th style="padding:12px 20px;text-align:right;font-size:13px;font-weight:700;color:#111827;width:30%;">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{items}}
+  </tbody>
+</table>
         </div>
+        <!-- Totals Section -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:40px;">
+          <tr>
+            <td width="50%"></td>
+            <td width="50%" align="right">
+              <div style="background-color:#f9fafb;padding:24px;border-radius:8px;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="padding-bottom:10px;color:#4b5563;font-size:14px;">Subtotal</td>
+                    <td style="padding-bottom:10px;text-align:right;color:#111827;font-weight:600;">{{amountDue}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-bottom:15px;border-bottom:1px solid #e5e7eb;color:#4b5563;font-size:14px;">Tax</td>
+                    <td style="padding-bottom:15px;border-bottom:1px solid #e5e7eb;text-align:right;color:#111827;font-weight:600;">฿0.00</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-top:15px;color:#111827;font-size:16px;font-weight:700;">Total</td>
+                    <td style="padding-top:15px;text-align:right;color:#0d6efd;font-size:18px;font-weight:700;">{{amountDue}}</td>
+                  </tr>
+                </table>
+              </div>
+            </td>
+          </tr>
+        </table>
 
-        <div class="content">
-            <p>เรียน ลูกค้าผู้มีอุปการคุณ,</p>
-
-            <p>อีเมลนี้เพื่อแจ้งว่าการเรียกเก็บเงินจาก **Company A จำกัด** ใกล้ถึงกำหนดชำระแล้ว โปรดดำเนินการตรวจสอบและชำระเงินตามรายละเอียดด้านล่าง:</p>
-
-            <div class="billing-info">
-                <p><strong>วันครบกำหนดชำระ:</strong></p>
-                <p class="due-date">20 ธันวาคม 2568</p>
-                
-                <p><strong>จำนวนเงินที่ต้องชำระ:</strong></p>
-                <p class="amount">1,590.00 บาท</p>
-                
-                <p class="days-left">
-                    (เหลือเวลาอีก <strong>9 วัน</strong> ก่อนถึงกำหนดชำระ)
-                </p>
-            </div>
-
-            <p>เพื่อความต่อเนื่องในการใช้งานบริการ กรุณาชำระเงินภายในกำหนด</p>
-
-            <div class="call-to-action">
-                <a href="https://payment.companya.com/invoice12345" class="button">
-                    คลิกที่นี่เพื่อชำระเงิน
-                </a>
-            </div>
-            
-            <p style="margin-top: 30px;">ขอบคุณที่ใช้บริการของเรา</p>
-
-            <p>ขอแสดงความนับถือ,<br>
-            ทีมงานบัญชี Company A จำกัด</p>
+        <!-- Notification / Buttons -->
+        <div style="text-align:center;margin-top:40px;border-top:1px solid #f3f4f6;padding-top:30px;">
+            <p style="color:#6b7280;font-size:14px;margin-bottom:20px;">
+            Reminder: Payment for this invoice is coming up in <strong>{{daysUntilBilling}} days</strong>.
+          </p>
         </div>
+      </div>
 
-        <div class="footer">
-            <p>อีเมลนี้ถูกสร้างขึ้นโดยอัตโนมัติ | Company A จำกัด</p>
-        </div>
+      <!-- Footer -->
+      <div style="background-color:#ffffff;padding:20px;text-align:center;border-top:1px solid #f3f4f6;">
+      </div>
     </div>
+  </div>
 </body>
 </html>

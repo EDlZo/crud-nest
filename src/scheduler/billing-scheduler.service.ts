@@ -175,8 +175,32 @@ export class BillingSchedulerService {
 
           this.logger.log(`Record ${recordId} matches notify condition (daysUntil=${daysUntil}). Sending email...`);
 
-          if (!dryRun) {
+              if (!dryRun) {
             try {
+              // Build items for this record (optional)
+              const safeNum = (v: any) => {
+                const n = Number(v);
+                return Number.isFinite(n) ? n : 0;
+              };
+              const itemsForEmail: Array<any> = [];
+              if (Array.isArray(record.services) && record.services.length > 0) {
+                record.services.forEach((s: any) => {
+                  const unit = safeNum(s.amount ?? s.price ?? s.unitPrice ?? s.cost ?? s.value);
+                  const qty = safeNum(s.qty ?? s.quantity) || 1;
+                  const total = safeNum(s.total ?? unit * qty);
+                  itemsForEmail.push({ code: s.code || s.id || null, description: s.name || s.description || 'Service', qty, unitPrice: unit, total });
+                });
+              } else if (Array.isArray(record.items) && record.items.length > 0) {
+                record.items.forEach((it: any) => {
+                  const unit = safeNum(it.unitPrice ?? it.price ?? it.amount ?? it.cost);
+                  const qty = safeNum(it.qty ?? it.quantity) || 1;
+                  const total = safeNum(it.total ?? unit * qty);
+                  itemsForEmail.push({ code: it.code || it.id || null, description: it.description || it.name || 'Item', qty, unitPrice: unit, total });
+                });
+              } else {
+                itemsForEmail.push({ code: null, description: record.description || record.note || 'Invoice Amount', qty: 1, unitPrice: amountDue, total: amountDue });
+              }
+
               const sent = await this.emailService.sendBillingReminder(
                 allRecipients,
                 companyName,
@@ -186,6 +210,7 @@ export class BillingSchedulerService {
                 daysUntil,
                 amountDue,
                 settings.emailTemplate,
+                itemsForEmail,
                 doc.id,
               );
 
