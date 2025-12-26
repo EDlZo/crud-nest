@@ -574,6 +574,13 @@ const CalendarPage: React.FC = () => {
     });
   }, [events, billingEvents]);
 
+  // Debug: log events being passed to the calendar so we can inspect in the browser console
+  useEffect(() => {
+    try {
+      console.debug('CalendarPage: toRBCEvents count', toRBCEvents.length, toRBCEvents.slice(0, 6));
+    } catch (e) { /* ignore */ }
+  }, [toRBCEvents]);
+
   // Helper to format times: omit ":00" when minutes are zero (e.g. "12 AM" instead of "12:00 AM")
   const formatTimeSmart = (date: Date) => {
     try {
@@ -1037,12 +1044,18 @@ const CalendarPage: React.FC = () => {
               if (event.source === 'billing') backgroundColor = '#f4b548ff'; // yellow for billing
               if (event.source === 'activity') backgroundColor = '#10b981'; // green for activities
 
-              // If it's today's event, maybe a slightly different shade?
-
+              // Ensure event boxes have a visible min height and proper layout
               return {
                 style: {
                   backgroundColor,
                   border: '1px solid white',
+                  color: '#ffffff',
+                  display: 'block',
+                  minHeight: '26px',
+                  padding: '6px 8px',
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
                 }
               };
             }}
