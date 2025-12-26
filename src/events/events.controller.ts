@@ -11,6 +11,7 @@ export class EventsController {
   @UseGuards(JwtAuthGuard)
   @Post()
   async create(@Req() req: any, @Body() dto: CreateEventDto) {
+    console.debug('EventsController.create called', { user: req.user, dto });
     return this.eventsService.create(dto, req.user || { userId: 'anonymous' });
   }
 

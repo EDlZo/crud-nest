@@ -19,7 +19,9 @@ export class EventsService {
       createdAt: timestamp,
       updatedAt: timestamp,
     };
+    console.debug('EventsService.create payload before cleanup', payload);
     Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
+    console.debug('EventsService.create payload after cleanup', payload);
     const ref = await this.collection.add(payload);
     return { id: ref.id, ...(payload as any) } as Event;
   }
