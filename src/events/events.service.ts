@@ -85,4 +85,22 @@ export class EventsService {
     await batch.commit();
     return { ok: true };
   }
+
+  // Temporary raw write used for debugging: write the provided payload directly to Firestore
+  async rawCreate(payload: any) {
+    try {
+      const timestamp = new Date().toISOString();
+      const p = { ...payload };
+      // add timestamps if missing
+      if (!p.createdAt) p.createdAt = timestamp;
+      p.updatedAt = timestamp;
+      Object.keys(p).forEach((k) => p[k] === undefined && delete p[k]);
+      console.debug('EventsService.rawCreate writing payload', p);
+      const ref = await this.collection.add(p);
+      return { id: ref.id, ...(p as any) } as Event;
+    } catch (err) {
+      console.error('EventsService.rawCreate error', err);
+      throw err;
+    }
+  }
 }

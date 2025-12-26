@@ -184,7 +184,7 @@ const CalendarPage: React.FC = () => {
     const load = async () => {
       try {
         if (token) {
-          const res = await fetch('/events', { headers: { Authorization: `Bearer ${token}` } });
+          const res = await fetch(`${API_BASE_URL}/events`, { headers: { Authorization: `Bearer ${token}` } });
           if (res.ok) {
             const data = await res.json();
             setEvents(Array.isArray(data) ? data : []);
@@ -519,7 +519,7 @@ const CalendarPage: React.FC = () => {
 
     if (!token) return;
     try {
-      await fetch('/events/bulk', {
+      await fetch(`${API_BASE_URL}/events/bulk`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(next),
@@ -685,7 +685,7 @@ const CalendarPage: React.FC = () => {
       } else {
         try {
           if (exists) {
-            const res = await fetch(`/events/${ev.id}`, {
+            const res = await fetch(`${API_BASE_URL}/events/${ev.id}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
               body: JSON.stringify(ev),
@@ -700,7 +700,7 @@ const CalendarPage: React.FC = () => {
               persist(next);
             }
           } else {
-            const res = await fetch('/events', {
+            const res = await fetch(`${API_BASE_URL}/events`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
               body: JSON.stringify(ev),
@@ -741,7 +741,7 @@ const CalendarPage: React.FC = () => {
         persist(next);
       } else {
         try {
-          const res = await fetch(`/events/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+          const res = await fetch(`${API_BASE_URL}/events/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
           if (res.ok) {
             const next = events.filter(e => e.id !== id);
             persist(next);
@@ -874,7 +874,7 @@ const CalendarPage: React.FC = () => {
 
       if (token) {
         try {
-          await fetch(`/events/${event.id}`, {
+          await fetch(`${API_BASE_URL}/events/${event.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({

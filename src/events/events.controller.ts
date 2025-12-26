@@ -44,4 +44,11 @@ export class EventsController {
   async bulkReplace(@Req() req: any, @Body() items: any[]) {
     return this.eventsService.bulkReplace(items || [], req.user || { userId: 'anonymous' });
   }
+
+  // Temporary debug endpoint: write raw body directly into Firestore (bypasses DTO/Validation)
+  @Post('debug-write')
+  async debugWrite(@Body() body: any) {
+    console.debug('EventsController.debugWrite called', { body });
+    return this.eventsService.rawCreate(body || {});
+  }
 }
