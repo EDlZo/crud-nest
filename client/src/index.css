@@ -21,15 +21,17 @@ body {
   color: #fff;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 .btn-primary:hover {
   background-color: #0b5ed7;
   border-color: #0b5ed7;
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(54, 99, 160, 0.3);
+  box-shadow: none;
 }
+
 .btn-primary:active {
   transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(54, 99, 160, 0.2);
+  box-shadow: none;
 }
 
 .btn-info {
@@ -41,15 +43,17 @@ body {
   --bs-btn-active-border-color: #5d5d5d;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 .btn-info:hover {
   background-color: #5d5d5d;
   border-color: #5d5d5d;
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(174, 174, 174, 0.3);
+  box-shadow: none;
 }
+
 .btn-info:active {
   transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(174, 174, 174, 0.2);
+  box-shadow: none;
 }
 
 .btn-info:disabled,
@@ -81,7 +85,8 @@ body {
 
 /* Action pencil icons (edit) — subtle gray */
 .action-pencil {
-  color: #6b7280; /* gray-500 */
+  color: #6b7280;
+  /* gray-500 */
 }
 
 /* Stronger override when parent buttons set a different color (table action buttons) */
@@ -90,4 +95,3 @@ body {
 .btn .action-pencil {
   color: #6b7280 !important;
 }
-

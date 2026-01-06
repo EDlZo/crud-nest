@@ -87,7 +87,7 @@ const CustomToolbar: React.FC<any & { onAdd?: () => void }> = ({ label, onNaviga
           onClick={() => onAdd && onAdd()}
           aria-label="Add event"
         >
-          
+
           <span>+ Add Event</span>
         </button>
       </div>
@@ -214,6 +214,8 @@ const CalendarPage: React.FC = () => {
   }, [token]);
 
   // load billing records as calendar-only events (don't persist with user events)
+  // load billing records as calendar-only events (don't persist with user events)
+
   useEffect(() => {
     let mounted = true;
     const loadBilling = async () => {
@@ -222,41 +224,231 @@ const CalendarPage: React.FC = () => {
         if (!res.ok) return;
         const data = await res.json();
         if (!Array.isArray(data)) return;
-        const mapped = data.map((r: any) => {
-          // billingDate may be ISO or just YYYY-MM-DD
+        const mapped = ([] as any[]);
+        // helper to add months to a YYYY-MM-DD string (preserves local date semantics)
+        const addMonthsToDateStr = (dateStr: string, months: number) => {
+          try {
+            const [yy, mm, dd] = dateStr.split('-').map(Number);
+            const d = new Date(yy, (mm || 1) - 1, dd || 1);
+            d.setMonth(d.getMonth() + months);
+            const y2 = d.getFullYear();
+            const m2 = String(d.getMonth() + 1).padStart(2, '0');
+            const day2 = String(d.getDate()).padStart(2, '0');
+            return `${y2}-${m2}-${day2}`;
+          } catch (err) { return dateStr; }
+        };
+
+        // helper: convert YYYY-MM-DD to ms at local midnight
+        const ymdToMs = (iso: string) => {
+          try {
+            const [y, m, d] = iso.split('-').map(Number);
+            return new Date(y, m - 1, d).getTime();
+          } catch (err) { return NaN; }
+        };
+
+        // helper: add hours to a date string `YYYY-MM-DDT HH:mm:SS` time part or produce an end time string
+        const addHoursToIsoDateStr = (isoDateStr: string, hours: number) => {
+          try {
+            // isoDateStr expected like 'YYYY-MM-DDTHH:mm:SS' or 'YYYY-MM-DDTHH:mm'
+            const parts = String(isoDateStr).split('T');
+            if (parts.length < 2) return isoDateStr;
+            const datePart = parts[0];
+            const timePart = parts[1].split('Z')[0].split('+')[0].split('-')[0];
+            const [hh = '0', mm = '0', ss = '0'] = timePart.split(':');
+            const d = new Date(Number(datePart.split('-')[0]), Number(datePart.split('-')[1]) - 1, Number(datePart.split('-')[2]), Number(hh), Number(mm), Number(ss));
+            d.setHours(d.getHours() + hours);
+            const yyyy = d.getFullYear();
+            const mmn = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const h = String(d.getHours()).padStart(2, '0');
+            const mi = String(d.getMinutes()).padStart(2, '0');
+            const s = String(d.getSeconds()).padStart(2, '0');
+            return `${yyyy}-${mmn}-${dd}T${h}:${mi}:${s}`;
+          } catch (err) { return isoDateStr; }
+        };
+
+        // limit window: show occurrences from 1 month in the past up to 12 months in the future
+        const now = new Date();
+        const windowStart = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        const windowEnd = new Date(now.getFullYear(), now.getMonth() + 12, now.getDate());
+        const isWithinWindow = (iso: string) => {
+          try {
+            const [y, m, d] = iso.split('-').map(Number);
+            const dt = new Date(y, m - 1, d);
+            return dt >= windowStart && dt <= windowEnd;
+          } catch (err) { return false; }
+        };
+
+        // fetch notification settings once to use as fallback time for billing events
+        let globalNotificationTime: string | null = null;
+        try {
+          const nsInit: RequestInit = {};
+          if (token) nsInit.headers = { Authorization: `Bearer ${token}` } as any;
+          const nsRes = await fetch(`${API_BASE_URL}/notification-settings`, nsInit);
+          if (nsRes && nsRes.ok) {
+            const ns = await nsRes.json().catch(() => ({}));
+            if (ns && ns.notificationTime) globalNotificationTime = String(ns.notificationTime).trim();
+          }
+        } catch (err) { /* ignore */ }
+
+        for (const r of data) {
           const raw = r.billingDate ?? r.notificationDate ?? r.nextBillingDate ?? null;
           const dateIso = raw ? String(raw).split('T')[0] : null;
-          if (!dateIso) return null;
-          // determine time: prefer time in billingDate if present, else notificationTime, else default 09:00
+          if (!dateIso) continue;
+
+          // determine time: prefer time in billingDate if present, else notificationTime, else contractStartDate time, else default 09:00
           let timePart = '09:00:00';
           try {
-            const rawStr = String(raw);
-            if (rawStr.includes('T')) {
-              const t = rawStr.split('T')[1];
-              timePart = (t.split('Z')[0].split('.')[0]) || '09:00:00';
-            } else if (r.notificationTime) {
-              const nt = String(r.notificationTime).trim();
-              // if format HH:mm or HH:mm:ss
-              timePart = nt.length === 5 ? `${nt}:00` : nt;
+            const rawStr = raw ? String(raw) : '';
+            // helper to extract time part from an ISO-like string (returns HH:mm:SS)
+            const extractTimeFromIso = (isoLike: string | null) => {
+              try {
+                if (!isoLike) return null;
+                const s = String(isoLike);
+                if (!s.includes('T')) return null;
+                const t = s.split('T')[1];
+                const tp = (t.split('Z')[0].split('.')[0]).split('+')[0].split('-')[0];
+                const parts = tp.split(':');
+                if (parts.length === 2) return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:00`;
+                if (parts.length >= 3) return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:${parts[2].padStart(2, '0')}`;
+                return null;
+              } catch (e) { return null; }
+            };
+
+            // 1) billingDate/raw with time
+            const fromRaw = extractTimeFromIso(rawStr);
+            if (fromRaw) {
+              timePart = fromRaw;
+            } else {
+              // Prefer per-record notificationTime, otherwise fall back to fetched global notification settings
+              const candidate = (r && (r.notificationTime || globalNotificationTime)) || null;
+              if (candidate) {
+                const nt = String(candidate).trim();
+                if (/^\d{1,2}:\d{2}$/.test(nt)) timePart = `${nt}:00`;
+                else if (/^\d{1,2}:\d{2}:\d{2}$/.test(nt)) timePart = nt;
+                else {
+                  // fallback: try to parse notificationTime as time-only
+                  try {
+                    const dt = new Date(`1970-01-01T${nt}`);
+                    if (!isNaN(dt.getTime())) {
+                      const h = String(dt.getHours()).padStart(2, '0');
+                      const m = String(dt.getMinutes()).padStart(2, '0');
+                      const s = String(dt.getSeconds()).padStart(2, '0');
+                      timePart = `${h}:${m}:${s}`;
+                    }
+                  } catch (e) { /* ignore */ }
+                }
+              } else {
+                // 3) contractStartDate may include time
+                const fromContract = extractTimeFromIso(String(r.contractStartDate || ''));
+                if (fromContract) timePart = fromContract;
+              }
             }
           } catch (e) {
-            // fallback
             timePart = '09:00:00';
           }
-          const startIso = `${dateIso}T${timePart}`;
-          return {
-            id: `billing-${r.id || (r.companyId ? `${r.companyId}-${dateIso}` : Math.random().toString(36).slice(2))}`,
-            title: r.companyName ? `Invoice: ${r.companyName}` : r.title || 'Invoice',
-            start: startIso,
-            end: null,
-            date: dateIso,
-            source: 'billing',
-            raw: r,
+
+          const parseIntervalMonths = (val: any) => {
+            try {
+              if (val === undefined || val === null) return 0;
+              if (typeof val === 'number') return Math.abs(Math.floor(val)) || 0;
+              const s = String(val).trim();
+              const n = Number(s);
+              if (!Number.isNaN(n)) return Math.abs(Math.floor(n));
+              const m = s.match(/-?\d+/);
+              if (m) return Math.abs(parseInt(m[0], 10));
+              return 0;
+            } catch (e) { return 0; }
           };
-        }).filter(Boolean) as any[];
+
+          const intervalMonths = parseIntervalMonths(r.billingIntervalMonths ?? r.billingInterval ?? 0);
+          if (intervalMonths > 0) {
+            // Prefer billing/nextBilling date as the anchor for recurrence (falls back to contractStartDate)
+            const anchorIso = dateIso || (r.contractStartDate ? String(r.contractStartDate).split('T')[0] : dateIso);
+            const contractEndIso = r.contractEndDate ? String(r.contractEndDate).split('T')[0] : null;
+            // max iterations to avoid infinite loops on malformed data
+            for (let i = 0; i < 240; i++) {
+              const monthsToAdd = i * intervalMonths;
+              const occDate = addMonthsToDateStr(anchorIso, monthsToAdd);
+              const occMs = ymdToMs(occDate);
+              // if contractEnd present and occurrence is after it, stop
+              if (contractEndIso && !Number.isNaN(ymdToMs(contractEndIso)) && occMs > ymdToMs(contractEndIso)) break;
+              // if occurrence is beyond our display window, break early (subsequent occurrences will be even later)
+              if (!Number.isNaN(occMs) && occMs > windowEnd.getTime()) break;
+              if (!isWithinWindow(occDate)) continue;
+              const startIso = `${occDate}T${timePart}`;
+              const endIso = addHoursToIsoDateStr(startIso, 1);
+              mapped.push({
+                id: `billing-${r.id || (r.companyId ? `${r.companyId}-${occDate}` : Math.random().toString(36).slice(2))}-occ-${i}`,
+                title: r.companyName ? `Invoice: ${r.companyName}` : r.title || 'Invoice',
+                start: parseLocalISO(startIso),
+                end: parseLocalISO(endIso),
+                date: occDate,
+                source: 'billing',
+                raw: r,
+              });
+            }
+          } else {
+            // If contract date range exists, preserve times if present, otherwise use resolved timePart
+            if (r.contractStartDate && r.contractEndDate) {
+              const cs = String(r.contractStartDate);
+              const ce = String(r.contractEndDate);
+              const startIso = cs.includes('T') ? (() => {
+                const parts = cs.split('T');
+                const tp = (parts[1].split('Z')[0].split('.')[0]).split('+')[0].split('-')[0];
+                const p = tp.split(':');
+                const time = p.length === 2 ? `${p[0].padStart(2, '0')}:${p[1].padStart(2, '0')}:00` : (p.length >= 3 ? `${p[0].padStart(2, '0')}:${p[1].padStart(2, '0')}:${p[2].padStart(2, '0')}` : timePart);
+                return `${parts[0]}T${time}`;
+              })() : `${String(r.contractStartDate).split('T')[0]}T${timePart}`;
+              // set end: if contractEndDate has time, preserve it; otherwise set end-of-day
+              const endIso = ce.includes('T') ? (() => {
+                const parts = ce.split('T');
+                const tp = (parts[1].split('Z')[0].split('.')[0]).split('+')[0].split('-')[0];
+                const p = tp.split(':');
+                const time = p.length === 2 ? `${p[0].padStart(2, '0')}:${p[1].padStart(2, '0')}:00` : (p.length >= 3 ? `${p[0].padStart(2, '0')}:${p[1].padStart(2, '0')}:${p[2].padStart(2, '0')}` : '23:59:59');
+                return `${parts[0]}T${time}`;
+              })() : `${String(r.contractEndDate).split('T')[0]}T23:59:59`;
+              mapped.push({
+                id: `billing-${r.id || (r.companyId ? `${r.companyId}-${dateIso}` : Math.random().toString(36).slice(2))}`,
+                title: r.companyName ? `Invoice: ${r.companyName}` : r.title || 'Invoice',
+                start: parseLocalISO(startIso),
+                end: parseLocalISO(endIso),
+                date: dateIso,
+                source: 'billing',
+                raw: r,
+              });
+            } else {
+              const startIso = `${dateIso}T${timePart}`;
+              const endIso = addHoursToIsoDateStr(startIso, 1);
+              mapped.push({
+                id: `billing-${r.id || (r.companyId ? `${r.companyId}-${dateIso}` : Math.random().toString(36).slice(2))}`,
+                title: r.companyName ? `Invoice: ${r.companyName}` : r.title || 'Invoice',
+                start: parseLocalISO(startIso),
+                end: parseLocalISO(endIso),
+                date: dateIso,
+                source: 'billing',
+                raw: r,
+              });
+            }
+          }
+        }
+        // Deduplicate billing occurrences by raw id + start ISO to avoid duplicate notifications
+        const deduped: any[] = [];
+        const seen = new Set<string>();
+        for (const m of mapped) {
+          try {
+            const rid = String(m.raw?.id || m.raw?._id || m.raw?.companyId || m.id || '');
+            const key = `${rid}::${String(m.start)}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            deduped.push(m);
+          } catch (err) { deduped.push(m); }
+        }
+
         if (mounted) {
-          setBillingEvents(mapped as any[]);
+          setBillingEvents(deduped as any[]);
           console.debug('CalendarPage loaded billing events', mapped.map((m: any) => ({ id: m?.id, start: m?.start, raw: m?.raw })));
+          console.debug('CalendarPage: deduped sample', (deduped || []).slice(0, 6).map((m: any) => ({ id: m.id, start: m.start })), 'globalNotificationTime', globalNotificationTime);
           // Do not dispatch any local notification here based on billing fetch.
           // Notification dispatch is handled by the client-side scheduler (useEffect)
           // which will fire notifications at the correct time. This prevents
@@ -652,7 +844,11 @@ const CalendarPage: React.FC = () => {
 
     // if this is a billing event, navigate to billing preview
     if (ev.source === 'billing' || (ev.id && ev.id.toString().startsWith('billing-'))) {
-      const recId = (ev.id && ev.id.toString().replace(/^billing-/, '')) || ev.raw?.id;
+      // Prefer the original raw record id when present (covers recurring and generated ids).
+      // Fallback: strip the `billing-` prefix and any generated occurrence suffix like `-occ-<n>`.
+      const rawId = ev.raw && (ev.raw.id || ev.raw._id);
+      const fromId = ev.id ? String(ev.id).replace(/^billing-/, '').replace(/-occ-\d+$/i, '') : null;
+      const recId = rawId || fromId || null;
       if (recId) {
         navigate(`/billing/preview/${recId}`);
         return;
@@ -793,19 +989,35 @@ const CalendarPage: React.FC = () => {
           const offsetMin = reminderOffsets[reminderKey] || 0;
           const notifyAt = new Date(start.getTime() - offsetMin * 60000);
           const msUntil = notifyAt.getTime() - now.getTime();
-          const dispatchedKey = `local_notif_dispatched_${id}_${offsetMin}`;
+          // Build a stable notification key: prefer raw record id (billing) or event id, include full start ISO
+          const occKey = (() => {
+            try {
+              const startIsoFull = formatLocalISO(start);
+              if (ev.raw && (ev.raw.id || ev.raw._id)) {
+                const rid = ev.raw.id || ev.raw._id;
+                return `raw_${rid}::${startIsoFull}`;
+              }
+              if (ev.id) return `evt_${String(ev.id)}::${startIsoFull}`;
+              return `gen_${startIsoFull}`;
+            } catch (e) { return `gen_${format(start, 'yyyy-MM-dd')}`; }
+          })();
+          const dispatchedKey = `local_notif_dispatched_${occKey}_${offsetMin}`;
           const alreadyDispatched = !!localStorage.getItem(dispatchedKey);
-          console.debug('scheduler: event check', { id, offsetMin, start: start.toString(), notifyAt: notifyAt.toString(), msUntil, dispatched: alreadyDispatched });
+          console.debug('scheduler: event check', { id, offsetMin, start: start.toString(), notifyAt: notifyAt.toString(), msUntil, dispatched: alreadyDispatched, occKey });
 
           const doDispatch = () => {
             try {
               const payload = {
-                id: `local-${id}-${offsetMin}`,
+                id: `local-${occKey}-${offsetMin}`,
                 title: ev.title || 'Event',
-                body: `${format(start, 'HH:mm')} ${ev.title || ''}`.trim(),
+                // Don't prefix the body with the time (Topbar already shows date/time above).
+                // Prefer a description from the raw payload when available.
+                body: (ev.raw && (ev.raw.description || ev.raw.note)) ? (ev.raw.description || ev.raw.note) : '',
                 createdAt: new Date().toISOString(),
                 read: false,
                 raw: ev.raw || null,
+                // include source so Topbar can route correctly (e.g., 'activity' | 'billing' | 'event')
+                source: ev.source || (ev.raw && ev.raw.type ? 'activity' : undefined),
               };
               console.debug('Client scheduler dispatching localNotification', { id, offsetMin, payload });
               window.dispatchEvent(new CustomEvent('localNotification', { detail: payload }));
@@ -816,32 +1028,35 @@ const CalendarPage: React.FC = () => {
           // if already dispatched, skip
           if (localStorage.getItem(dispatchedKey)) continue;
 
-          // avoid scheduling duplicate timers for same id+offset
-          const timerKey = `${id}_${offsetMin}`;
+          // avoid scheduling duplicate timers for same dispatchedKey
+          const timerKey = dispatchedKey;
           if (notifTimersRef.current[timerKey]) {
-            // already scheduled
             console.debug('scheduler: timer already exists, skipping', { timerKey });
             continue;
           }
 
           if (msUntil <= 0) {
-            // if passed more than 5 minutes ago, do not notify, just mark as dispatched
-            if (msUntil < -5 * 60000) {
-              console.debug('scheduler: notify time passed significantly, skipping dispatch', { id, offsetMin, msUntil });
-              try { localStorage.setItem(dispatchedKey, '1'); } catch (e) { /* ignore */ }
-              continue;
-            }
-            console.debug('scheduler: notify time passed or immediate, dispatching now', { id, offsetMin, msUntil });
-            doDispatch();
-          } else {
-            const tid = window.setTimeout(() => {
-              doDispatch();
-              // clear timer record after execution
-              try { delete notifTimersRef.current[timerKey]; } catch (e) { /* ignore */ }
-            }, msUntil) as unknown as number;
-            notifTimersRef.current[timerKey] = tid;
-            console.debug('Scheduled notification', { id, msUntil, offsetMin, timerKey });
+            // If notification time already passed, dispatch immediately (but only once) and mark dispatched
+            console.debug('scheduler: notify time already passed, dispatching immediately', { id, offsetMin, msUntil });
+            try {
+              // dispatch asynchronously
+              setTimeout(() => {
+                doDispatch();
+                try { delete notifTimersRef.current[timerKey]; } catch (e) { /* ignore */ }
+              }, 0);
+              // record a dummy timer so other iterations won't schedule duplicates
+              notifTimersRef.current[timerKey] = -1 as unknown as number;
+            } catch (e) { /* ignore */ }
+            continue;
           }
+
+          // schedule for future
+          const tid = window.setTimeout(() => {
+            doDispatch();
+            try { delete notifTimersRef.current[timerKey]; } catch (e) { /* ignore */ }
+          }, msUntil) as unknown as number;
+          notifTimersRef.current[timerKey] = tid;
+          console.debug('Scheduled notification', { id, msUntil, offsetMin, timerKey });
         } catch (err) { /* per-event ignore */ }
       }
     };
@@ -1025,7 +1240,7 @@ const CalendarPage: React.FC = () => {
                 <CustomToolbar {...props} onAdd={handleAddClick} />
               ),
             }}
-              formats={calendarFormats}
+            formats={calendarFormats}
             dayPropGetter={(date: Date) => {
               if (selectedDate && isSameDay(date, selectedDate)) {
                 return {

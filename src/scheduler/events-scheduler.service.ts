@@ -58,14 +58,10 @@ export class EventsSchedulerService {
           const title = ev.title || 'Upcoming event';
           const body = `Event "${title}" starts in ${minutesUntil} minute(s) at ${startIso}`;
 
-          // send email to configured recipients (best-effort)
-          try {
-            if (recipients && recipients.length > 0) {
-              await this.emailService.sendEmail(recipients, `Reminder: ${title}`, `<p>${body}</p>`);
-            }
-          } catch (err) {
-            this.logger.error('Failed to send reminder email', err);
-          }
+          // Email sending for event reminders is intentionally disabled.
+          // Events will create persistent notifications in Firestore so clients can show them,
+          // but we don't send emails for event reminders to avoid spamming.
+          this.logger.debug('Event email sending skipped by configuration (email disabled for events)');
 
           // create notifications records for recipients
           try {

@@ -6,6 +6,8 @@ import { CiShare1 } from 'react-icons/ci';
 import { API_BASE_URL } from '../config';
 import formatToDDMMYYYY from '../utils/formatDate';
 import DeleteConfirmPopover from '../components/DeleteConfirmPopover';
+import { BillingCreatePage } from './BillingCreatePage';
+import DataTable from '../components/DataTable';
 // read token directly to avoid circular import/runtime issues
 
 export const BillingPage: React.FC = () => {
@@ -23,6 +25,8 @@ export const BillingPage: React.FC = () => {
   const [notifyDateFrom, setNotifyDateFrom] = useState<string>('');
   const [notifyDateTo, setNotifyDateTo] = useState<string>('');
   const [sendingIds, setSendingIds] = useState<Record<string, boolean>>({});
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [modalEditId, setModalEditId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const dropdownRef = React.useRef<HTMLDivElement | null>(null);
   const headerRef = React.useRef<HTMLDivElement | null>(null);
@@ -328,8 +332,15 @@ export const BillingPage: React.FC = () => {
       const amount = String(r.amount || '').toLowerCase();
       const status = String(r.status || '').toLowerCase();
 
+      // Resolve contact name for searching
+      let cName = '';
+      if (r.contactId && contactsById[r.contactId]) {
+        const c = contactsById[r.contactId];
+        cName = `${(c.firstName || '').trim()} ${(c.lastName || '').trim()}`.trim().toLowerCase();
+      }
+
       // global search
-      if (s && !(name.includes(s) || amount.includes(s) || status.includes(s))) return false;
+      if (s && !(name.includes(s) || amount.includes(s) || status.includes(s) || cName.includes(s))) return false;
 
       // column filters
       if (filters.company && !name.includes(String(filters.company).toLowerCase())) return false;
@@ -364,7 +375,119 @@ export const BillingPage: React.FC = () => {
 
       return true;
     });
-  }, [records, search, filters, dateFrom, dateTo, contractDateFrom, contractDateTo, notifyDateFrom, notifyDateTo]);
+  }, [records, search, filters, dateFrom, dateTo, contractDateFrom, contractDateTo, notifyDateFrom, notifyDateTo, contactsById]);
+
+  const columns = useMemo<import('@tanstack/react-table').ColumnDef<any, any>[]>(() => [
+    {
+      id: 'company',
+      header: 'Company',
+      accessorFn: (r) => r.companyName || r.companyId || '-',
+      cell: ({ getValue }) => <span>{getValue() as string}</span>,
+      enableColumnFilter: true,
+    },
+    {
+      id: 'contact',
+      header: 'Contact',
+      accessorFn: (r) => {
+        const nameFromCombined = r.contactName;
+        const first = r.contactFirstName || r.contactFirst || r.firstName;
+        const last = r.contactLastName || r.contactLast || r.lastName;
+        if (nameFromCombined) return nameFromCombined;
+        if (first || last) return `${(first || '').trim()} ${(last || '').trim()}`.trim();
+        const nested = r.contact || r.contactObj || null;
+        if (nested) return nested.name || nested.fullName || nested.displayName || nested.email || '-';
+        if (r.contactId && contactsById[r.contactId]) {
+          const c = contactsById[r.contactId];
+          return `${(c.firstName || '').trim()} ${(c.lastName || '').trim()}`.trim() || c.email || r.contactId;
+        }
+        return r.contactId || '-';
+      },
+      enableColumnFilter: true,
+    },
+    {
+      id: 'amount',
+      header: 'Amount',
+      accessorFn: (r) => (typeof r.amount === 'number' ? r.amount : (r.amount ?? '-')),
+      cell: ({ getValue }) => {
+        const v = getValue();
+        if (typeof v === 'number') return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(v);
+        return <span>{String(v ?? '-')}</span>;
+      },
+      enableColumnFilter: true,
+    },
+    {
+      id: 'contract',
+      header: 'Date of this contract',
+      accessorFn: (r) => r.contractStartDate || r.contractDate || '',
+      cell: ({ row }) => {
+        const r = row.original as any;
+        const toDisplayDate = (val: any) => {
+          if (!val && val !== 0) return '-';
+          try {
+            const seconds = val?.seconds ?? val?._seconds;
+            const nanos = val?.nanoseconds ?? val?._nanoseconds;
+            if (seconds !== undefined && seconds !== null) {
+              const s = Number(seconds || 0);
+              const ms = s * 1000 + Math.round((nanos ?? 0) / 1e6);
+              return formatToDDMMYYYY(new Date(ms));
+            }
+          } catch (e) { }
+          if (typeof val === 'number') {
+            const ms = val > 1e12 ? val : val * 1000;
+            return formatToDDMMYYYY(new Date(ms));
+          }
+          if (typeof val === 'string') {
+            const m = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (m) return formatToDDMMYYYY(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+            const parsed = Date.parse(val);
+            if (!isNaN(parsed)) return formatToDDMMYYYY(new Date(parsed));
+          }
+          return formatToDDMMYYYY(val);
+        };
+        const start = r.contractStartDate ? toDisplayDate(r.contractStartDate) : '-';
+        const end = r.contractEndDate ? toDisplayDate(r.contractEndDate) : '';
+        return <span>{start}{end ? ` - ${end}` : ''}</span>;
+      },
+    },
+    {
+      id: 'interval',
+      header: 'Billing interval (Months)',
+      accessorFn: (r) => r.billingIntervalMonths || r.billingCycle || '-',
+      cell: ({ getValue }) => <span>{getValue() as string}</span>,
+    },
+    {
+      id: 'notify',
+      header: 'Notification date',
+      accessorFn: (r) => r.notificationDate || r.billingDate || '-',
+      cell: ({ getValue }) => <span>{getValue() === '-' ? '-' : formatToDDMMYYYY(getValue() as any)}</span>,
+    },
+    {
+      id: 'action',
+
+      header: 'Action',
+      accessorFn: (r) => r.id,
+      cell: ({ row }) => {
+        const r = row.original as any;
+        return (
+          <div className="d-flex align-items-center gap-2 justify-content-center">
+            <button type="button" className="icon-btn" title="Share" onClick={() => handleSendNow(r.id)}>
+              <CiShare1 size={25} style={{ strokeWidth: 1.5 }} className="action-share" />
+            </button>
+            <button type="button" className="icon-btn edit" title="Edit" onClick={() => { setModalEditId(r.id); setShowCreateModal(true); }}>
+              <FiEdit2 size={25} strokeWidth={2} className="action-pencil" />
+            </button>
+            <DeleteConfirmPopover onConfirm={() => handleDelete(r.id)}>
+              <button type="button" className="icon-btn delete"><FiTrash2 size={25} strokeWidth={2} /></button>
+            </DeleteConfirmPopover>
+          </div>
+        );
+      },
+      meta: {
+        noMenu: true,
+        headerAlign: 'center',
+      },
+    },
+  ], [contactsById, records]);
 
   const handleFilterChange = (key: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -432,7 +555,7 @@ export const BillingPage: React.FC = () => {
             <button
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-sm"
               style={{ minWidth: 120, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-              onClick={() => navigate('/billing/create')}
+              onClick={() => { setModalEditId(null); setShowCreateModal(true); }}
             >
               + Create Invoice
             </button>
@@ -498,170 +621,34 @@ export const BillingPage: React.FC = () => {
 
       {/* (date range filter moved into table header) */}
 
-      <div className="card shadow-lg border-0">
+      <div className="card border-0 mb-4 static-card">
         <div className="card-body">
           {error && <div className="alert alert-danger">{error}</div>}
 
-          <div className="table-responsive">
-            <table className="table table-hover align-middle mb-0 table-borderless invoice-table">
-              <thead>
-                <tr>
-                  <th className="col-company">{renderFilterDropdown('company', 'Company')}</th>
-                  <th>Contact</th>
-                  <th>{renderFilterDropdown('amount', 'Amount')}</th>
-
-                  <th>{renderDateRangeDropdown('Date of this contract', 'contract')}</th>
-                  <th>Billing interval</th>
-                  <th className="col-notify">{renderDateRangeDropdown('Notification date', 'notify')}</th>
-                  <th style={{ width: '100px' }} className="text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {displayedRecords.length === 0 && !loading && (
-                  <tr>
-                    <td colSpan={7} className="text-center">No billing records found.</td>
-                  </tr>
-                )}
-                {displayedRecords.map((r: any) => {
-                  const fmt = formatToDDMMYYYY;
-                  const toDisplayDate = (val: any) => {
-                    if (!val && val !== 0) return '-';
-
-                    // Handle Firestore-like timestamp objects: { seconds, nanoseconds } or { _seconds, _nanoseconds }
-                    try {
-                      const seconds = val?.seconds ?? val?._seconds;
-                      const nanos = val?.nanoseconds ?? val?._nanoseconds;
-                      if (seconds !== undefined && seconds !== null) {
-                        const s = Number(seconds || 0);
-                        const ms = s * 1000 + Math.round((nanos ?? 0) / 1e6);
-                        return fmt(new Date(ms));
-                      }
-                    } catch (e) {
-                      // ignore and continue
-                    }
-
-                    // If it's a number, decide whether it's seconds or milliseconds
-                    if (typeof val === 'number') {
-                      // heuristic: timestamps in ms are > 1e12
-                      const ms = val > 1e12 ? val : val * 1000;
-                      return fmt(new Date(ms));
-                    }
-
-                    // If it's a string, try to parse YYYY-MM-DD or ISO and construct a local Date to avoid timezone shifts
-                    if (typeof val === 'string') {
-                      const m = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
-                      if (m) {
-                        const y = Number(m[1]);
-                        const mon = Number(m[2]);
-                        const d = Number(m[3]);
-                        // construct local date (year, monthIndex, day)
-                        return fmt(new Date(y, mon - 1, d));
-                      }
-                      // fallback to Date parsing
-                      const parsed = Date.parse(val);
-                      if (!isNaN(parsed)) return fmt(new Date(parsed));
-                    }
-
-                    // Fallback: let the formatter try its best
-                    return fmt(val);
-                  };
-
-                  const contractDate = (r.contractStartDate || r.contractEndDate)
-                    ? `${r.contractStartDate ? toDisplayDate(r.contractStartDate) : '-'}${r.contractEndDate ? ` - ${toDisplayDate(r.contractEndDate)}` : ''}`
-                    : (r.contractDate ? toDisplayDate(r.contractDate) : '-');
-                  const billingIntervalText = r.billingIntervalMonths
-                    ? `ทุกๆ ${r.billingIntervalMonths} เดือน`
-                    : (r.billingCycle || '-');
-                  const rawNotify = r.notificationDate ?? r.notificationDay ?? r.notificationTime ?? r.billingDate ?? '-';
-                  const notifyDate = rawNotify === '-' ? '-' : toDisplayDate(rawNotify);
-
-                  // Determine Bangkok today and whether billingDate matches today
-                  const now = new Date();
-                  const bangkokToday = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
-                  const bangkokTodayIso = bangkokToday.toISOString().split('T')[0];
-                  const billingDateIso = r.billingDate ? (r.billingDate + '').split('T')[0] : null;
-                  const isNotifyToday = billingDateIso === bangkokTodayIso;
-
-                  return (
-                    <tr key={r.id || `${r.companyId}-${r.billingDate}-${r.amount}`}>
-                      <td className="col-company">{r.companyName || r.companyId || '-'}</td>
-                      <td>{
-                        (() => {
-                          // prefer explicit fields on the record
-                          const nameFromCombined = r.contactName;
-                          const first = r.contactFirstName || r.contactFirst || r.firstName;
-                          const last = r.contactLastName || r.contactLast || r.lastName;
-                          if (nameFromCombined) return nameFromCombined;
-                          if (first || last) return `${(first || '').trim()} ${(last || '').trim()}`.trim();
-
-                          // also check nested contact object on the record (r.contact)
-                          const nested = r.contact || r.contactObj || null;
-                          if (nested) {
-                            const nFirst = nested.firstName || nested.firstname || nested.givenName;
-                            const nLast = nested.lastName || nested.lastname || nested.familyName;
-                            const nName = nested.name || nested.fullName || nested.displayName || nested.email;
-                            if (nFirst || nLast) return `${(nFirst || '').trim()} ${(nLast || '').trim()}`.trim();
-                            if (nName) return nName;
-                          }
-
-                          // then try to resolve from contactsById fetched from /cruds
-                          const contactObj = (r.contactId && contactsById[String(r.contactId)]) || (r.contact && (contactsById[String(r.contact?.id || r.contact?._id || r.contact?._ref)])) || null;
-                          if (contactObj) {
-                            const cFirst = contactObj.firstName || contactObj.firstname || contactObj.givenName;
-                            const cLast = contactObj.lastName || contactObj.lastname || contactObj.familyName;
-                            const cName = contactObj.name || contactObj.fullName || contactObj.displayName || contactObj.email;
-                            if (cFirst || cLast) return `${(cFirst || '').trim()} ${(cLast || '').trim()}`.trim();
-                            if (cName) return cName;
-                          }
-
-                          return r.contactId || (r.contact && (r.contact.id || r.contact._id || r.contact._ref)) || '-';
-                        })()
-                      }</td>
-                      <td>{typeof r.amount === 'number' ? new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(r.amount) : (r.amount ?? '-')}</td>
-                      <td>{contractDate}</td>
-                      <td>{billingIntervalText}</td>
-                      <td className="col-notify">{notifyDate}</td>
-                      <td>
-                        <div className="d-flex align-items-center gap-2 justify-content-center">
-                          {/* keep send-now button even if we don't show a "notify today" column */}
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-success"
-                            title="Share"
-                            aria-label="Share"
-                            onClick={() => handleSendNow(r.id)}
-                          >
-                            <CiShare1 size={20} style={{ width: 20, height: 20, display: 'inline-block' ,color: '#6b7280 ' ,strokeWidth: 0.8  }} className="action-share" />
-                          </button>
-                          <button
-                            type="button"
-                            className="icon-btn edit"
-                            title="ดินสอ"
-                            aria-label="ดินสอ"
-                            onClick={() => navigate(`/billing/create?editId=${r.id}`)}
-                          >
-                            <FiEdit2 className="action-pencil" />
-                          </button>
-                          <DeleteConfirmPopover onConfirm={() => handleDelete(r.id)}>
-                            <button
-                              type="button"
-                              className="icon-btn delete"
-                              title="ถังขยะ"
-                              aria-label="ถังขยะ"
-                            >
-                              <FiTrash2 />
-                            </button>
-                          </DeleteConfirmPopover>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="p-3">
+            <DataTable data={displayedRecords} columns={columns} initialPageSize={25} />
           </div>
         </div>
       </div>
+      {showCreateModal && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 no-card-hover" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setShowCreateModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden" style={{ animation: 'slideUp 0.18s ease-out' }} onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-4 flex justify-between items-center border-b border-gray-100">
+              <h5 className="text-[20px] font-semibold m-0">Create Invoice</h5>
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-600 transition-colors border-0 bg-transparent p-1 rounded-full hover:bg-gray-100 flex items-center justify-center no-hover-shadow"
+                onClick={() => setShowCreateModal(false)}
+              >
+                <span className="text-2xl leading-none">&times;</span>
+              </button>
+            </div>
+            <div style={{ maxHeight: '80vh', overflow: 'auto' }}>
+              <BillingCreatePage editIdProp={modalEditId ?? undefined} onSaved={() => { setShowCreateModal(false); fetchRecords(); }} onCancel={() => setShowCreateModal(false)} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

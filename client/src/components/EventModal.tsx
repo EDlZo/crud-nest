@@ -4,6 +4,22 @@ import { FaLink } from 'react-icons/fa';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import DeleteConfirmPopover from './DeleteConfirmPopover';
 
+// Format date for display: dd/Mon/yyyy where Mon is English short month like 'Dec'
+const formatDisplayDate = (isoOrDate?: string | null) => {
+  try {
+    if (!isoOrDate) return '';
+    // Accept YYYY-MM-DD or full ISO
+    const s = String(isoOrDate).trim();
+    const parts = s.includes('T') ? s.split('T')[0] : (s.includes('/') ? s.split(' ')[0] : s);
+    const [y, m, d] = parts.split('-').map(Number);
+    if (!y || !m || !d) return s;
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const mon = months[(m - 1) % 12] || '';
+    const dd = String(d).padStart(2, '0');
+    return `${dd} ${mon} ${y}`;
+  } catch (err) { return isoOrDate || ''; }
+};
+
 type EventItem = {
   id: string;
   date: string; // yyyy-MM-dd
@@ -116,7 +132,7 @@ const EventModal: React.FC<Props> = ({ show, onHide, onSave, onDelete, initial }
         {initial && !editing ? (
           // View mode: show details similar to attachment
           <div>
-            <div style={{ marginBottom: 8, color: '#6c757d', fontSize: 13 }}>{date || initial.date} {startTime || initial.startTime ? `• ${startTime || initial.startTime}${initial.endTime ? ' - ' + (endTime || initial.endTime) : ''}` : ''}</div>
+            <div style={{ marginBottom: 8, color: '#6c757d', fontSize: 13 }}>{formatDisplayDate(date || initial.date)} {startTime || initial.startTime ? `• ${startTime || initial.startTime}${initial.endTime ? ' - ' + (endTime || initial.endTime) : ''}` : ''}</div>
             <div style={{ marginBottom: 12 }}>{description || initial.description || <span className="text-muted">No description</span>}</div>
             {/* show join link if description contains http */}
             {((description || initial.description) || '').toString().match(/https?:\/\//) ? (
@@ -203,8 +219,9 @@ const EventModal: React.FC<Props> = ({ show, onHide, onSave, onDelete, initial }
       <div className="px-8 py-6 flex justify-end gap-4 border-t border-gray-100">
         <button
           type="button"
-          className="px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-all shadow-sm"
+          className="px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center leading-none"
           onClick={() => { onHide(); setUserRequestedEdit(false); }}
+          style={{ lineHeight: 1 }}
         >
           Close
         </button>
@@ -212,9 +229,10 @@ const EventModal: React.FC<Props> = ({ show, onHide, onSave, onDelete, initial }
         {editing && (
           <button
             type="button"
-            className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-md active:scale-95 disabled:opacity-50"
+            className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center leading-none"
             onClick={handleSave}
             disabled={false}
+            style={{ lineHeight: 1 }}
           >
             {initial ? 'Save' : 'Create'}
           </button>

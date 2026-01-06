@@ -318,7 +318,7 @@ export const DashboardPage = () => {
       <div className="row">
         {/* Billing Due Today */}
         <div className="col-xl-6 col-lg-6">
-          <div className="card shadow mb-4 dashboard-gray">
+          <div className="card mb-4 dashboard-gray">
             <div className="card-header py-3 d-flex flex-row align-items-center justify-content-between">
               <h6 className="m-0 font-weight-bold text-primary">Upcoming & Due Today</h6>
               <Link to="/billing" className="view-all-btn no-hover-shadow small">
@@ -387,7 +387,7 @@ export const DashboardPage = () => {
 
         {/* Recent Activities */}
         <div className="col-xl-6 col-lg-6">
-          <div className="card shadow mb-4 dashboard-gray">
+          <div className="card mb-4 dashboard-gray">
             <div className="card-header py-3 d-flex flex-row align-items-center justify-content-between">
               <h6 className="m-0 font-weight-bold text-primary">Recent Activities</h6>
               <Link to="/activities" className="view-all-btn no-hover-shadow small">
@@ -421,7 +421,7 @@ export const DashboardPage = () => {
       {/* Quick Actions */}
       <div className="row">
         <div className="col-12">
-          <div className="card shadow mb-4 dashboard-gray">
+          <div className="card mb-4 dashboard-gray">
             <div className="card-header py-3">
               <h6 className="m-0 font-weight-bold text-primary">Quick Actions</h6>
             </div>

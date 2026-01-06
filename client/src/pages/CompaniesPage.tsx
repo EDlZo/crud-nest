@@ -589,7 +589,7 @@ export const CompaniesPage = () => {
           </div>
           <div className="flex items-center gap-2">
             <button
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-sm"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 17 }}
               onClick={openAddModal}
             >
@@ -635,7 +635,7 @@ export const CompaniesPage = () => {
                 // กำหนดสี pastel สำหรับ avatar (ใช้ util เดียวกับหน้า Contacts)
                 const avatarColor = getAvatarColor(company.name);
                 return (
-                  <div key={company.id} className="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
+                  <div key={company.id} className="card p-6 flex flex-col gap-4">
                     <div className="flex items-center gap-4">
                       {company.avatarUrl ? (
                         <img src={company.avatarUrl} alt={company.name} className="w-12 h-12 rounded-lg object-cover" />
@@ -744,7 +744,7 @@ export const CompaniesPage = () => {
       {showModal && (
         <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-slideUp"
+            className="card w-full max-w-2xl overflow-hidden animate-slideUp p-0"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -1051,7 +1051,7 @@ export const CompaniesPage = () => {
       {showContactsModal && activeCompany && (
         <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-slideUp"
+            className="card w-full max-w-2xl overflow-hidden animate-slideUp p-0"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -1119,7 +1119,7 @@ export const CompaniesPage = () => {
       }
       {deleteTargetId && (
         <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteTargetId(null)}>
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+          <div className="card p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
             <div className="flex flex-col items-center text-center gap-4">
               <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
                 <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -587,11 +587,11 @@ export const CompanyDetailsPage = () => {
                                 <div className="d-flex align-items-center">
                                     <h1 className="h3 mb-1 text-gray-800 me-2">{company.name}</h1>
                                     <button
-                                        className="btn btn-sm btn-light"
+                                        className="icon-btn"
                                         onClick={() => startEditing('name', company.name)}
                                         title="Edit name"
                                     >
-                                        <FaPen size={12} />
+                                        <FaPen size={14} />
                                     </button>
                                 </div>
                             )}
@@ -602,7 +602,7 @@ export const CompanyDetailsPage = () => {
                 <div className="row">
                     {/* Main Content - Contacts */}
                     <div className="col-lg-8">
-                        <div className="card shadow mb-4">
+                        <div className="card shadow mb-4 static-card">
                             <div className="card-header py-3 d-flex justify-content-between align-items-center bg-white">
                                 <h6 className="m-0 font-weight-bold text-dark">
                                     <span className="me-2">Contacts</span>
@@ -666,14 +666,14 @@ export const CompanyDetailsPage = () => {
                                                         <td className="text-end pe-4">
                                                             <div className="btn-group">
                                                                 <button
-                                                                    className="btn btn-sm btn-outline-secondary border-0"
+                                                                    className="icon-btn"
                                                                     title="Email"
                                                                     onClick={() => showCustomPopup('Email', contact.email || 'No email available')}
                                                                 >
                                                                     <FaEnvelope />
                                                                 </button>
                                                                 <button
-                                                                    className="btn btn-sm btn-outline-secondary border-0"
+                                                                    className="icon-btn"
                                                                     title="Call"
                                                                     onClick={() => showCustomPopup('Phone', contact.phone || 'No phone available')}
                                                                 >
@@ -699,7 +699,7 @@ export const CompanyDetailsPage = () => {
                         </div>
 
                         {/* Small Billing card — link to full Bills page for this company */}
-                        <div className="card shadow mb-4">
+                        <div className="card shadow mb-4 static-card">
                             <div className="card-header py-3 d-flex justify-content-between align-items-center bg-white">
                                 <h6 className="m-0 font-weight-bold text-dark">Billing</h6>
                             </div>
@@ -780,7 +780,7 @@ export const CompanyDetailsPage = () => {
                                 </div>
                                 <div className="mt-2">
                                     <button
-                                        className="btn btn-sm btn-primary d-inline-flex align-items-center"
+                                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors d-inline-flex align-items-center"
                                         style={{ gap: 8 }}
                                         onClick={() => navigate(`/billing?companyId=${company.id}`)}
                                     >
@@ -796,7 +796,7 @@ export const CompanyDetailsPage = () => {
 
                     {/* Sidebar - Company Info */}
                     <div className="col-lg-4">
-                        <div className="card shadow mb-4">
+                        <div className="card shadow mb-4 static-card">
                             <div className="card-header py-3 bg-white">
                                 <h6 className="m-0 font-weight-bold text-dark">Company info</h6>
                             </div>
@@ -994,10 +994,10 @@ export const CompanyDetailsPage = () => {
                                                 </div>
                                                 {!isEditing && (
                                                     <button
-                                                        className="btn btn-sm btn-light"
+                                                        className="icon-btn"
                                                         onClick={() => startEditing(fieldKey, value || '')}
                                                     >
-                                                        <FaPen size={12} />
+                                                        <FaPen size={14} />
                                                     </button>
                                                 )}
                                             </div>

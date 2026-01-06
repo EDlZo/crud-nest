@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt, FaChevronDown, FaChevronRight, FaFileAlt, FaTasks, FaEllipsisV, FaBell, FaCalendarAlt } from 'react-icons/fa';
+import { FaTachometerAlt, FaCog, FaFolder, FaChartArea, FaTable, FaUser, FaBuilding, FaUsers, FaSignOutAlt, FaChevronDown, FaChevronRight, FaFileAlt, FaTasks, FaEllipsisV, FaBell, FaCalendarAlt, FaDollarSign } from 'react-icons/fa';
 import { PiAddressBookFill } from 'react-icons/pi';
 import { Dropdown } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
@@ -277,20 +277,21 @@ const Sidebar = () => {
                     </div>
                 </li>
 
-                {/* Deals - Hidden temporarily */}
-                {/* {isPageVisible('deals') && (
-                <li className="nav-item accordion-section">
-                    <div className="accordion-card">
-                        <Link 
-                            className={`nav-link accordion-header ${isActive('/deals') ? 'active' : ''}`} 
-                            to="/deals"
-                        >
-                            <FaDollarSign className="me-2" />
-                            <span>Deals Pipeline</span>
-                        </Link>
-                    </div>
-                </li>
-            )} */}
+                {/* Deals Pipeline */}
+                {isPageVisible('deals') && (
+                    <li className="nav-item accordion-section">
+                        <div className="accordion-card">
+                            <Link
+                                className={`nav-link accordion-header ${isActive('/deals') ? 'active' : ''}`}
+                                to="/deals"
+                                onClick={() => setMobileOpen(false)}
+                            >
+                                <FaDollarSign className="me-2" />
+                                <span>Deals Pipeline</span>
+                            </Link>
+                        </div>
+                    </li>
+                )}
 
                 {/* Manage Section */}
                 {(isPageVisible('admin_users') || isPageVisible('visibility')) && (

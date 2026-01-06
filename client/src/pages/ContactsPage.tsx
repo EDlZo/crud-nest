@@ -1,9 +1,10 @@
-import { FormEvent, useCallback, useEffect, useState, useRef } from 'react';
+import { FormEvent, useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { FiEdit2, FiTrash2, FiFilter } from 'react-icons/fi';
 import { FaPen } from 'react-icons/fa';
 import '../App.css';
+import DataTable from '../components/DataTable';
 import { API_BASE_URL } from '../config';
 import provincesFallback from '../data/thailand-provinces.json';
 import localThailandHierarchy from '../data/thailand-hierarchy.json';
@@ -118,6 +119,8 @@ export const ContactsPage = () => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string>('');
@@ -160,13 +163,39 @@ export const ContactsPage = () => {
         throw new Error(typeof body === 'string' ? body : JSON.stringify(body));
       }
       const data = await response.json();
-      setContacts(Array.isArray(data) ? data : []);
+      let safeData = Array.isArray(data) ? data : [];
+
+      // Pre-process contacts to ensure address parts (province/amphoe/tambon) are populated for filters
+      safeData = safeData.map((c: any) => {
+        let tambon = c.tambon || c.subdistrict || '';
+        let amphoe = c.amphoe || c.district || '';
+        let province = c.province || c.province_name || '';
+        const addrText = c.address || '';
+
+        if ((!tambon || !amphoe || !province)) {
+          const parsed = extractThaiPartsFromAddress(addrText);
+          tambon = tambon || parsed.tambon;
+          amphoe = amphoe || parsed.amphoe;
+          province = province || parsed.province;
+        }
+
+        if ((!tambon || !amphoe || !province) && thailandHierarchy) {
+          const inferred = inferPartsByLookup(addrText);
+          tambon = tambon || inferred.tambon;
+          amphoe = amphoe || inferred.amphoe;
+          province = province || inferred.province;
+        }
+
+        return { ...c, tambon, amphoe, province };
+      });
+
+      setContacts(safeData);
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, thailandHierarchy]);
 
   const fetchCompanies = useCallback(async () => {
     if (!token) return;
@@ -220,10 +249,16 @@ export const ContactsPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchContacts();
-    fetchCompanies();
     fetchThailandHierarchy();
-  }, [fetchContacts, fetchCompanies, fetchThailandHierarchy]);
+  }, [fetchThailandHierarchy]);
+
+  useEffect(() => {
+    fetchCompanies();
+  }, [fetchCompanies]);
+
+  useEffect(() => {
+    fetchContacts();
+  }, [fetchContacts]);
 
   // Close popup when clicking outside or pressing Escape
   useEffect(() => {
@@ -309,6 +344,11 @@ export const ContactsPage = () => {
 
   const handleChange = (key: keyof Contact, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
+    setFieldErrors((prev) => {
+      const p = { ...prev };
+      delete p[String(key)];
+      return p;
+    });
   };
 
   const handleZipcodeChange = (zip: string) => {
@@ -332,6 +372,8 @@ export const ContactsPage = () => {
     setFormData(emptyContact);
     setPhotoPreview('');
     setSelectedCompanyIds([]);
+    setFieldErrors({});
+    setFormError(null);
   };
 
   const openAddModal = () => {
@@ -348,7 +390,7 @@ export const ContactsPage = () => {
     event.preventDefault();
     if (!token) return;
     setSubmitting(true);
-    setError(null);
+    setFormError(null);
 
     // Build payload and infer missing address parts from free-text address when necessary
     const inferredFromText = (() => {
@@ -384,7 +426,14 @@ export const ContactsPage = () => {
     };
 
     if (!payload.firstName || !payload.lastName || !payload.email || !payload.phone || !payload.address) {
-      setError('Please fill out all fields');
+      const errs: Record<string, string> = {};
+      if (!payload.firstName) errs.firstName = 'required';
+      if (!payload.lastName) errs.lastName = 'required';
+      if (!payload.email) errs.email = 'required';
+      if (!payload.phone) errs.phone = 'required';
+      if (!payload.address) errs.address = 'required';
+      setFieldErrors(errs);
+      setFormError('Please fill out all fields');
       setSubmitting(false);
       return;
     }
@@ -487,7 +536,7 @@ export const ContactsPage = () => {
       setShowModal(false);
     } catch (err) {
       console.error('Submit error:', err);
-      setError((err as Error).message);
+      setFormError((err as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -516,6 +565,8 @@ export const ContactsPage = () => {
     } catch (e) {
       setSelectedCompanyIds([]);
     }
+    setFieldErrors({});
+    setFormError(null);
     setShowModal(true);
   };
 
@@ -621,7 +672,7 @@ export const ContactsPage = () => {
         </div>
         {isActive && (
           <div
-            className="position-fixed bg-white shadow-lg rounded p-3"
+            className="position-fixed bg-white rounded p-3"
             style={{
               zIndex: 9999,
               minWidth: '220px',
@@ -655,8 +706,17 @@ export const ContactsPage = () => {
               </button>
             </div>
           </div>
-        )}
-      </div>
+        )
+        }
+        {/* show modal-local error here with spacing */}
+        {
+          error && (
+            <div style={{ marginTop: 12 }}>
+              <div className="alert alert-danger" style={{ margin: 0 }}>{error}</div>
+            </div>
+          )
+        }
+      </div >
     );
   };
 
@@ -737,6 +797,171 @@ export const ContactsPage = () => {
     );
   };
 
+  // Columns for DataTable (TanStack)
+  const columns = useMemo<import('@tanstack/react-table').ColumnDef<Contact, any>[]>(() => [
+    {
+      id: 'name',
+      header: 'Name',
+      accessorFn: (row) => `${row.firstName} ${row.lastName}`,
+      cell: ({ row }) => {
+        const contact = row.original as Contact;
+        const avatarColor = getAvatarColor(contact.firstName || contact.email || '');
+        return (
+          <div className="d-flex align-items-center">
+            {contact.photo ? (
+              <img
+                src={contact.photo}
+                alt={`${contact.firstName} ${contact.lastName}`}
+                className="rounded-circle me-3"
+                style={{ width: 40, height: 40, objectFit: 'cover' }}
+              />
+            ) : (
+              <div
+                className="rounded-circle d-flex align-items-center justify-content-center me-3 text-white fw-semibold"
+                style={{ width: 40, height: 40, backgroundColor: avatarColor, fontSize: 16 }}
+              >
+                {contact.firstName?.charAt(0).toUpperCase() || 'C'}
+              </div>
+            )}
+            <span style={{ fontWeight: 500, color: '#111827' }}>{contact.firstName} {contact.lastName}</span>
+          </div>
+        );
+      },
+      enableColumnFilter: true,
+    },
+    {
+      id: 'email',
+      header: 'Email',
+      accessorFn: (row) => row.email ?? '-',
+      cell: ({ getValue }) => <span style={{ color: '#6b7280' }}>{String(getValue() ?? '-')}</span>,
+      enableColumnFilter: true,
+    },
+    {
+      id: 'phone',
+      header: 'Phone',
+      accessorFn: (row) => row.phone ?? '-',
+      cell: ({ getValue }) => <span style={{ color: '#6b7280' }}>{String(getValue() ?? '-')}</span>,
+      enableColumnFilter: true,
+    },
+    {
+      id: 'address',
+      header: 'Address',
+      accessorFn: (row) => row.address ?? '-',
+      cell: ({ row }) => {
+        const contact = row.original as Contact;
+        const addrText = contact.address ?? '';
+        let tambon = (contact as any).tambon || (contact as any).subdistrict || '';
+        let amphoe = (contact as any).amphoe || (contact as any).district || '';
+        let province = (contact as any).province || (contact as any).province_name || '';
+        if (!tambon || !amphoe || !province) {
+          const parsed = extractThaiPartsFromAddress(addrText);
+          tambon = tambon || parsed.tambon;
+          amphoe = amphoe || parsed.amphoe;
+          province = province || parsed.province;
+        }
+        if ((!tambon || !amphoe || !province) && thailandHierarchy) {
+          const inferred = inferPartsByLookup(addrText);
+          tambon = tambon || inferred.tambon;
+          amphoe = amphoe || inferred.amphoe;
+          province = province || inferred.province;
+        }
+        const segments: string[] = [];
+        if (addrText) segments.push(String(addrText).trim());
+        if (tambon) segments.push(`ต.${String(tambon).trim()}`);
+        if (amphoe) segments.push(`อ.${String(amphoe).trim()}`);
+        if (province) segments.push(`จ.${String(province).trim()}`);
+        if ((contact as any).zipcode) segments.push(String((contact as any).zipcode).trim());
+        return <span style={{ color: '#6b7280' }}>{segments.length ? segments.join(' ') : '-'}</span>;
+      },
+      enableColumnFilter: true,
+      meta: {
+        filterVariant: 'address',
+        addressFieldMap: {
+          province: 'province',
+          amphoe: 'amphoe',
+          tambon: 'tambon',
+          zipcode: 'zipcode'
+        }
+      },
+    },
+    {
+      id: 'company',
+      header: 'Company',
+      accessorFn: (row) => {
+        const found = companies.find(c => Array.isArray(c.contacts) && c.contacts.includes(row.id));
+        return found ? (found.name || found.branchName || '-') : '-';
+      },
+      cell: ({ row }) => {
+        const contact = row.original as Contact;
+        const found = companies.filter(c => Array.isArray(c.contacts) && c.contacts.includes(contact.id));
+        if (!found || found.length === 0) return '-';
+        const first = found[0];
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span
+              role="button"
+              onClick={() => navigate(`/companies/${first.id}`)}
+              style={{ cursor: 'pointer', color: '#6b7280', textDecoration: 'none', fontWeight: 500 }}
+            >
+              {first.name || first.branchName || first.id}
+            </span>
+            {found.length > 1 && (
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const next: string | null = openCompaniesFor === contact.id ? null : (contact.id ?? null);
+                  const el = e.currentTarget as HTMLElement;
+                  const rect = el.getBoundingClientRect();
+                  setPopupPosition({ x: rect.left + rect.width / 2, y: rect.bottom });
+                  setPopupCompanies(found);
+                  setOpenCompaniesFor(next);
+                }}
+                aria-expanded={openCompaniesFor === contact.id}
+              >
+                +{found.length - 1}
+              </button>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      id: 'updatedAt',
+      header: 'Last Updated',
+      accessorFn: (row) => row.updatedAt ?? '',
+      cell: ({ getValue }) => <span className="text-muted" style={{ fontSize: '0.875rem' }}>{formatDateTime(getValue() as any)}</span>,
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      accessorFn: (row) => row.id,
+      cell: ({ row }) => {
+        const contact = row.original as Contact;
+        const canModify = user?.role === 'admin' || user?.role === 'superadmin' || contact.userId === user?.userId;
+        return (
+          <div className="text-center">
+            {canModify ? (
+              <div className="d-flex justify-content-center gap-1">
+                <button className="icon-btn edit" aria-label="edit" title="Edit" onClick={() => handleEdit(contact)}>
+                  <FiEdit2 className="action-pencil" />
+                </button>
+                <DeleteConfirmPopover onConfirm={() => handleDelete(contact.id)}>
+                  <button className="icon-btn delete" aria-label="delete" title="Delete">
+                    <FiTrash2 />
+                  </button>
+                </DeleteConfirmPopover>
+              </div>
+            ) : (
+              <span className="badge bg-secondary">No permission</span>
+            )}
+          </div>
+        );
+      },
+    },
+  ], [companies, navigate, openCompaniesFor, thailandHierarchy, user]);
+
   return (
     <>
       <div className="container-fluid">
@@ -756,7 +981,7 @@ export const ContactsPage = () => {
           </div>
         </div>
 
-        {error && <div className="alert alert-danger">{error}</div>}
+        {/* Global/page-level errors moved into modals where appropriate */}
 
         {/* Active Filters Display */}
         {hasActiveFilters && (
@@ -781,177 +1006,14 @@ export const ContactsPage = () => {
         )}
 
         {/* Contact Table */}
-        <div className="card shadow-lg border-0">
+        <div className="card border-0 static-card">
           <div className="card-body p-0">
             {contacts.length === 0 && !loading ? (
               <p className="text-center py-5">No contacts yet. Try adding a new one.</p>
             ) : (
-              <>
-                <div className="table-responsive">
-                  <table className="table table-hover align-middle mb-0" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#fafafa' }}>
-                        <th className="border-0 py-3 px-4" style={{ fontWeight: 500, color: '#374151' }}>
-                          {renderFilterDropdown('name', 'Name')}
-                        </th>
-                        <th className="border-0 py-3 px-4" style={{ fontWeight: 500, color: '#374151' }}>
-                          {renderFilterDropdown('email', 'Email')}
-                        </th>
-                        <th className="border-0 py-3 px-4" style={{ fontWeight: 500, color: '#374151' }}>
-                          {renderFilterDropdown('phone', 'Phone')}
-                        </th>
-                        <th className="border-0 py-3 px-4" style={{ fontWeight: 500, color: '#374151' }}>
-                          {renderFilterDropdown('address', 'Address')}
-                        </th>
-                        <th className="border-0 py-3 px-4" style={{ fontWeight: 500, color: '#374151' }}>
-                          Company
-                        </th>
-                        <th className="border-0 py-3 px-4" style={{ fontWeight: 500, color: '#374151' }}>
-                          Last Updated
-                        </th>
-                        <th className="border-0 py-3 px-4 text-center" style={{ fontWeight: 500, color: '#374151' }}>
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedContacts.map((contact) => {
-                        const canModify =
-                          user?.role === 'admin' || user?.role === 'superadmin' || contact.userId === user?.userId;
-
-                        // Generate pastel avatar color using shared util
-                        const avatarColor = getAvatarColor(contact.firstName || contact.email || '');
-
-                        return (
-                          <tr key={contact.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                            <td className="py-3 px-4 border-0">
-                              <div className="d-flex align-items-center">
-                                {contact.photo ? (
-                                  <img
-                                    src={contact.photo}
-                                    alt={`${contact.firstName} ${contact.lastName}`}
-                                    className="rounded-circle me-3"
-                                    style={{ width: 40, height: 40, objectFit: 'cover' }}
-                                  />
-                                ) : (
-                                  <div
-                                    className="rounded-circle d-flex align-items-center justify-content-center me-3 text-white fw-semibold"
-                                    style={{
-                                      width: 40,
-                                      height: 40,
-                                      backgroundColor: avatarColor,
-                                      fontSize: 16,
-                                    }}
-                                  >
-                                    {contact.firstName?.charAt(0).toUpperCase() || 'C'}
-                                  </div>
-                                )}
-                                <span style={{ fontWeight: 500, color: '#111827' }}>
-                                  {contact.firstName} {contact.lastName}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="py-3 px-4 border-0" style={{ color: '#6b7280' }}>
-                              {contact.email ?? '-'}
-                            </td>
-                            <td className="py-3 px-4 border-0" style={{ color: '#6b7280' }}>
-                              {contact.phone ?? '-'}
-                            </td>
-                            <td className="py-3 px-4 border-0" style={{ color: '#6b7280' }}>
-                              {(() => {
-                                // prefer explicit fields; if missing, try to parse from free-text address
-                                const addrText = contact.address ?? '';
-                                let tambon = (contact as any).tambon || (contact as any).subdistrict || '';
-                                let amphoe = (contact as any).amphoe || (contact as any).district || '';
-                                let province = (contact as any).province || (contact as any).province_name || '';
-                                if (!tambon || !amphoe || !province) {
-                                  const parsed = extractThaiPartsFromAddress(addrText);
-                                  tambon = tambon || parsed.tambon;
-                                  amphoe = amphoe || parsed.amphoe;
-                                  province = province || parsed.province;
-                                }
-                                // If still missing, attempt lookup against loaded hierarchy
-                                if ((!tambon || !amphoe || !province) && thailandHierarchy) {
-                                  const inferred = inferPartsByLookup(addrText);
-                                  tambon = tambon || inferred.tambon;
-                                  amphoe = amphoe || inferred.amphoe;
-                                  province = province || inferred.province;
-                                }
-                                const segments: string[] = [];
-                                if (addrText) segments.push(String(addrText).trim());
-                                if (tambon) segments.push(`ต.${String(tambon).trim()}`);
-                                if (amphoe) segments.push(`อ.${String(amphoe).trim()}`);
-                                if (province) segments.push(`จ.${String(province).trim()}`);
-                                if ((contact as any).zipcode) segments.push(String((contact as any).zipcode).trim());
-                                return segments.length ? segments.join(' ') : '-';
-                              })()}
-                            </td>
-                            <td className="py-3 px-4 border-0" style={{ color: '#6b7280', position: 'relative' }}>
-                              {(() => {
-                                // find all companies that list this contact in their contacts array
-                                const found = companies.filter(c => Array.isArray(c.contacts) && c.contacts.includes(contact.id));
-                                if (!found || found.length === 0) return '-';
-                                const first = found[0];
-                                return (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <span
-                                      role="button"
-                                      onClick={() => navigate(`/companies/${first.id}`)}
-                                      style={{ cursor: 'pointer', color: '#6b7280', textDecoration: 'none', fontWeight: 500 }}
-                                    >
-                                      {first.name || first.branchName || first.id}
-                                    </span>
-                                    {found.length > 1 && (
-                                      <button
-                                        type="button"
-                                        className="btn btn-sm btn-outline-secondary"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const next: string | null = openCompaniesFor === contact.id ? null : (contact.id ?? null);
-                                          const el = e.currentTarget as HTMLElement;
-                                          const rect = el.getBoundingClientRect();
-                                          setPopupPosition({ x: rect.left + rect.width / 2, y: rect.bottom });
-                                          setPopupCompanies(found);
-                                          setOpenCompaniesFor(next);
-                                        }}
-                                        aria-expanded={openCompaniesFor === contact.id}
-                                      >
-                                        +{found.length - 1}
-                                      </button>
-                                    )}
-                                  </div>
-                                );
-                              })()}
-                            </td>
-                            <td className="py-3 px-4 border-0" style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                              <span title={typeof contact.updatedAt === 'string' ? contact.updatedAt : JSON.stringify(contact.updatedAt)}>
-                                {formatDateTime(contact.updatedAt)}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 border-0 text-center">
-                              {canModify ? (
-                                <div className="d-flex justify-content-center gap-1">
-                                  <button className="icon-btn edit" aria-label="edit" title="Edit" onClick={() => handleEdit(contact)}>
-                                    <FiEdit2 className="action-pencil" />
-                                  </button>
-                                  <DeleteConfirmPopover onConfirm={() => handleDelete(contact.id)}>
-                                    <button className="icon-btn delete" aria-label="delete" title="Delete">
-                                      <FiTrash2 />
-                                    </button>
-                                  </DeleteConfirmPopover>
-                                </div>
-                              ) : (
-                                <span className="badge bg-secondary">No permission</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                {renderPagination()}
-              </>
+              <div className="p-3">
+                <DataTable data={contacts} columns={columns} initialPageSize={itemsPerPage} />
+              </div>
             )}
           </div>
         </div>
@@ -985,7 +1047,7 @@ export const ContactsPage = () => {
       {showModal && (
         <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={closeModal}>
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
+            className="card w-full max-w-2xl overflow-hidden animate-slideUp p-0"
             style={{ animation: 'slideUp 0.18s ease-out' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1082,7 +1144,7 @@ export const ContactsPage = () => {
                           display: avatarHover ? 'inline-flex' : 'none',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          boxShadow: '0 4px 12px rgba(2,6,23,0.12)',
+                          boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
                           cursor: 'pointer',
                         }}
                       >
@@ -1096,6 +1158,7 @@ export const ContactsPage = () => {
                     <input
                       type="text"
                       className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                      style={{ ...(fieldErrors.firstName ? { border: '1px solid #f87171', boxShadow: '0 0 0 4px rgba(248,113,113,0.06)' } : {}) }}
                       value={formData.firstName}
                       onChange={(e) => handleChange('firstName', e.target.value)}
                     />
@@ -1105,6 +1168,7 @@ export const ContactsPage = () => {
                     <input
                       type="text"
                       className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                      style={{ ...(fieldErrors.lastName ? { border: '1px solid #f87171', boxShadow: '0 0 0 4px rgba(248,113,113,0.06)' } : {}) }}
                       value={formData.lastName}
                       onChange={(e) => handleChange('lastName', e.target.value)}
                     />
@@ -1114,6 +1178,7 @@ export const ContactsPage = () => {
                     <input
                       type="email"
                       className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                      style={{ ...(fieldErrors.email ? { border: '1px solid #f87171', boxShadow: '0 0 0 4px rgba(248,113,113,0.06)' } : {}) }}
                       value={formData.email}
                       onChange={(e) => handleChange('email', e.target.value)}
                     />
@@ -1123,6 +1188,7 @@ export const ContactsPage = () => {
                     <input
                       type="tel"
                       className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
+                      style={{ ...(fieldErrors.phone ? { border: '1px solid #f87171', boxShadow: '0 0 0 4px rgba(248,113,113,0.06)' } : {}) }}
                       value={formData.phone}
                       onChange={(e) => handleChange('phone', e.target.value)}
                     />
@@ -1133,6 +1199,7 @@ export const ContactsPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
                   <textarea
                     className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all mb-2"
+                    style={{ ...(fieldErrors.address ? { border: '1px solid #f87171', boxShadow: '0 0 0 4px rgba(248,113,113,0.06)' } : {}) }}
                     value={formData.address}
                     onChange={(e) => handleChange('address', e.target.value)}
                     rows={3}
@@ -1314,23 +1381,25 @@ export const ContactsPage = () => {
                       )}
                     </div>,
                     document.body
-                    )}
+                  )}
 
-                  {error && <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-4 text-sm">{error}</div>}
+                  {formError && <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-4 text-sm">{formError}</div>}
 
                   <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
                     <button
                       type="button"
-                      className="px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-all shadow-sm"
+                      className="px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center leading-none"
                       onClick={closeModal}
                       disabled={submitting}
+                      style={{ lineHeight: 1 }}
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-md active:scale-95 disabled:opacity-50"
+                      className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center leading-none"
                       disabled={submitting}
+                      style={{ lineHeight: 1 }}
                     >
                       {submitting ? 'Saving...' : editingId ? 'Save changes' : 'Add contact'}
                     </button>

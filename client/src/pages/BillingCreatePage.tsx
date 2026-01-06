@@ -6,11 +6,11 @@ import { useAuth } from '../context/AuthContext';
 
 type Company = { id: string; name: string } | any;
 
-export const BillingCreatePage: React.FC = () => {
+export const BillingCreatePage: React.FC<{ editIdProp?: string; onSaved?: () => void; onCancel?: () => void }> = ({ editIdProp, onSaved, onCancel }) => {
   const { token } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const editId = searchParams.get('editId');
+  const editId = editIdProp ?? searchParams.get('editId');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
   const [contactsForCompany, setContactsForCompany] = useState<any[]>([]);
@@ -119,7 +119,7 @@ export const BillingCreatePage: React.FC = () => {
             readOnly
             className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all"
             value={value ? formatToDDMMYYYY(value) : 'dd/mm/yyyy'}
-            style={{ width: '100%', paddingRight: '40px', boxSizing: 'border-box' }}
+            style={{ width: '100%', paddingRight: '40px', boxSizing: 'border-box', ...(error ? { border: '1px solid #f87171', boxShadow: '0 0 0 4px rgba(248,113,113,0.06)' } : {}) }}
             onClick={() => {
               if (!open) {
                 window.dispatchEvent(new CustomEvent('inline-month-picker-open', { detail: instanceIdRef.current }));
@@ -343,13 +343,16 @@ export const BillingCreatePage: React.FC = () => {
     if (!Array.isArray(form.items) || form.items.length === 0) return false;
     // ensure every item has a non-empty name
     for (const it of form.items) {
-      if (!it || !String(it.name || '').trim()) return false;
+      if (!it || !String(it.description || it.name || '').trim()) return false;
     }
     return true;
   }, [form]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return; // prevent double-submit
+    // mark saving early to avoid duplicate clicks; will be cleared on validation failure
+    setSaving(true);
     // Clear previous field errors
     setFieldErrors({});
     setError(null);
@@ -364,7 +367,7 @@ export const BillingCreatePage: React.FC = () => {
       if (!Array.isArray(form.items) || form.items.length === 0) errs.items = 'At least one item is required';
       if (Array.isArray(form.items)) {
         form.items.forEach((it: any, idx: number) => {
-          const nameTrim = String(it?.name || '').trim();
+          const nameTrim = String((it?.description || it?.name) || '').trim();
           if (!nameTrim) {
             // If the user just typed but React state hasn't flushed yet, check the DOM input value
             try {
@@ -374,7 +377,7 @@ export const BillingCreatePage: React.FC = () => {
                 // update form with the DOM value so UI stays in sync
                 setForm((prev: any) => {
                   const items = Array.isArray(prev.items) ? [...prev.items] : [];
-                  items[idx] = { ...(items[idx] || {}), name: domVal };
+                  items[idx] = { ...(items[idx] || {}), description: domVal };
                   return { ...prev, items };
                 });
                 return; // treat as valid
@@ -388,10 +391,10 @@ export const BillingCreatePage: React.FC = () => {
       }
       setFieldErrors(errs);
       setError('Please fill out all fields');
+      setSaving(false);
       return;
     }
 
-    setSaving(true);
     try {
       // Determine billingCycle name from months: 1->monthly, 3->quarterly, 12->yearly, otherwise 'custom'
       const months = Number(form.billingIntervalMonths || 1);
@@ -443,7 +446,11 @@ export const BillingCreatePage: React.FC = () => {
         throw new Error(txt || `Status ${res.status}`);
       }
       // success
-      navigate('/billing');
+      if (onSaved) {
+        onSaved();
+      } else {
+        navigate('/billing');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to create billing record');
     } finally {
@@ -453,19 +460,18 @@ export const BillingCreatePage: React.FC = () => {
 
   return (
     <div className="container-fluid">
-      <div className="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 className="h3 mb-0 text-gray-800">Create Invoice</h1>
-      </div>
+      {/* header intentionally omitted when rendered inside modal */}
 
-      <div className="card shadow mb-4">
+      <div className="card mb-4 border-0 static-card" style={{ border: 'none' }}>
         <div className="card-body">
           <form onSubmit={handleSubmit}>
             <div className="row mb-3">
-              <div className="col-md-4">
+              <div className="col-md-6">
                 <label className="form-label">Companies</label>
                 <select
-                  className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${fieldErrors.companyId ? 'ring-2 ring-red-200' : ''}`}
+                  className={`w-full px-4 py-2.5 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-all`}
                   value={form.companyId}
+                  style={{ ...(fieldErrors.companyId ? { border: '1px solid #f87171', boxShadow: '0 0 0 4px rgba(248,113,113,0.06)' } : {}) }}
                   onChange={(e) => {
                     const v = e.target.value;
                     setForm((f: any) => ({ ...f, companyId: v }));
@@ -483,11 +489,12 @@ export const BillingCreatePage: React.FC = () => {
                   ))}
                 </select>
               </div>
-              <div className="col-md-4" >
+              <div className="col-md-6" >
                 <label className="form-label">Contact</label>
                 <select
-                  className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${fieldErrors.contactId ? 'ring-2 ring-red-200' : ''} ${(!form.companyId || loadingContactsForCompany) ? 'opacity-70 text-gray-400' : 'text-gray-700'}`}
+                  className={`w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${(!form.companyId || loadingContactsForCompany) ? 'opacity-70 text-gray-400' : 'text-gray-700'}`}
                   value={form.contactId}
+                  style={{ ...(fieldErrors.contactId ? { border: '1px solid #f87171', boxShadow: '0 0 0 4px rgba(248,113,113,0.06)' } : {}) }}
                   onChange={(e) => {
                     const v = e.target.value;
                     setForm((f: any) => ({ ...f, contactId: v }));
@@ -515,7 +522,10 @@ export const BillingCreatePage: React.FC = () => {
                   ))}
                 </select>
               </div>
-              <div className="col-md-2">
+            </div>
+
+            <div className="row mb-3">
+              <div className="col-md-6">
                 <label className="form-label">Notification date</label>
                 <InlineMonthPicker
                   value={form.billingDate}
@@ -530,7 +540,7 @@ export const BillingCreatePage: React.FC = () => {
                   error={fieldErrors.billingDate}
                 />
               </div>
-              <div className="col-md-2">
+              <div className="col-md-6">
                 <label className="form-label">Billing interval (months)</label>
                 <select className="w-full px-4 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all" value={form.billingIntervalMonths} onChange={(e) => setForm({ ...form, billingIntervalMonths: Number(e.target.value) })}>
                   {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
@@ -582,7 +592,8 @@ export const BillingCreatePage: React.FC = () => {
                         <td>
                           <input
                             name={`item_name_${idx}`}
-                            className={`w-full px-3 py-2 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all ${fieldErrors[`item_${idx}`] ? 'ring-2 ring-red-200' : ''}`}
+                            className={`w-full px-3 py-2 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all`}
+                            style={{ ...(fieldErrors[`item_${idx}`] ? { border: '1px solid #f87171', boxShadow: '0 0 0 4px rgba(248,113,113,0.06)' } : {}) }}
                             value={it.description}
                             onChange={(e) => {
                               const v = e.target.value;
@@ -627,8 +638,21 @@ export const BillingCreatePage: React.FC = () => {
             {error && <div className="alert alert-danger">{error}</div>}
 
             <div>
-              <button className="btn btn-primary me-2" type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
-              <button className="btn btn-secondary" type="button" onClick={() => navigate('/billing')}>Cancel</button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-sm me-2"
+                style={{ opacity: saving ? 0.7 : 1 }}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { if (onCancel) onCancel(); else navigate('/billing'); }}
+                className="px-4 py-2 bg-white text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
             </div>
 
           </form>

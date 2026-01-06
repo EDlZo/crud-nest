@@ -16,7 +16,7 @@ import { BillingCreatePage } from './pages/BillingCreatePage';
 import { BillingPreviewPage } from './pages/BillingPreviewPage';
 import CalendarPage from './pages/CalendarPage';
 import NotificationsPage from './pages/NotificationsPage';
-// import { DealsPage } from './pages/DealsPage'; // Hidden temporarily
+import { DealsPage } from './pages/DealsPage';
 import Layout from './components/Layout';
 import { useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
@@ -189,8 +189,8 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* Deals Pipeline - Hidden temporarily */}
-        {/* <Route
+        {/* Deals Pipeline */}
+        <Route
           path="/deals"
           element={
             <ProtectedRoute>
@@ -199,7 +199,7 @@ function App() {
               </Layout>
             </ProtectedRoute>
           }
-        /> */}
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

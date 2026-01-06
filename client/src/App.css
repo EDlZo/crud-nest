@@ -33,10 +33,13 @@ body {
 }
 
 .card {
+  position: relative;
+  z-index: 1;
   background: #fff;
   border-radius: 16px;
   padding: 1.75rem;
-  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.08) !important;
+  border: none !important;
 }
 
 /* Dashboard specific small tweaks to align with the app look */
@@ -124,7 +127,7 @@ body {
 .form textarea:focus {
   outline: none;
   border-color: #6366f1;
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.15);
+  box-shadow: none;
 }
 
 .form .full {
@@ -152,7 +155,7 @@ button {
 
 button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(79, 70, 229, 0.25);
+  box-shadow: none;
 }
 
 button:disabled {
@@ -318,19 +321,24 @@ table th:last-child .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: none;
   background: transparent;
   box-shadow: none;
   cursor: pointer;
   border-radius: 6px;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
+  color: #6b7280;
+  /* Grey */
 }
 
 .icon-btn:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(0, 0, 0, 0.08);
+  /* Light grey background */
+  color: #69696a;
+  /* Darker grey/black icon */
   transform: none;
 }
 
@@ -345,15 +353,16 @@ table th:last-child .btn {
 
 .icon-btn.edit:hover {
   background-color: rgba(245, 158, 11, 0.1);
+  color: #d97706;
 }
 
-/* yellow for edit */
 .icon-btn.delete {
   color: #dc2626;
 }
 
 .icon-btn.delete:hover {
   background-color: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
 }
 
 /* Remove modal header icon focus/pill (accessibility ring) that appears as purple */
@@ -385,7 +394,7 @@ table th:last-child .btn {
   background-color: #2563eb !important;
   border-color: #2563eb !important;
   color: #ffffff !important;
-  box-shadow: 0 6px 18px rgba(37,99,235,0.12) !important;
+  box-shadow: none !important;
 }
 
 .modal .btn-secondary,
@@ -400,6 +409,7 @@ table th:last-child .btn {
 .fixed .flex.justify-end .bg-blue-600 {
   background-color: #2563eb !important;
 }
+
 .fixed .flex.justify-end .bg-white {
   background-color: #ffffff !important;
 }
@@ -407,8 +417,8 @@ table th:last-child .btn {
 /* red for delete */
 
 .icon-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
   display: block;
 }
 
@@ -444,7 +454,7 @@ table th:last-child .btn {
   /* gray-300 */
   color: #374151;
   font-weight: 500;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -472,6 +482,7 @@ table th:last-child .btn {
 .invoice-table {
   table-layout: fixed;
 }
+
 .invoice-table th,
 .invoice-table td {
   white-space: nowrap;
@@ -479,16 +490,25 @@ table th:last-child .btn {
   text-overflow: ellipsis;
   vertical-align: middle;
 }
+
 /* Give first 6 columns equal width and reserve a smaller width for action */
-.invoice-table th:nth-child(1), .invoice-table td:nth-child(1),
-.invoice-table th:nth-child(2), .invoice-table td:nth-child(2),
-.invoice-table th:nth-child(3), .invoice-table td:nth-child(3),
-.invoice-table th:nth-child(4), .invoice-table td:nth-child(4),
-.invoice-table th:nth-child(5), .invoice-table td:nth-child(5),
-.invoice-table th:nth-child(6), .invoice-table td:nth-child(6) {
+.invoice-table th:nth-child(1),
+.invoice-table td:nth-child(1),
+.invoice-table th:nth-child(2),
+.invoice-table td:nth-child(2),
+.invoice-table th:nth-child(3),
+.invoice-table td:nth-child(3),
+.invoice-table th:nth-child(4),
+.invoice-table td:nth-child(4),
+.invoice-table th:nth-child(5),
+.invoice-table td:nth-child(5),
+.invoice-table th:nth-child(6),
+.invoice-table td:nth-child(6) {
   width: 15%;
 }
-.invoice-table th:nth-child(7), .invoice-table td:nth-child(7) {
+
+.invoice-table th:nth-child(7),
+.invoice-table td:nth-child(7) {
   width: 10%;
 }
 
@@ -497,6 +517,7 @@ table th:last-child .btn {
   color: #1e40af;
   font-weight: 600;
 }
+
 .invoice-table td.col-notify {
   color: #065f46;
   font-weight: 600;
@@ -506,17 +527,18 @@ table th:last-child .btn {
   color: #475569;
   font-weight: 700;
 }
+
 /* Contacts modal / companies picker styles to match Add Activities */
 .companies-toggle {
   padding: 0.7rem 1rem !important;
   border-radius: 12px !important;
   background: #ffffff !important;
   border: 1px solid #e6eef8 !important;
-  box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+  box-shadow: none;
 }
 
 .companies-dropdown {
-  box-shadow: 0 20px 40px rgba(2,6,23,0.08);
+  box-shadow: none;
   border-radius: 10px;
   border: 1px solid #e6eef8;
   padding: 8px;
@@ -527,11 +549,15 @@ table th:last-child .btn {
   padding: 8px;
   border-radius: 8px;
 }
+
 .companies-item:hover {
-  background: rgba(243, 232, 255, 0.6);
+  background: rgba(0, 0, 0, 0.05);
+  /* Light grey hover */
 }
+
 .companies-item.checked {
-  background: rgba(238, 242, 255, 0.9);
+  background: rgba(37, 99, 235, 0.08);
+  /* Very light blue for selected items */
 }
 
 /* Ensure the modal form fields look like the Add Activity form */
@@ -539,6 +565,7 @@ table th:last-child .btn {
   font-weight: 600;
   color: #111827;
 }
+
 .form .form-control,
 .form .form-select,
 .form textarea {
@@ -593,7 +620,7 @@ table th:last-child .btn {
   width: min(520px, 100%);
   padding: 2rem;
   border-radius: 14px;
-  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+  box-shadow: none;
   background: #ffffff;
   position: relative;
   z-index: 1;
@@ -625,7 +652,7 @@ table th:last-child .btn {
   border-radius: 50%;
   background: linear-gradient(135deg, #3663a0 0%, #1d4b8b 100%);
   margin-bottom: 1.5rem;
-  box-shadow: 0 8px 24px rgba(54, 99, 160, 0.3);
+  box-shadow: none;
   animation: iconPulse 2s ease-in-out infinite;
 }
 
@@ -708,7 +735,7 @@ table th:last-child .btn {
     margin-bottom: 0.75rem;
     background: #fff;
     border-radius: 10px;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+    box-shadow: none;
     padding: 0.5rem;
     border: 1px solid #eef2f6;
   }
@@ -757,7 +784,7 @@ table th:last-child .btn {
   height: 44px;
   border-radius: 8px;
   background: #ffffff;
-  box-shadow: 0 6px 16px rgba(2, 6, 23, 0.08);
+  box-shadow: none;
   align-items: center;
   justify-content: center;
   border: none;
@@ -1364,10 +1391,11 @@ table th:last-child .btn {
   padding: 1rem;
   border-radius: 12px;
   background: linear-gradient(180deg, #ffffff, #fbfdff);
-  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.04);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
   display: flex;
   align-items: center;
   gap: 0.9rem;
+  border: none !important;
 }
 
 .stat-icon {
@@ -1594,6 +1622,12 @@ table th:last-child .btn {
   background: #f8fafc !important;
   color: #374151 !important;
   border: 1px solid #e6eef8;
+  transition: background-color 0.2s ease !important;
+}
+
+.dashboard-gray .quick-action-btn:hover {
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .dashboard-gray .quick-action-btn .btn-icon {
@@ -1621,8 +1655,16 @@ table th:last-child .btn {
   background: transparent;
   transition: background-color 120ms ease, color 120ms ease;
 }
-.topbar-bell:hover { background: rgba(2,6,23,0.04); }
-.topbar-bell svg { width: 18px; height: 18px; }
+
+.topbar-bell:hover {
+  background: rgba(2, 6, 23, 0.04);
+}
+
+.topbar-bell svg {
+  width: 18px;
+  height: 18px;
+}
+
 .topbar-bell-count {
   position: absolute;
   top: 6px;
@@ -1651,8 +1693,7 @@ table th:last-child .btn {
 }
 
 .dashboard-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 40px rgba(15,23,42,0.06);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
 }
 
 .dashboard .card-body {
@@ -1675,7 +1716,7 @@ table th:last-child .btn {
   border-radius: 999px;
   background: #ffffff;
   border: 1px solid #e6eef8;
-  box-shadow: 0 6px 18px rgba(2,6,23,0.03);
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.03);
 }
 
 /* Activity status pills: flatter, tighter */
@@ -1688,7 +1729,7 @@ table th:last-child .btn {
 
 /* Make the right column card lighter and compact like the screenshot */
 .dashboard-gray .card {
-  background: linear-gradient(180deg,#ffffff,#fbfdff);
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
 }
 
 /* Keep spacing consistent inside lists */
@@ -1706,27 +1747,32 @@ table th:last-child .btn {
   display: grid;
   grid-template-rows: auto 1fr;
 }
+
 .calendar-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 6px;
   margin-bottom: 8px;
 }
+
 .calendar-weekday {
   font-weight: 700;
   font-size: 0.85rem;
   color: #64748b;
   text-align: center;
 }
+
 .calendar-rows {
   display: grid;
   gap: 8px;
 }
+
 .calendar-week {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 8px;
 }
+
 .calendar-cell {
   background: #fff;
   border-radius: 10px;
@@ -1738,28 +1784,34 @@ table th:last-child .btn {
   flex-direction: column;
   justify-content: flex-start;
 }
+
 .calendar-cell.empty {
   background: transparent;
   border: none;
   cursor: default;
 }
+
 .calendar-cell.today {
-  box-shadow: 0 6px 18px rgba(37,99,235,0.06);
-  border: 1px solid rgba(37,99,235,0.12);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.06);
+  border: 1px solid rgba(37, 99, 235, 0.12);
 }
+
 .calendar-cell.selected {
   background: linear-gradient(180deg, #eff6ff, #f8fafc);
 }
+
 .cell-day {
   font-weight: 700;
   color: #0f172a;
 }
+
 .cell-events {
   margin-top: 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
+
 .cell-event {
   background: #2563eb;
   color: #ffffff;
@@ -1889,4 +1941,29 @@ span.dropdown-toggle::after,
   background: none !important;
   border: none !important;
   padding: 0 !important;
+}
+
+/* Utility to remove card hover effect (bounce/transform) */
+.card.static-card:hover {
+  transform: none !important;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.08) !important;
+  transition: none !important;
+}
+
+/* Ensure all cards and their parts are borderless */
+.card,
+.card-header,
+.card-footer {
+  border: none !important;
+}
+
+.card-header {
+  background-color: transparent !important;
+  padding-bottom: 0 !important;
+}
+
+/* Fix z-index for cards with open dropdowns */
+.card:has(.dropdown.show),
+.card:has(.show.dropdown-menu) {
+  z-index: 50 !important;
 }

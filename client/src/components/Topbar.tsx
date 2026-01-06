@@ -266,11 +266,39 @@ const Topbar = () => {
         window.addEventListener('notificationCreated', onNotificationCreated as EventListener);
         window.addEventListener('localNotification', onLocalNotification as EventListener);
 
+        const onNotificationsCleared = (e: Event) => {
+            try {
+                const detail = (e as CustomEvent).detail || {};
+                const ids: string[] = Array.isArray(detail.ids) ? detail.ids : (detail.ids ? [detail.ids] : []);
+                // If no ids provided, assume all cleared and wipe notifications
+                if (!ids || ids.length === 0) {
+                    try { localStorage.removeItem('local_notifications'); } catch (err) { /* ignore */ }
+                    setNotifications([]);
+                    return;
+                }
+
+                // Remove cleared ids from local storage and in-memory state
+                try {
+                    const key = 'local_notifications';
+                    const raw = localStorage.getItem(key);
+                    const arr = raw ? JSON.parse(raw) : [];
+                    const next = (arr || []).filter((n: any) => !ids.includes(n.id));
+                    try { localStorage.setItem(key, JSON.stringify(sortNotificationsDesc(next))); } catch (err) { /* ignore */ }
+                } catch (err) { /* ignore */ }
+
+                setNotifications((prev) => (prev || []).filter(n => !ids.includes(n.id)));
+            } catch (err) {
+                console.error('Failed to handle notificationsCleared in Topbar', err);
+            }
+        };
+        window.addEventListener('notificationsCleared', onNotificationsCleared as EventListener);
+
         return () => {
             mounted = false;
             if (timer) clearInterval(timer);
             window.removeEventListener('notificationCreated', onNotificationCreated as EventListener);
             window.removeEventListener('localNotification', onLocalNotification as EventListener);
+            window.removeEventListener('notificationsCleared', onNotificationsCleared as EventListener);
         };
     }, [token]);
 
@@ -301,19 +329,46 @@ const Topbar = () => {
 
     const handleNotificationClick = async (n: any) => {
         try {
-            // Navigate based on notification type
-            // Invoice/billing notifications should go to billing preview when possible
+            // Navigate based on notification content
             const raw = n?.raw || {};
-            // infer billing id from raw payload (common keys: id, billingId, invoiceId)
-            const billingId = raw?.id || raw?.billingId || raw?.invoiceId || null;
+            const data = n?.data || {};
+
+            // 1) If server-side data explicitly contains billing/event IDs, prefer those
+            if (data && data.billingId) {
+                await markRead(n.id);
+                navigate(`/billing/preview/${data.billingId}`);
+                return;
+            }
+            if (data && data.eventId) {
+                await markRead(n.id);
+                // go to calendar and include state to hint opening the event (CalendarPage can implement handling)
+                navigate('/calendar', { state: { openEventId: String(data.eventId) } });
+                return;
+            }
+
+            // 2) If payload includes an explicit source marker for activity, route to Activities
+            const src = n?.source || raw?.source || null;
+            if (src === 'activity' || raw?.type) {
+                // extract activity id from raw payload where possible
+                const activityId = raw && (raw.id || raw._id) ? (raw.id || raw._id) : null;
+                await markRead(n.id);
+                if (activityId) {
+                    navigate('/activities', { state: { openActivityId: String(activityId) } });
+                } else {
+                    navigate('/activities');
+                }
+                return;
+            }
+
+            // 3) Fallback: check common billing id keys on raw (legacy support)
+            const billingId = raw?.billingId || raw?.invoiceId || raw?.id || null;
             if (billingId) {
-                // mark read first then navigate
                 await markRead(n.id);
                 navigate(`/billing/preview/${billingId}`);
                 return;
             }
 
-            // Default: go to calendar page
+            // Default fallback: go to calendar
             await markRead(n.id);
             navigate('/calendar');
         } catch (err) {
@@ -327,8 +382,8 @@ const Topbar = () => {
             <div className="font-bold text-lg flex items-center gap-2">
 
             </div>
-            <div className="flex items-center gap-4">
-                <Dropdown align="end" className="notification-dropdown">
+             <div className="flex items-center gap-4">
+                {/* <Dropdown align="end" className="notification-dropdown">
                     <Dropdown.Toggle id="notifDropdown" className="p-0 bg-transparent border-0 no-hover-shadow topbar-bell-toggle" style={{ boxShadow: 'none' }}>
                         <div className="topbar-bell">
                             <FaBell />
@@ -352,16 +407,16 @@ const Topbar = () => {
                                                 <div className="text-muted small" style={{ fontSize: 12, marginTop: 2 }}>{formatNotificationDate(n)}</div>
                                                 <div className="small text-truncate" style={{ maxWidth: 240, marginTop: 4 }}>{n.body}</div>
                                     <div className="mt-1 d-flex justify-content-end">
-                                        {/* clicking the whole item will mark read and navigate; no separate button needed */}
+                                        
                                     </div>
                                 </div>
                             ))
                         )}
                         <div className="px-3 py-2 text-center">
                             <button className="btn btn-link p-0" onClick={() => navigate('/notifications')}>View all</button>
-                        </div>
+                        </div> 
                     </Dropdown.Menu>
-                </Dropdown>
+                </Dropdown> */}
 
                 <Dropdown align="end">
                     <Dropdown.Toggle

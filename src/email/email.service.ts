@@ -1,6 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as postmark from 'postmark';
 import * as nodemailer from 'nodemailer';
+import * as fs from 'fs';
+import * as path from 'path';
+import { config as dotenvConfig } from 'dotenv';
+
+// Ensure environment variables from .env are loaded when service is instantiated
+dotenvConfig();
 
 @Injectable()
 export class EmailService {
@@ -44,6 +50,29 @@ export class EmailService {
       this.fromEmail = gmailUser;
       this.logger.log('Nodemailer Gmail transporter configured as fallback');
     }
+
+    // Additional SMTP fallback (generic) via SMTP_HOST/PORT/USER/PASS
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpPort = Number(process.env.SMTP_PORT || 0);
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    if (!this.client && !this.transporter && smtpHost && smtpPort && smtpUser && smtpPass) {
+      try {
+        this.transporter = nodemailer.createTransport({
+          host: smtpHost,
+          port: smtpPort,
+          secure: smtpPort === 465,
+          auth: {
+            user: smtpUser,
+            pass: smtpPass,
+          },
+        });
+        this.fromEmail = process.env.SMTP_FROM_EMAIL || smtpUser;
+        this.logger.log(`Nodemailer SMTP transporter configured (${smtpHost}:${smtpPort})`);
+      } catch (err) {
+        this.logger.error('Failed to configure SMTP transporter', err);
+      }
+    }
   }
 
   async sendEmail(to: string | string[], subject: string, html: string): Promise<boolean> {
@@ -52,7 +81,7 @@ export class EmailService {
 
     // Prefer Postmark if available
     if (this.client) {
-      let atLeastOneSent = false;
+      const failed: string[] = [];
       for (const recipient of recipients) {
         try {
           const result = await this.client.sendEmail({
@@ -62,14 +91,15 @@ export class EmailService {
             HtmlBody: html,
           });
           this.logger.log(`Postmark: Email sent to ${recipient}. MessageID: ${result.MessageID}`);
-          atLeastOneSent = true;
         } catch (error) {
-          this.logger.error(`Postmark send failed for ${recipient}:`, error);
-          // continue to next recipient
+          this.logger.error(`Postmark send failed for ${recipient}: ${String(error)}`);
+          failed.push(recipient);
         }
       }
-      if (atLeastOneSent) return true;
-      // if all failed or no recipients, we might fall through to transporter
+      // If Postmark succeeded for everyone, we're done
+      if (failed.length === 0) return true;
+      this.logger.warn(`Postmark failed for recipients: ${failed.join(', ')}`);
+      // otherwise fall through to transporter/file fallback
     }
 
     // Fallback to nodemailer if configured
@@ -85,11 +115,25 @@ export class EmailService {
         return true;
       } catch (err) {
         this.logger.error('Nodemailer send failed:', err);
-        return false;
+        // continue to file fallback
       }
     }
 
-    this.logger.error('No email transport configured (Postmark or Gmail). Set POSTMARK_API_TOKEN or GMAIL_USER & GMAIL_APP_PASSWORD.');
+    // Development-friendly fallback: write email to local file for inspection
+    try {
+      const outDir = path.join(process.cwd(), 'tmp', 'emails');
+      fs.mkdirSync(outDir, { recursive: true });
+      const filename = `${new Date().toISOString().replace(/[:.]/g, '-')}_${recipients.join('_').replace(/[@,]/g, '_')}.html`;
+      const filePath = path.join(outDir, filename);
+      const fileContent = `<!-- To: ${recipients.join(', ')} -->\n<!-- Subject: ${subject} -->\n\n${html}`;
+      fs.writeFileSync(filePath, fileContent, 'utf8');
+      this.logger.warn(`No email transport configured. Email written to ${filePath} for inspection.`);
+      return true;
+    } catch (fileErr) {
+      this.logger.error('Failed to write email to local file fallback:', fileErr);
+    }
+
+    this.logger.error('No email transport available and file fallback failed. Set POSTMARK_API_TOKEN or SMTP/GMAIL credentials.');
     return false;
   }
 
@@ -105,6 +149,7 @@ export class EmailService {
     items?: Array<any>,
     recordId?: string,
   ): Promise<boolean> {
+    this.logger.log(`Preparing billing reminder: company=${companyName}, billingDate=${billingDate}, daysUntil=${daysUntilBilling}, recipients=${Array.isArray(to) ? to.length : 0}`);
     const isDueToday = daysUntilBilling === 0;
     const subject = isDueToday
       ? `🔔 Billing Due Today: ${companyName}`

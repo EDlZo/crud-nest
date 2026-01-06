@@ -3,17 +3,20 @@ import { Cron } from '@nestjs/schedule';
 import { getFirestore } from 'firebase-admin/firestore';
 import { EmailService } from '../email/email.service';
 import { NotificationSettingsService } from '../notification-settings/notification-settings.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class BillingSchedulerService {
   private readonly logger = new Logger(BillingSchedulerService.name);
   private readonly db = getFirestore();
   private lastRunDate: string | null = null; // prevent duplicate runs on same day
+  private lastKnownNotificationTime: string | null = null; // track last seen configured time
 
   constructor(
     @Inject(forwardRef(() => EmailService))
     private readonly emailService: EmailService,
     private readonly settingsService: NotificationSettingsService,
+    private readonly notificationsService: NotificationsService,
   ) { }
 
   // Run every minute and check if it's time to execute notification job
@@ -36,10 +39,23 @@ export class BillingSchedulerService {
 
       this.logger.debug(`Scheduler check: currentTime=${currentTime}, settingsTime=${settings.notificationTime}, lastRunDate=${this.lastRunDate}, todayDate=${todayDate}`);
 
-      if (currentTime === settings.notificationTime && this.lastRunDate !== todayDate) {
-        this.logger.log(`Scheduled time ${settings.notificationTime} reached! Running billing notifications...`);
+      // If the configured notification time changed since last tick, reset lastRunDate
+      if (this.lastKnownNotificationTime !== settings.notificationTime) {
+        this.logger.log(`Notification time changed from ${this.lastKnownNotificationTime ?? 'null'} to ${settings.notificationTime}. Resetting lastRunDate to allow run at new time.`);
+        this.lastKnownNotificationTime = settings.notificationTime;
+        this.lastRunDate = null;
+      }
+
+      // Run when currentTime is equal or later than configured time and we haven't run today.
+      // Using >= prevents missing the run if the process was busy or delayed by a few seconds/minutes.
+      if (currentTime >= settings.notificationTime && this.lastRunDate !== todayDate) {
+        this.logger.log(`Scheduled time ${settings.notificationTime} reached or passed (currentTime=${currentTime})! Running billing notifications...`);
         this.lastRunDate = todayDate;
         await this.handleBillingNotifications();
+      } else if (this.lastRunDate === todayDate) {
+        this.logger.debug('Scheduler already ran for today; skipping.');
+      } else {
+        this.logger.debug('Not time yet for scheduled notifications.');
       }
     } catch (err) {
       this.logger.error('Error in scheduler tick', err);
@@ -47,7 +63,7 @@ export class BillingSchedulerService {
   }
 
   // Iterate billing-records and notify based on each record's billingDate and billingIntervalMonths
-  async handleBillingNotifications(dryRun = false) {
+  async handleBillingNotifications(dryRun = false, forceSend = false) {
     this.logger.log('Running billing notification check (per-record billingDate + billingIntervalMonths)...');
 
     const settings = await this.settingsService.getSettings();
@@ -134,7 +150,8 @@ export class BillingSchedulerService {
 
         // Skip if this record was already notified today for THIS SPECIFIC billing date
         // This allows re-notifying if the billingDate has advanced (i.e. a new cycle/catch-up)
-        if (record.lastNotifiedDate === todayIso && (record.lastNotifiedBillingDate || '').split('T')[0] === currentBillingDateIso) {
+        // If `forceSend` is true, bypass this skip to force resend for debugging or manual re-run
+        if (!forceSend && record.lastNotifiedDate === todayIso && (record.lastNotifiedBillingDate || '').split('T')[0] === currentBillingDateIso) {
           this.logger.debug(`Skipping record ${recordId} ("${companyName}") — already notified for cycle ${currentBillingDateIso} today`);
           continue;
         }
@@ -216,6 +233,30 @@ export class BillingSchedulerService {
 
               if (!sent) {
                 throw new Error('Email sending failed for all recipients or no transport configured');
+              }
+
+              // Create persistent notifications in Firestore for each recipient so Topbar shows them
+              try {
+                const isDueToday = daysUntil === 0;
+                const notifTitle = isDueToday ? `🔔 Billing Due Today: ${companyName}` : `📅 แจ้งเตือนการเรียกเก็บเงิน: ${companyName}`;
+                const notifBody = isDueToday ? `Invoice for ${companyName} is due today (${currentBillingDateIso}).` : `Invoice for ${companyName} is due in ${daysUntil} day(s) on ${currentBillingDateIso}.`;
+                const toEmails = Array.isArray(allRecipients) ? allRecipients : [];
+                for (const to of Array.from(new Set(toEmails))) {
+                  try {
+                    await this.notificationsService.create({
+                      toEmail: to,
+                      title: notifTitle,
+                      body: notifBody,
+                      data: { billingId: doc.id, companyId, billingDate: currentBillingDateIso, amountDue },
+                      createdAt: new Date().toISOString(),
+                      read: false,
+                    });
+                  } catch (createErr) {
+                    this.logger.debug(`Failed to create notification for ${to} for record ${doc.id}`, createErr);
+                  }
+                }
+              } catch (notifErr) {
+                this.logger.error('Failed to create billing notifications in Firestore', notifErr);
               }
 
               // Build update payload: mark lastNotifiedDate/BillingDate and increment count

@@ -1,4 +1,4 @@
-:root{
+:root {
   --primary-500: #0b63b5;
   --primary-700: #063a77;
   --bg: #ffffff;
@@ -7,15 +7,15 @@
 }
 
 /* Wrapper */
-#wrapper{
-  min-height:100vh;
-  display:flex;
+#wrapper {
+  min-height: 100vh;
+  display: flex;
 }
 
 /* Sidebar */
-.sidebar{
+.sidebar {
   width: 250px;
-  min-height:100vh;
+  min-height: 100vh;
   background: linear-gradient(180deg, #3763a0, #1d4b8b);
   padding-top: 1rem;
   position: fixed;
@@ -26,14 +26,15 @@
 }
 
 /* Make content sit to the right of sidebar */
-#content-wrapper{
+#content-wrapper {
   margin-left: 250px;
-  min-height:100vh;
+  min-height: 100vh;
   background: var(--bg);
 }
 
 /* Behavior when window is narrow: treat like mobile - sidebar is off-canvas and content occupies full width */
 @media (max-width: 1200px) {
+
   /* make sidebar off-canvas by default on <=1200px */
   .sidebar {
     position: fixed;
@@ -45,20 +46,27 @@
     transition: left 0.25s ease;
     overflow-y: auto;
   }
+
   .sidebar.open-mobile {
     left: 0;
   }
+
   /* content should not keep left margin on narrower screens */
-  #content-wrapper { margin-left: 0; transition: margin-left 0.2s ease; }
+  #content-wrapper {
+    margin-left: 0;
+    transition: margin-left 0.2s ease;
+  }
 }
 
 /* For larger screens keep the normal margin */
 @media (min-width: 1201px) {
-  #wrapper .sidebar + #content-wrapper { margin-left: 250px; }
+  #wrapper .sidebar+#content-wrapper {
+    margin-left: 250px;
+  }
 }
 
 /* Container inside content */
-.app-container{
+.app-container {
   width: 100%;
   margin: 0;
   padding: 1.25rem 2rem;
@@ -66,41 +74,44 @@
 }
 
 /* Sidebar brand */
-.sidebar .sidebar-brand{
+.sidebar .sidebar-brand {
   height: 72px;
   margin-bottom: 0.5rem;
 }
-.sidebar .sidebar-brand .sidebar-brand-icon{
-  color: rgba(255,255,255,0.95);
+
+.sidebar .sidebar-brand .sidebar-brand-icon {
+  color: rgba(255, 255, 255, 0.95);
 }
 
 /* Links */
-.sidebar .nav-link{
-  color: rgba(255,255,255,0.95);
+.sidebar .nav-link {
+  color: rgba(255, 255, 255, 0.95);
   padding: 0.75rem 1rem;
-  display:flex;
-  align-items:center;
+  display: flex;
+  align-items: center;
   gap: 0.6rem;
-  font-weight:600;
+  font-weight: 600;
   justify-content: flex-start;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.sidebar .nav-link .me-2{
-  opacity:0.95;
+
+.sidebar .nav-link .me-2 {
+  opacity: 0.95;
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
-.sidebar .nav-item.active > .nav-link,
-.sidebar .nav-link:hover{
-  background: rgba(255,255,255,0.08);
+
+.sidebar .nav-item.active>.nav-link,
+.sidebar .nav-link:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.sidebar .sidebar-divider{
-  border-top: 1px solid rgba(255,255,255,0.06);
+.sidebar .sidebar-divider {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   margin: 0.5rem 0;
 }
 
-.sidebar .sidebar-heading{
-  color: rgba(255,255,255,0.85);
+.sidebar .sidebar-heading {
+  color: rgba(255, 255, 255, 0.85);
   padding: 0 1rem;
   font-size: 0.85rem;
   margin-top: 0.5rem;
@@ -130,7 +141,7 @@
   margin-bottom: 0.5rem;
   border-radius: 8px;
   border: none;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: none;
   background: white;
   min-width: 200px;
   max-width: calc(100% - 2rem);
@@ -143,6 +154,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -176,6 +188,7 @@
   align-items: center !important;
   gap: 0.5rem;
 }
+
 .dropdown-menu .dropdown-item svg {
   flex-shrink: 0;
   width: 1em;
@@ -222,12 +235,12 @@
   background: #ffffff;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar .accordion-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: none;
   transform: translateY(-2px);
 }
 
@@ -309,7 +322,8 @@
 
 /* Ensure profile area stays above expanding accordion sections */
 .sidebar .sidebar-profile {
-  position: sticky; /* keep profile visible at bottom */
+  position: sticky;
+  /* keep profile visible at bottom */
   bottom: 0;
   z-index: 30;
   background: transparent;
@@ -330,68 +344,90 @@
 }
 
 /* Topbar (if used) */
-.topbar{
+.topbar {
   background: #fff;
   border-bottom: 1px solid #e6e9ef;
-  box-shadow: 0 2px 6px rgba(11,37,69,0.04);
+  box-shadow: none;
 }
 
 /* Cards */
-.card{
+.card {
+  position: relative;
+  z-index: 1;
   background: #fff;
   border-radius: 12px;
   padding: 1.25rem;
-  box-shadow: 0 8px 24px rgba(11,37,69,0.06);
-  border: none;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.08) !important;
+  border: none !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.card:hover {
-  box-shadow: 0 12px 32px rgba(11,37,69,0.1);
-  transform: translateY(-2px);
+.card:hover,
+.card:focus-within {
+  z-index: 10;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* When a modal overlay or other container uses .no-card-hover, disable
+   the card hover transform/box-shadow inside to avoid pop-up on hover. */
+.no-card-hover .card,
+.no-card-hover .card:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  transition: none !important;
 }
 
 /* Buttons */
-.btn-primary{
+.btn-primary {
   background: var(--primary-500);
   border-color: var(--primary-500);
 }
 
 .btn.btn-add,
-button.btn-add{
+button.btn-add {
   background: #3663a0 !important;
   border-color: #3663a0 !important;
   color: #ffffff !important;
-  box-shadow: 0 6px 16px rgba(54, 99, 160, 0.25);
+  box-shadow: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn.btn-add:hover,
-button.btn-add:hover{
+button.btn-add:hover {
   background: #0b5ed7 !important;
   border-color: #0b5ed7 !important;
   color: #ffffff !important;
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(54, 99, 160, 0.35);
+  box-shadow: none;
 }
 
 .btn.btn-add:active,
-button.btn-add:active{
+button.btn-add:active {
   transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(54, 99, 160, 0.25);
+  box-shadow: none;
 }
 
 /* Tables */
-.table thead th{
+.table thead th {
   color: var(--muted);
-  font-weight:700;
+  font-weight: 700;
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px){
-  .sidebar{ position: relative; width: 100%; min-height: auto }
-  #content-wrapper{ margin-left: 0 }
-  .app-container{ margin: 1rem; }
+@media (max-width: 768px) {
+  .sidebar {
+    position: relative;
+    width: 100%;
+    min-height: auto
+  }
+
+  #content-wrapper {
+    margin-left: 0
+  }
+
+  .app-container {
+    margin: 1rem;
+  }
 }
 
 /* Make sidebar off-canvas on narrow/medium screens and controllable via .open-mobile */
@@ -406,9 +442,13 @@ button.btn-add:active{
     transition: left 0.25s ease;
     overflow-y: auto;
   }
+
   .sidebar.open-mobile {
     left: 0;
   }
+
   /* Ensure content wrapper isn't shifted by sidebar on small screens */
-  #content-wrapper { margin-left: 0; }
+  #content-wrapper {
+    margin-left: 0;
+  }
 }
